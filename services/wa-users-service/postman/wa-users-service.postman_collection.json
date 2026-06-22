@@ -1,0 +1,433 @@
+{
+  "info": {
+    "name": "WA Users Service",
+    "description": "Colección Postman para flujos U1–U4 del servicio de usuarios bancarios WA (H1).\n\nFlujo encadenado: Create → Get by ID → Get by Document → Update → Suspend → Audit.\n\nVariable: baseUrl (default http://localhost:8080).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "documentNumber",
+      "value": "12345678"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/actuator/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["actuator", "health"]
+        },
+        "description": "Verifica que la aplicación y MongoDB estén operativos."
+      }
+    },
+    {
+      "name": "U1 - Create User (Alta activo)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 201 Created', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('User is ACTIVE', function () {",
+              "    pm.expect(body.status).to.eql('ACTIVE');",
+              "    pm.expect(body.canLinkChannel).to.be.true;",
+              "});",
+              "",
+              "pm.collectionVariables.set('userId', body.id);",
+              "pm.collectionVariables.set('documentNumber', body.documentNumber);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"{{documentNumber}}\",\n  \"displayName\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"+541112345678\",\n  \"preferences\": { \"lang\": \"es\" }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users"]
+        },
+        "description": "U1: Alta de usuario bancario. Guarda userId y documentNumber en variables de colección."
+      }
+    },
+    {
+      "name": "U1 Error - Duplicate Document",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 400 Bad Request', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Error contract BAD_REQUEST', function () {",
+              "    pm.expect(body.code).to.eql('BAD_REQUEST');",
+              "    pm.expect(body.message).to.include('already exists');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"{{documentNumber}}\",\n  \"displayName\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"+541112345678\",\n  \"preferences\": { \"lang\": \"es\" }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users"]
+        },
+        "description": "U1 error: documento duplicado retorna 400 BAD_REQUEST."
+      }
+    },
+    {
+      "name": "U2 - Get User by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('User ID matches', function () {",
+              "    pm.expect(body.id).to.eql(pm.collectionVariables.get('userId'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "{{userId}}"]
+        },
+        "description": "U2: Consulta de usuario por identificador interno."
+      }
+    },
+    {
+      "name": "U2 - Get User by Document",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Document matches', function () {",
+              "    pm.expect(body.documentNumber).to.eql(pm.collectionVariables.get('documentNumber'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/by-document?documentType=DNI&documentNumber={{documentNumber}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "by-document"],
+          "query": [
+            {
+              "key": "documentType",
+              "value": "DNI"
+            },
+            {
+              "key": "documentNumber",
+              "value": "{{documentNumber}}"
+            }
+          ]
+        },
+        "description": "U2: Consulta de usuario por tipo y número de documento."
+      }
+    },
+    {
+      "name": "U2 Error - User Not Found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 404 Not Found', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Error contract NOT_FOUND', function () {",
+              "    pm.expect(body.code).to.eql('NOT_FOUND');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/000000000000000000000000",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "000000000000000000000000"]
+        },
+        "description": "U2 error: usuario inexistente retorna 404 NOT_FOUND."
+      }
+    },
+    {
+      "name": "U3 - Update User (campos permitidos)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Fields updated', function () {",
+              "    pm.expect(body.displayName).to.eql('Jane Doe');",
+              "    pm.expect(body.email).to.eql('jane@example.com');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"displayName\": \"Jane Doe\",\n  \"email\": \"jane@example.com\",\n  \"phone\": \"+541198765432\",\n  \"preferences\": { \"lang\": \"es\", \"notifications\": true }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "{{userId}}"]
+        },
+        "description": "U3: Actualización parcial de displayName, email, phone y preferences."
+      }
+    },
+    {
+      "name": "U4 - Suspend User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('User is SUSPENDED', function () {",
+              "    pm.expect(body.status).to.eql('SUSPENDED');",
+              "    pm.expect(body.canLinkChannel).to.be.false;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"SUSPENDED\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "{{userId}}", "status"]
+        },
+        "description": "U4: Cambio de estado a SUSPENDED."
+      }
+    },
+    {
+      "name": "U4 - Reactivate User",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "{{userId}}", "status"]
+        },
+        "description": "U4: Reactivación desde SUSPENDED a ACTIVE."
+      }
+    },
+    {
+      "name": "U4 - Soft Delete User",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"SOFT_DELETED\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "{{userId}}", "status"]
+        },
+        "description": "U4: Baja lógica (estado terminal SOFT_DELETED)."
+      }
+    },
+    {
+      "name": "Audit - Get History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Audit entries present', function () {",
+              "    pm.expect(body.content).to.be.an('array');",
+              "    pm.expect(body.content.length).to.be.above(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users/{{userId}}/audit?page=0&size=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users", "{{userId}}", "audit"],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Historial de auditoría paginado del usuario."
+      }
+    },
+    {
+      "name": "Validation Error Example",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 400 Bad Request', function () {",
+              "    pm.response.to.have.status(400);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Error contract VALIDATION_ERROR', function () {",
+              "    pm.expect(body.code).to.eql('VALIDATION_ERROR');",
+              "    pm.expect(body.details).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"documentType\": \"DNI\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/users",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "users"]
+        },
+        "description": "Ejemplo de error 400 VALIDATION_ERROR (body incompleto)."
+      }
+    }
+  ]
+}

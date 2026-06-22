@@ -1,0 +1,65 @@
+spring:
+  application:
+    name: wa-users-service
+  profiles:
+    active: local
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/wa-users
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when_authorized
+      show-components: when_authorized
+      probes:
+        enabled: true
+  health:
+    mongo:
+      enabled: true
+    diskspace:
+      enabled: true
+      threshold: 10MB
+  info:
+    env:
+      enabled: true
+    git:
+      enabled: true
+      mode: full
+
+info:
+  app:
+    name: ${spring.application.name}
+    description: Servicio de usuarios del canal bancario WA
+    version: '@project.version@'
+    encoding: UTF-8
+    java:
+      version: ${java.version}
+  contact:
+    team: licius-it
+    email: marceloalejandro.albarracin@gmail.com
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    root: INFO
+    com.wa.banking.users: DEBUG

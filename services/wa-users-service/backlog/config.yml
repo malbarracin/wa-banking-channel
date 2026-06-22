@@ -1,0 +1,12 @@
+projectName: wa-users-service
+statuses:
+  - "To Do"
+  - "In Progress"
+  - "Done"
+  - "Blocked"
+labels:
+  - soma-session
+  - soma-step
+defaultStatus: "To Do"
+dateFormat: "YYYY-MM-DD HH:mm"
+autoCommit: false

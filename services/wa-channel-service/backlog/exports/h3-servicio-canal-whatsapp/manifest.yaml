@@ -1,0 +1,143 @@
+version: 1
+component: wa-channel-service
+session: h3-servicio-canal-whatsapp
+spec:
+  slug: h3-servicio-canal-whatsapp
+  title: "H3 — Servicio Canal WhatsApp"
+artifact:
+  group_id: com.wa.banking
+  artifact_id: wa-channel-service
+  version: "0.0.1-SNAPSHOT"
+  base_package: com.wa.banking.channel
+pipeline:
+  epic_id: TASK-12
+  release_task: TASK-19
+  review_verdict: APPROVED
+  review_task: TASK-18
+  completed_steps:
+    - validate
+    - plan
+    - scaffold
+    - build
+    - test
+    - docs
+    - review
+    - release
+artifacts:
+  - type: handoff
+    path: handoff.md
+    description: Guía de integración y prueba del componente
+  - type: dod
+    path: dod.md
+    description: Definition of Done y checklist quality gates
+  - type: stats
+    path: stats.md
+    description: Estadísticas de la corrida del pipeline
+  - type: openapi
+    path: openapi.yaml
+    description: Contrato REST OpenAPI 3.0.1 (snapshot /v3/api-docs.yaml)
+  - type: manifest
+    path: manifest.yaml
+    description: Índice del bundle de exportación
+provides:
+  - id: channel-links-api-v1
+    kind: rest-api
+    base_path: /api/v1/channel-links
+    openapi: openapi.yaml
+    operations:
+      - method: GET
+        path: /api/v1/channel-links/by-phone/{phone}
+        flow: F1
+        summary: Consulta anti-duplicado por número E.164
+      - method: POST
+        path: /api/v1/channel-links
+        flow: F1
+        summary: Iniciar vínculo
+      - method: POST
+        path: /api/v1/channel-links/{id}/accept-terms
+        flow: F1
+        summary: Aceptar términos
+      - method: POST
+        path: /api/v1/channel-links/{id}/verify
+        flow: F1
+        summary: Verificar identidad (H1 + OTP)
+      - method: POST
+        path: /api/v1/channel-links/{id}/complete-onboarding
+        flow: F1
+        summary: Completar onboarding → ACTIVE + H2
+      - method: GET
+        path: /api/v1/channel-links/{id}
+        flow: support
+        summary: Consulta por ID
+      - method: GET
+        path: /api/v1/channel-links/{id}/profile
+        flow: F2
+        summary: Perfil enmascarado
+      - method: GET
+        path: /api/v1/channel-links/{id}/preferences
+        flow: F2
+        summary: Consultar preferencias
+      - method: PATCH
+        path: /api/v1/channel-links/{id}/preferences
+        flow: F2
+        summary: Actualizar preferencias
+      - method: POST
+        path: /api/v1/channel-links/{id}/block
+        flow: F3
+        summary: Bloquear y revocar H2
+      - method: POST
+        path: /api/v1/channel-links/{id}/unlink
+        flow: F3
+        summary: Desvincular y revocar H2
+      - method: POST
+        path: /api/v1/channel-links/{id}/relink
+        flow: F4
+        summary: Re-vinculación con verificación
+      - method: GET
+        path: /api/v1/channel-links/{id}/history
+        flow: support
+        summary: Historial paginado para soporte
+  - id: health-check
+    kind: actuator
+    path: /actuator/health
+  - id: openapi-live
+    kind: openapi-endpoint
+    paths:
+      json: /v3/api-docs
+      yaml: /v3/api-docs.yaml
+      ui: /swagger-ui/index.html
+consumers:
+  - component: h9-canal-conversacional
+    uses:
+      - channel-links-api-v1
+    notes: Consulta by-phone, profile, preferences; no mutación salvo onboarding
+  - component: h4-h6-productos
+    uses:
+      - channel-links-api-v1
+    notes: Requiere vínculo ACTIVE + credencial H2
+dependencies:
+  runtime:
+    - name: mongodb
+      version: "7.0"
+      uri_pattern: mongodb://localhost:27017/wa-channel
+  upstream:
+    - component: h1-servicio-usuarios
+      bundle: backlog/exports/h1-servicio-usuarios
+      base_url: http://localhost:8080
+      operations:
+        - GET /api/v1/users/by-document
+        - GET /api/v1/users/{id}
+      notes: Validar canLinkChannel antes de verify
+    - component: h2-session
+      base_url: http://localhost:8082
+      stub_enabled: true
+      operations:
+        - POST /api/v1/sessions/credentials
+        - DELETE /api/v1/sessions/credentials/{id}
+      notes: Stub local por defecto; H2 real opcional
+metrics:
+  endpoints: 13
+  tests: 49
+  coverage_line_ratio: 0.822
+  coverage_threshold: 0.70
+  verify_command: "./mvnw clean verify"

@@ -1,0 +1,503 @@
+{
+  "info": {
+    "name": "WA Channel Service",
+    "description": "Colección Postman para flujos F1–F3 del servicio de canal WhatsApp WA (H3).\n\nFlujo encadenado: Initiate → Accept Terms → Verify → Complete → Profile → Preferences → Block.\n\nVariables: baseUrl (default http://localhost:8081), linkId, phoneNumber.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "linkId",
+      "value": ""
+    },
+    {
+      "key": "phoneNumber",
+      "value": "+541112345678"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/actuator/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["actuator", "health"]
+        },
+        "description": "Verifica que la aplicación y MongoDB estén operativos."
+      }
+    },
+    {
+      "name": "F1 - Initiate Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 201 Created', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Link is NO_LINK', function () {",
+              "    pm.expect(body.status).to.eql('NO_LINK');",
+              "    pm.expect(body.phoneNumber).to.eql(pm.collectionVariables.get('phoneNumber'));",
+              "});",
+              "",
+              "pm.collectionVariables.set('linkId', body.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phoneNumber\": \"{{phoneNumber}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links"]
+        },
+        "description": "F1 paso 1: Inicia vínculo para número no vinculado. Guarda linkId."
+      }
+    },
+    {
+      "name": "F1 - Accept Terms",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Status PENDING_VERIFICATION', function () {",
+              "    pm.expect(body.status).to.eql('PENDING_VERIFICATION');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"termsAccepted\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links/{{linkId}}/accept-terms",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links", "{{linkId}}", "accept-terms"]
+        },
+        "description": "F1 paso 2: Acepta términos → PENDING_VERIFICATION."
+      }
+    },
+    {
+      "name": "F1 - Verify Identity",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Identity verified', function () {",
+              "    pm.expect(body.identityVerified).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"12345678\",\n  \"otpCode\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links/{{linkId}}/verify",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links", "{{linkId}}", "verify"]
+        },
+        "description": "F1 paso 3: Verifica identidad contra H1. OTP MVP: 123456. Requiere usuario activo en wa-users-service."
+      }
+    },
+    {
+      "name": "F1 - Complete Onboarding",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Link is ACTIVE', function () {",
+              "    pm.expect(body.status).to.eql('ACTIVE');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links/{{linkId}}/complete-onboarding",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links", "{{linkId}}", "complete-onboarding"]
+        },
+        "description": "F1 paso 4: Completa onboarding → ACTIVE + credencial H2 stub."
+      }
+    },
+    {
+      "name": "F1 - Get Link by Phone",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links/by-phone/{{phoneNumber}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links", "by-phone", "{{phoneNumber}}"]
+        },
+        "description": "F1: Consulta anti-duplicado por número E.164."
+      }
+    },
+    {
+      "name": "F1 Error - Duplicate Active Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 409 Conflict', function () {",
+              "    pm.response.to.have.status(409);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Error contract BAD_REQUEST', function () {",
+              "    pm.expect(body.code).to.eql('BAD_REQUEST');",
+              "    pm.expect(body.message).to.include('already linked');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phoneNumber\": \"{{phoneNumber}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links"]
+        },
+        "description": "F1 error: número ya vinculado activo retorna 409 BAD_REQUEST."
+      }
+    },
+    {
+      "name": "F2 - Get Profile",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Profile has masked data', function () {",
+              "    pm.expect(body.linkId).to.eql(pm.collectionVariables.get('linkId'));",
+              "    pm.expect(body.displayName).to.be.a('string');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links/{{linkId}}/profile",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links", "{{linkId}}", "profile"]
+        },
+        "description": "F2: Perfil del canal sin datos legales sensibles."
+      }
+    },
+    {
+      "name": "F2 - Get Preferences",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links/{{linkId}}/preferences",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links", "{{linkId}}", "preferences"]
+        },
+        "description": "F2: Consulta preferencias del canal."
+      }
+    },
+    {
+      "name": "F2 - Update Preferences",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Preferences updated', function () {",
+              "    pm.expect(body.language).to.eql('es');",
+              "    pm.expect(body.notificationsEnabled).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"language\": \"es\",\n  \"notificationsEnabled\": true,\n  \"quietHoursStart\": \"22:00\",\n  \"quietHoursEnd\": \"08:00\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links/{{linkId}}/preferences",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links", "{{linkId}}", "preferences"]
+        },
+        "description": "F2: Actualización parcial de preferencias."
+      }
+    },
+    {
+      "name": "F3 - Block Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Link is BLOCKED', function () {",
+              "    pm.expect(body.status).to.eql('BLOCKED');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"confirmed\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links/{{linkId}}/block",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links", "{{linkId}}", "block"]
+        },
+        "description": "F3: Bloquea vínculo activo y revoca credencial H2."
+      }
+    },
+    {
+      "name": "F3 - Unlink",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Link is UNLINKED', function () {",
+              "    pm.expect(body.status).to.eql('UNLINKED');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"confirmed\": true\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links/{{linkId}}/unlink",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links", "{{linkId}}", "unlink"]
+        },
+        "description": "F3: Desvincula número y revoca credencial H2. Ejecutar sobre vínculo ACTIVE (no bloqueado)."
+      }
+    },
+    {
+      "name": "F3 Error - Link Not Found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 404 Not Found', function () {",
+              "    pm.response.to.have.status(404);",
+              "});",
+              "",
+              "const body = pm.response.json();",
+              "pm.test('Error contract NOT_FOUND', function () {",
+              "    pm.expect(body.code).to.eql('NOT_FOUND');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links/by-phone/+5499999999999",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links", "by-phone", "+5499999999999"]
+        },
+        "description": "F3/error: vínculo inexistente retorna 404 NOT_FOUND."
+      }
+    },
+    {
+      "name": "Support - Interaction History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', function () {",
+              "    pm.response.to.have.status(200);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/channel-links/{{linkId}}/history?page=0&size=20",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "v1", "channel-links", "{{linkId}}", "history"],
+          "query": [
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "20"
+            }
+          ]
+        },
+        "description": "Historial paginado de interacciones para soporte."
+      }
+    }
+  ]
+}

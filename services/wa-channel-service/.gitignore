@@ -1,0 +1,80 @@
+# Soma Orchestrator
+.soma/
+soma.config.yaml
+.sdd/
+sdd.config.yaml
+
+# =============================================
+# AGENTE SDD / SOMA (NO VERSIONAR)
+# =============================================
+
+# Carpeta .cursor completa (rules, skills, commands, templates, agents)
+.cursor/
+
+# Carpeta de entregables del pipeline
+delivery/
+
+# Carpeta de ejemplos de input
+examples/
+
+# Archivos de agente por extensión
+*.prompt.md
+*.skill.md
+*.mdc
+*.input.md
+*.template.md
+
+# Inputs generados localmente (opcional)
+inputs/
+
+# =============================================
+# JAVA / SPRING BOOT
+# =============================================
+
+# Build
+target/
+build/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Native build
+target/native-image/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# =============================================
+# GENERADOS POR EL PIPELINE (NO VERSIONAR)
+# =============================================
+
+# Reportes de coverage
+coverage-report.html
+jacoco.exec
+
+# Archivos temporales de multi-feature
+.multi-feature-temp/
+*.feature-result.json

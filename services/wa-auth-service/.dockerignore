@@ -1,0 +1,13 @@
+target/
+.git/
+.cursor/
+delivery/
+*.md
+.idea/
+.soma/
+soma.config.yaml
+.sdd/
+sdd.config.yaml
+backlog/
+inputs/
+examples/

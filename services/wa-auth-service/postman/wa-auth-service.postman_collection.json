@@ -1,0 +1,399 @@
+{
+  "info": {
+    "name": "WA Auth Service — H2 Session Credentials",
+    "description": "Colección Postman para el servicio de acceso y sesión (H2).\nFlujo principal: A1 issue → validate → A3 revoke.\n\nAutor: licius-it\nContacto: marceloalejandro.albarracin@gmail.com",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8082",
+      "type": "string"
+    },
+    {
+      "key": "credentialId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "channelLinkId",
+      "value": "link-abc123",
+      "type": "string"
+    },
+    {
+      "key": "bankUserId",
+      "value": "user-xyz789",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Actuator Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Verifica que la aplicación y MongoDB estén operativos."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "H2 Flow — issue → validate → revoke",
+      "description": "Flujo A1 → validate → A3 documentado en README. Ejecutar requests en orden.",
+      "item": [
+        {
+          "name": "A1 — Issue Credential",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('credentialId', json.credentialId);",
+                  "pm.collectionVariables.set('token', json.token);",
+                  "",
+                  "pm.test('credentialId present', function () {",
+                  "    pm.expect(json.credentialId).to.be.a('string').and.not.empty;",
+                  "});",
+                  "",
+                  "pm.test('token present', function () {",
+                  "    pm.expect(json.token).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channelLinkId\": \"{{channelLinkId}}\",\n  \"bankUserId\": \"{{bankUserId}}\",\n  \"phoneNumber\": \"+541112345678\",\n  \"identityVerified\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/credentials",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "credentials"]
+            },
+            "description": "Emite credencial de sesión tras verificación H3. Guarda credentialId y token en variables de colección."
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Credential (valid)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Credential is valid', function () {",
+                  "    pm.expect(json.valid).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"credentialId\": \"{{credentialId}}\",\n  \"token\": \"{{token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/credentials/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "credentials", "validate"]
+            },
+            "description": "Valida la credencial emitida en el paso anterior."
+          },
+          "response": []
+        },
+        {
+          "name": "A3 — Revoke Credential (DELETE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 204 No Content', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/credentials/{{credentialId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "credentials", "{{credentialId}}"]
+            },
+            "description": "Revoca la credencial (consumo H3 block/unlink)."
+          },
+          "response": []
+        },
+        {
+          "name": "Validate Credential (after revoke)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Credential is invalid after revoke', function () {",
+                  "    pm.expect(json.valid).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"credentialId\": \"{{credentialId}}\",\n  \"token\": \"{{token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/credentials/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "credentials", "validate"]
+            },
+            "description": "Confirma que la credencial revocada retorna valid=false."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Additional Operations",
+      "item": [
+        {
+          "name": "Get Credential Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/credentials/{{credentialId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "credentials", "{{credentialId}}"]
+            },
+            "description": "Consulta estado sin exponer token."
+          },
+          "response": []
+        },
+        {
+          "name": "Renew Credential",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/credentials/{{credentialId}}/renew",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "credentials", "{{credentialId}}", "renew"]
+            },
+            "description": "A2 — Extiende TTL de credencial activa."
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke With Reason (POST)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"FRAUD\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/credentials/{{credentialId}}/revoke",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "credentials", "{{credentialId}}", "revoke"]
+            },
+            "description": "Revocación con motivo explícito (banco/riesgo)."
+          },
+          "response": []
+        },
+        {
+          "name": "Revoke By User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bankUserId\": \"{{bankUserId}}\",\n  \"reason\": \"POLICY\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/credentials/revoke-by-user",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "credentials", "revoke-by-user"]
+            },
+            "description": "Revoca todas las credenciales activas del usuario."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/credentials/{{credentialId}}/audit?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "credentials", "{{credentialId}}", "audit"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Historial paginado de auditoría."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Error Examples",
+      "item": [
+        {
+          "name": "Issue — Validation Error (missing fields)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 400 Bad Request', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Error code VALIDATION_ERROR', function () {",
+                  "    pm.expect(json.code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/credentials",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "credentials"]
+            },
+            "description": "Ejemplo de error contract VALIDATION_ERROR."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Status — Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 404 Not Found', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Error code NOT_FOUND', function () {",
+                  "    pm.expect(json.code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/sessions/credentials/cred_nonexistent",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "sessions", "credentials", "cred_nonexistent"]
+            },
+            "description": "Ejemplo de error contract NOT_FOUND."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

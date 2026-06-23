@@ -1,0 +1,12 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/wa-accounts
+
+server:
+  port: 8083
+
+integration:
+  session:
+    base-url: http://localhost:8082
+    stub-enabled: true

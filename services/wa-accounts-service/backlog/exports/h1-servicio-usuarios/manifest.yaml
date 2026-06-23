@@ -1,0 +1,97 @@
+version: 1
+component: wa-users-service
+session: h1-servicio-usuarios
+spec:
+  notion_id: "36875bb08ca78197a853e85505bf49a5"
+  title: "H1 — Servicio de Usuarios"
+  slug: h1-servicio-usuarios
+artifact:
+  group_id: com.wa.banking
+  artifact_id: wa-users-service
+  version: "0.0.1-SNAPSHOT"
+  base_package: com.wa.banking.users
+pipeline:
+  epic_id: TASK-1
+  release_task: TASK-8
+  review_verdict: APPROVED
+  review_iteration: 1
+  completed_steps:
+    - validate
+    - plan
+    - scaffold
+    - build
+    - test
+    - docs
+    - review
+    - release
+artifacts:
+  - type: handoff
+    path: handoff.md
+    description: Guía de integración y prueba del componente
+  - type: dod
+    path: dod.md
+    description: Definition of Done y checklist quality gates
+  - type: stats
+    path: stats.md
+    description: Estadísticas de la corrida del pipeline
+  - type: openapi
+    path: openapi.yaml
+    description: Contrato REST OpenAPI 3.0.1 (snapshot /v3/api-docs.yaml)
+  - type: manifest
+    path: manifest.yaml
+    description: Índice del bundle de exportación
+provides:
+  - id: users-api-v1
+    kind: rest-api
+    base_path: /api/v1/users
+    openapi: openapi.yaml
+    operations:
+      - method: POST
+        path: /api/v1/users
+        flow: U1
+        summary: Alta de usuario bancario
+      - method: GET
+        path: /api/v1/users/{id}
+        flow: U2
+        summary: Consulta por ID
+      - method: GET
+        path: /api/v1/users/by-document
+        flow: U2
+        summary: Consulta por documento
+      - method: PATCH
+        path: /api/v1/users/{id}
+        flow: U3
+        summary: Actualización parcial
+      - method: PATCH
+        path: /api/v1/users/{id}/status
+        flow: U4
+        summary: Cambio de estado
+      - method: GET
+        path: /api/v1/users/{id}/audit
+        flow: audit
+        summary: Historial de auditoría paginado
+  - id: health-check
+    kind: actuator
+    path: /actuator/health
+  - id: openapi-live
+    kind: openapi-endpoint
+    paths:
+      json: /v3/api-docs
+      yaml: /v3/api-docs.yaml
+      ui: /swagger-ui/index.html
+consumers:
+  - component: h3-canal-whatsapp
+    uses:
+      - users-api-v1
+    notes: Validar canLinkChannel antes de vincular canal
+dependencies:
+  runtime:
+    - name: mongodb
+      version: "7.0"
+      uri_pattern: mongodb://localhost:27017/wa-users
+metrics:
+  endpoints: 6
+  tests: 18
+  coverage_line_ratio: 0.90
+  coverage_threshold: 0.70
+  verify_command: "./mvnw clean verify"

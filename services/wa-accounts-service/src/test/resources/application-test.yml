@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: wa-accounts-service
+
+integration:
+  session:
+    base-url: http://localhost:8082
+    stub-enabled: true
+
+logging:
+  level:
+    root: WARN
+    com.wa.banking.accounts: INFO

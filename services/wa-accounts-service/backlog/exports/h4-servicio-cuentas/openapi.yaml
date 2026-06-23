@@ -1,0 +1,262 @@
+openapi: 3.0.1
+info:
+  title: WA Accounts Service API
+  description: Servicio de cuentas del ecosistema bancario WA (H4 piloto F1)
+  contact:
+    name: licius-it
+    email: marceloalejandro.albarracin@gmail.com
+  version: v1
+servers:
+- url: http://localhost:8083
+  description: Generated server url
+tags:
+- name: Accounts V1
+  description: Consulta de cuentas y saldos del titular autenticado (H4 piloto F1)
+paths:
+  /api/v1/accounts:
+    get:
+      tags:
+      - Accounts V1
+      summary: Listar cuentas del titular autenticado
+      description: Devuelve las cuentas activas del titular asociado a la credencial H2
+        validada. Requiere headers Authorization (Bearer) y X-Credential-Id.
+      operationId: listAccounts
+      responses:
+        "200":
+          description: Listado de cuentas del titular
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountListResponse"
+              examples:
+                Cuentas del titular demo:
+                  description: Cuentas del titular demo
+                  value:
+                    accounts:
+                    - id: "674a1b2c3d4e5f6789012345"
+                      alias: Cuenta Sueldo
+                      type: CHECKING
+                      currency: ARS
+                      availableBalance: 125000.50
+                      ledgerBalance: 125000.50
+                      status: ACTIVE
+                    - id: "674a1b2c3d4e5f6789012346"
+                      alias: Caja de Ahorro USD
+                      type: SAVINGS
+                      currency: USD
+                      availableBalance: 1500.00
+                      ledgerBalance: 1500.00
+                      status: ACTIVE
+        "401":
+          description: Credencial ausente, inválida o expirada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Sin credencial válida:
+                  description: Sin credencial válida
+                  value:
+                    code: UNAUTHORIZED
+                    message: Por seguridad, verificá tu identidad para ver tus cuentas.
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+      security:
+      - sessionCredential: []
+  /api/v1/accounts/{accountId}/balance:
+    get:
+      tags:
+      - Accounts V1
+      summary: Consultar saldo disponible y contable de una cuenta
+      description: Devuelve saldo disponible y contable de la cuenta indicada. Solo
+        se permiten cuentas del titular autenticado; cuentas ajenas responden 404.
+      operationId: getBalance
+      parameters:
+      - name: accountId
+        in: path
+        description: Identificador de la cuenta (campo id del listado)
+        required: true
+        schema:
+          type: string
+        example: "674a1b2c3d4e5f6789012345"
+      responses:
+        "200":
+          description: Saldo de la cuenta solicitada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountBalanceResponse"
+              examples:
+                Saldo Cuenta Sueldo:
+                  description: Saldo Cuenta Sueldo
+                  value:
+                    accountId: "674a1b2c3d4e5f6789012345"
+                    alias: Cuenta Sueldo
+                    currency: ARS
+                    availableBalance: 125000.50
+                    ledgerBalance: 125000.50
+        "401":
+          description: Credencial ausente, inválida o expirada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Sin credencial válida:
+                  description: Sin credencial válida
+                  value:
+                    code: UNAUTHORIZED
+                    message: Por seguridad, verificá tu identidad para ver tus cuentas.
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "404":
+          description: Cuenta inexistente o no pertenece al titular autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Cuenta no encontrada:
+                  description: Cuenta no encontrada
+                  value:
+                    code: NOT_FOUND
+                    message: "Account not found: missing-account-id"
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+      security:
+      - sessionCredential: []
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Código de error estandarizado
+          example: VALIDATION_ERROR
+          enum:
+          - NOT_FOUND
+          - VALIDATION_ERROR
+          - BAD_REQUEST
+          - INTERNAL_ERROR
+          - UNAUTHORIZED
+        message:
+          type: string
+          description: Descripción legible del error
+          example: Validation failed
+        details:
+          type: array
+          description: Detalles adicionales (ej. errores de campo en validación)
+          example:
+          - "credentialId: credentialId is required"
+          items:
+            type: string
+            description: Detalles adicionales (ej. errores de campo en validación)
+            example: "[\"credentialId: credentialId is required\"]"
+        timestamp:
+          type: string
+          description: Marca de tiempo ISO-8601
+          format: date-time
+          example: 2026-06-23T10:30:00Z
+      description: Contrato unificado de respuesta de error
+    AccountListResponse:
+      type: object
+      properties:
+        accounts:
+          type: array
+          description: Cuentas del titular
+          items:
+            $ref: "#/components/schemas/AccountResponse"
+      description: Listado de cuentas del titular autenticado
+    AccountResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identificador único de la cuenta
+          example: acc-001
+        alias:
+          type: string
+          description: Alias visible para el cliente
+          example: Cuenta Sueldo
+        type:
+          type: string
+          description: Tipo de producto
+          example: CHECKING
+        currency:
+          type: string
+          description: Moneda ISO 4217
+          example: ARS
+        availableBalance:
+          type: number
+          description: Saldo disponible para operar
+          example: 125000.50
+        ledgerBalance:
+          type: number
+          description: Saldo contable
+          example: 125000.50
+        status:
+          type: string
+          description: Estado de la cuenta
+          example: ACTIVE
+      description: Cuenta bancaria del titular autenticado
+    AccountBalanceResponse:
+      type: object
+      properties:
+        accountId:
+          type: string
+          description: Identificador de la cuenta
+          example: acc-001
+        alias:
+          type: string
+          description: Alias de la cuenta
+          example: Cuenta Sueldo
+        currency:
+          type: string
+          description: Moneda ISO 4217
+          example: ARS
+        availableBalance:
+          type: number
+          description: Saldo disponible para operar
+          example: 125000.50
+        ledgerBalance:
+          type: number
+          description: Saldo contable
+          example: 125000.50
+      description: Saldo disponible y contable de una cuenta
+  securitySchemes:
+    sessionCredential:
+      type: http
+      description: Token opaco emitido por H2. Requiere también el header X-Credential-Id.
+      scheme: bearer
+      bearerFormat: opaque
+security:
+- sessionCredential: []

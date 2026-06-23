@@ -1,0 +1,123 @@
+version: 1
+component: wa-accounts-service
+session: h4-servicio-cuentas
+spec:
+  title: "H4 — Servicio de Cuentas"
+  slug: h4-servicio-cuentas
+  phase: F1-piloto
+artifact:
+  group_id: com.wa.banking
+  artifact_id: wa-accounts-service
+  version: "0.0.1-SNAPSHOT"
+  base_package: com.wa.banking.accounts
+pipeline:
+  epic_id: TASK-33
+  release_task: TASK-40
+  review_verdict: APPROVED
+  review_task: TASK-39
+  completed_steps:
+    - validate
+    - plan
+    - scaffold
+    - build
+    - test
+    - docs
+    - review
+    - release
+artifacts:
+  - type: handoff
+    path: handoff.md
+    description: Guía de integración para H3 y prueba del componente
+  - type: dod
+    path: dod.md
+    description: Definition of Done y checklist quality gates
+  - type: pr
+    path: pr.md
+    description: Resumen de PR y test plan
+  - type: stats
+    path: stats.md
+    description: Estadísticas de la corrida del pipeline
+  - type: openapi
+    path: openapi.yaml
+    description: Contrato REST OpenAPI 3.0.1 F1 piloto (snapshot /v3/api-docs.yaml)
+  - type: manifest
+    path: manifest.yaml
+    description: Índice del bundle de exportación
+provides:
+  - id: accounts-api-v1
+    kind: rest-api
+    base_path: /api/v1/accounts
+    port: 8083
+    openapi: openapi.yaml
+    phase: F1
+    operations:
+      - method: GET
+        path: /api/v1/accounts
+        flow: F1
+        operation_id: listAccounts
+        summary: Listar cuentas del titular autenticado
+        consumer: h3-canal-whatsapp
+        auth_headers:
+          - Authorization
+          - X-Credential-Id
+      - method: GET
+        path: /api/v1/accounts/{accountId}/balance
+        flow: F1
+        operation_id: getBalance
+        summary: Consultar saldo disponible y contable
+        consumer: h3-canal-whatsapp
+        auth_headers:
+          - Authorization
+          - X-Credential-Id
+  - id: health-check
+    kind: actuator
+    path: /actuator/health
+    port: 8083
+  - id: openapi-live
+    kind: openapi-endpoint
+    port: 8083
+    paths:
+      json: /v3/api-docs
+      yaml: /v3/api-docs.yaml
+      ui: /swagger-ui/index.html
+consumers:
+  - component: h3-canal-whatsapp
+    port: 8081
+    integration:
+      base_url_property: integration.accounts.base-url
+      base_url_default: http://localhost:8083
+    uses:
+      - accounts-api-v1
+    notes: >
+      Reenviar Authorization (Bearer token H2) y X-Credential-Id en cada consulta
+      de cuentas/saldo. Credencial obtenida en complete-onboarding (RN3 H3).
+dependencies:
+  runtime:
+    - name: mongodb
+      version: "7.0"
+      uri_pattern: mongodb://localhost:27017/wa-accounts
+  upstream:
+    - id: session-credentials-api-v1
+      component: h2-servicio-acceso-sesion
+      service: wa-auth-service
+      port: 8082
+      validate_path: /api/v1/sessions/credentials/validate
+      property: integration.session.base-url
+      stub_enabled_property: integration.session.stub-enabled
+      default_stub_enabled: true
+      bundle: backlog/exports/h2-servicio-acceso-sesion/
+      notes: POST validate con credentialId + token antes de operaciones F1
+roadmap:
+  deferred:
+    - phase: F2
+      summary: Movimientos paginados (ventana 90 días)
+    - phase: F3
+      summary: Transferencias entre cuentas propias
+    - phase: F4
+      summary: Transferencias a terceros agendados
+metrics:
+  endpoints: 2
+  tests: 26
+  coverage_line_ratio: 0.86
+  coverage_threshold: 0.70
+  verify_command: "./mvnw clean verify"

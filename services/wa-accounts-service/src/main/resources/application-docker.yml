@@ -1,0 +1,18 @@
+spring:
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://mongo:27017/wa-accounts}
+
+server:
+  port: 8083
+
+integration:
+  session:
+    base-url: ${INTEGRATION_SESSION_BASE_URL:http://wa-auth-service:8082}
+    stub-enabled: ${INTEGRATION_SESSION_STUB_ENABLED:false}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus

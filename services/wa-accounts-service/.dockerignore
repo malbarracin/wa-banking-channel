@@ -1,0 +1,10 @@
+target/
+.git/
+.cursor/
+delivery/
+*.md
+.idea/
+.soma/
+backlog/
+examples/
+inputs/

@@ -1,0 +1,16 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/wa-channel-test
+
+integration:
+  users:
+    base-url: http://localhost:8080
+  session:
+    base-url: http://localhost:8082
+    stub-enabled: true
+
+logging:
+  level:
+    root: WARN
+    com.wa.banking.channel: INFO

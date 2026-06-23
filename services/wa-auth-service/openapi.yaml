@@ -1,0 +1,800 @@
+openapi: 3.0.1
+info:
+  title: WA Auth Service API
+  description: Servicio de acceso y sesión del ecosistema bancario WA
+  contact:
+    name: licius-it
+    email: marceloalejandro.albarracin@gmail.com
+  version: v1
+servers:
+- url: http://localhost:8082
+  description: Generated server url
+tags:
+- name: Session Credentials
+  description: Gestión de credenciales de sesión del canal WhatsApp (H2)
+paths:
+  /api/v1/sessions/credentials:
+    post:
+      tags:
+      - Session Credentials
+      summary: Emitir credencial de sesión tras verificación H3 (A1)
+      description: Emite una credencial opaca para el vínculo canal-cliente. Revoca
+        la credencial activa previa del mismo linkId. El token solo se devuelve en
+        esta respuesta.
+      operationId: issue
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueCredentialRequest"
+        required: true
+      responses:
+        "201":
+          description: Credencial emitida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssueCredentialResponse"
+              examples:
+                Credencial emitida:
+                  description: Credencial emitida
+                  value:
+                    credentialId: cred_abc123
+                    token: sess_xxx_placeholder
+                    expiresAt: 2026-06-24T10:00:00Z
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "400":
+          description: Validación fallida o identidad no verificada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error de validación:
+                  description: Error de validación
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Validation failed
+                    details:
+                    - "channelLinkId: channelLinkId is required"
+                    timestamp: 2026-06-23T10:30:00Z
+                Identidad no verificada:
+                  description: Identidad no verificada
+                  value:
+                    code: BAD_REQUEST
+                    message: Identity verification is required before issuing a session
+                      credential
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+  /api/v1/sessions/credentials/{id}/revoke:
+    post:
+      tags:
+      - Session Credentials
+      summary: Revocar credencial con motivo explícito (banco/riesgo)
+      description: "Revoca la credencial con motivo configurable. Actor de auditorí\
+        a: BANK."
+      operationId: revokeWithReason
+      parameters:
+      - name: id
+        in: path
+        description: Identificador de la credencial
+        required: true
+        schema:
+          type: string
+        example: cred_abc123
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevokeCredentialRequest"
+      responses:
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "400":
+          description: Credencial ya revocada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Ya revocada:
+                  description: Ya revocada
+                  value:
+                    code: BAD_REQUEST
+                    message: Session credential is already revoked
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "404":
+          description: Credencial no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                No encontrada:
+                  description: No encontrada
+                  value:
+                    code: NOT_FOUND
+                    message: "Session credential not found: cred_xxx"
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "204":
+          description: Credencial revocada
+  /api/v1/sessions/credentials/{id}/renew:
+    post:
+      tags:
+      - Session Credentials
+      summary: Renovar credencial activa extendiendo TTL (A2)
+      description: Extiende la fecha de expiración de una credencial ACTIVE según
+        session.credential.ttl-hours.
+      operationId: renew
+      parameters:
+      - name: id
+        in: path
+        description: Identificador de la credencial
+        required: true
+        schema:
+          type: string
+        example: cred_abc123
+      responses:
+        "400":
+          description: Credencial no renovable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                No activa:
+                  description: No activa
+                  value:
+                    code: BAD_REQUEST
+                    message: Session credential is not active
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "200":
+          description: Credencial renovada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RenewCredentialResponse"
+              examples:
+                Renovación exitosa:
+                  description: Renovación exitosa
+                  value:
+                    credentialId: cred_abc123
+                    expiresAt: 2026-06-25T10:00:00Z
+                    renewalCount: 1
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "404":
+          description: Credencial no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                No encontrada:
+                  description: No encontrada
+                  value:
+                    code: NOT_FOUND
+                    message: "Session credential not found: cred_xxx"
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+  /api/v1/sessions/credentials/validate:
+    post:
+      tags:
+      - Session Credentials
+      summary: Validar credencial para servicios de productos H4–H6
+      description: "Verifica que la credencial exista, esté activa, no expirada y\
+        \ que el token coincida. Retorna valid=false sin error HTTP cuando la credencial\
+        \ es inválida."
+      operationId: validate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidateCredentialRequest"
+        required: true
+      responses:
+        "200":
+          description: Resultado de validación
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidateCredentialResponse"
+              examples:
+                Credencial válida:
+                  description: Credencial válida
+                  value:
+                    valid: true
+                    bankUserId: user-xyz789
+                    channelLinkId: link-abc123
+                    expiresAt: 2026-06-24T10:00:00Z
+                Credencial inválida:
+                  description: Credencial inválida
+                  value:
+                    valid: false
+                    bankUserId: null
+                    channelLinkId: null
+                    expiresAt: null
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "400":
+          description: Validación fallida del request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error de validación:
+                  description: Error de validación
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Validation failed
+                    details:
+                    - "token: token is required"
+                    timestamp: 2026-06-23T10:30:00Z
+  /api/v1/sessions/credentials/revoke-by-user:
+    post:
+      tags:
+      - Session Credentials
+      summary: Revocar todas las credenciales activas de un usuario bancario
+      description: Revoca en bloque todas las credenciales ACTIVE del bankUserId indicado.
+      operationId: revokeByUser
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RevokeByUserRequest"
+        required: true
+      responses:
+        "204":
+          description: Credenciales revocadas (puede ser 0)
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "400":
+          description: Validación fallida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error de validación:
+                  description: Error de validación
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Validation failed
+                    details:
+                    - "bankUserId: bankUserId is required"
+                    timestamp: 2026-06-23T10:30:00Z
+  /api/v1/sessions/credentials/{id}:
+    get:
+      tags:
+      - Session Credentials
+      summary: Consultar estado de credencial sin token
+      description: Devuelve metadatos y estado de la credencial sin exponer el token
+        opaco.
+      operationId: getStatus
+      parameters:
+      - name: id
+        in: path
+        description: Identificador de la credencial
+        required: true
+        schema:
+          type: string
+        example: cred_abc123
+      responses:
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "200":
+          description: Estado de la credencial
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CredentialStatusResponse"
+              examples:
+                Credencial activa:
+                  description: Credencial activa
+                  value:
+                    credentialId: cred_abc123
+                    channelLinkId: link-abc123
+                    bankUserId: user-xyz789
+                    phoneNumber: "+541112345678"
+                    status: ACTIVE
+                    issuedAt: 2026-06-23T10:00:00Z
+                    expiresAt: 2026-06-24T10:00:00Z
+                    revokedAt: null
+                    revokeReason: null
+                    renewalCount: 0
+        "404":
+          description: Credencial no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                No encontrada:
+                  description: No encontrada
+                  value:
+                    code: NOT_FOUND
+                    message: "Session credential not found: cred_xxx"
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+    delete:
+      tags:
+      - Session Credentials
+      summary: Revocar credencial inmediatamente (consumo H3 block/unlink)
+      description: "Revoca la credencial con motivo POLICY y actor CHANNEL. Usado por
+        H3 en block/unlink. Idempotente: si la credencial ya está revocada, responde
+        204 sin error."
+      operationId: revoke
+      parameters:
+      - name: id
+        in: path
+        description: Identificador de la credencial
+        required: true
+        schema:
+          type: string
+        example: cred_abc123
+      responses:
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "404":
+          description: Credencial no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                No encontrada:
+                  description: No encontrada
+                  value:
+                    code: NOT_FOUND
+                    message: "Session credential not found: cred_xxx"
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "204":
+          description: Credencial revocada (o ya estaba revocada)
+  /api/v1/sessions/credentials/{id}/audit:
+    get:
+      tags:
+      - Session Credentials
+      summary: Historial paginado de auditoría de la credencial
+      description: "Lista entradas de auditoría ordenadas por fecha descendente. Pará\
+        metros: page, size, sort."
+      operationId: getAuditHistory
+      parameters:
+      - name: id
+        in: path
+        description: Identificador de la credencial
+        required: true
+        schema:
+          type: string
+        example: cred_abc123
+      - name: pageable
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/Pageable"
+      responses:
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "404":
+          description: Credencial no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                No encontrada:
+                  description: No encontrada
+                  value:
+                    code: NOT_FOUND
+                    message: "Session credential not found: cred_xxx"
+                    details: []
+                    timestamp: 2026-06-23T10:30:00Z
+        "200":
+          description: Página de entradas de auditoría
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditEntryResponse"
+              examples:
+                Historial paginado:
+                  description: Historial paginado
+                  value:
+                    content:
+                    - credentialId: cred_abc123
+                      channelLinkId: link-abc123
+                      bankUserId: user-xyz789
+                      action: ISSUED
+                      actor: CHANNEL
+                      reason: null
+                      performedAt: 2026-06-23T10:00:00Z
+                    totalElements: 1
+                    totalPages: 1
+                    size: 20
+                    number: 0
+components:
+  schemas:
+    IssueCredentialRequest:
+      required:
+      - bankUserId
+      - channelLinkId
+      type: object
+      properties:
+        channelLinkId:
+          type: string
+          description: "Identificador del vínculo canal-cliente. En JSON también se acepta el alias `linkId`."
+          example: link-abc123
+        linkId:
+          type: string
+          description: "Alias de `channelLinkId` (compatibilidad H3). Si se envían ambos, prevalece `channelLinkId`."
+          example: link-abc123
+        bankUserId:
+          type: string
+          description: Identificador del usuario bancario
+          example: user-xyz789
+        phoneNumber:
+          type: string
+          description: Número de teléfono E.164
+          example: "+541112345678"
+        identityVerified:
+          type: boolean
+          description: Indica si la identidad fue verificada; default true si ausente
+          example: true
+      description: Solicitud de emisión de credencial de sesión
+    IssueCredentialResponse:
+      type: object
+      properties:
+        credentialId:
+          type: string
+          description: Identificador de la credencial
+          example: cred_abc123
+        token:
+          type: string
+          description: Token opaco de sesión (no reenviar al cliente en chat)
+          example: sess_xxx_placeholder
+        expiresAt:
+          type: string
+          description: Fecha de expiración UTC
+          format: date-time
+          example: 2026-06-24T10:00:00Z
+      description: Credencial emitida con token opaco (solo en emisión)
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Código de error estandarizado
+          example: VALIDATION_ERROR
+          enum:
+          - NOT_FOUND
+          - VALIDATION_ERROR
+          - BAD_REQUEST
+          - INTERNAL_ERROR
+        message:
+          type: string
+          description: Descripción legible del error
+          example: Validation failed
+        details:
+          type: array
+          description: Detalles adicionales (ej. errores de campo en validación)
+          example:
+          - "linkId: linkId is required"
+          items:
+            type: string
+            description: Detalles adicionales (ej. errores de campo en validación)
+            example: "[\"linkId: linkId is required\"]"
+        timestamp:
+          type: string
+          description: Marca de tiempo ISO-8601
+          format: date-time
+          example: 2026-06-23T10:30:00Z
+      description: Contrato unificado de respuesta de error
+    RevokeCredentialRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Motivo de revocación
+          example: FRAUD
+          enum:
+          - BLOCK
+          - UNLINK
+          - FRAUD
+          - FAILED_ATTEMPTS
+          - POLICY
+          - REPLACED
+      description: Solicitud de revocación con motivo
+    RenewCredentialResponse:
+      type: object
+      properties:
+        credentialId:
+          type: string
+          description: Identificador de la credencial
+          example: cred-abc123
+        expiresAt:
+          type: string
+          description: Nueva fecha de expiración UTC
+          format: date-time
+          example: 2026-06-25T10:00:00Z
+        renewalCount:
+          type: integer
+          description: Cantidad de renovaciones realizadas
+          format: int32
+          example: 1
+      description: Credencial renovada con nueva fecha de expiración
+    ValidateCredentialRequest:
+      required:
+      - credentialId
+      - token
+      type: object
+      properties:
+        credentialId:
+          type: string
+          description: Identificador de la credencial
+          example: cred_abc123
+        token:
+          type: string
+          description: Token opaco presentado por el consumidor
+          example: sess_xxx_placeholder
+      description: Solicitud de validación de credencial de sesión
+    ValidateCredentialResponse:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          description: Indica si la credencial es vigente y válida
+          example: true
+        bankUserId:
+          type: string
+          description: Usuario bancario asociado (solo si valid=true)
+          example: user-xyz789
+        channelLinkId:
+          type: string
+          description: Vínculo canal asociado (solo si valid=true)
+          example: link-abc123
+        expiresAt:
+          type: string
+          description: Fecha de expiración (solo si valid=true)
+          format: date-time
+          example: 2026-06-24T10:00:00Z
+      description: Resultado de validación de credencial
+    RevokeByUserRequest:
+      required:
+      - bankUserId
+      type: object
+      properties:
+        bankUserId:
+          type: string
+          description: Identificador del usuario bancario
+          example: user-xyz789
+        reason:
+          type: string
+          description: Motivo de revocación
+          example: POLICY
+          enum:
+          - BLOCK
+          - UNLINK
+          - FRAUD
+          - FAILED_ATTEMPTS
+          - POLICY
+          - REPLACED
+      description: Revocación masiva por bankUserId
+    CredentialStatusResponse:
+      type: object
+      properties:
+        credentialId:
+          type: string
+          description: Identificador de la credencial
+          example: cred-abc123
+        channelLinkId:
+          type: string
+          description: Identificador del vínculo canal-cliente
+          example: link-abc123
+        bankUserId:
+          type: string
+          description: Identificador del usuario bancario
+          example: user-xyz789
+        phoneNumber:
+          type: string
+          description: Número de teléfono E.164
+          example: "+541112345678"
+        status:
+          type: string
+          description: Estado de la credencial
+          example: ACTIVE
+          enum:
+          - ACTIVE
+          - REVOKED
+          - EXPIRED
+        issuedAt:
+          type: string
+          description: Fecha de emisión UTC
+          format: date-time
+          example: 2026-06-23T10:00:00Z
+        expiresAt:
+          type: string
+          description: Fecha de expiración UTC
+          format: date-time
+          example: 2026-06-24T10:00:00Z
+        revokedAt:
+          type: string
+          description: Fecha de revocación UTC
+          format: date-time
+          example: 2026-06-23T12:00:00Z
+        revokeReason:
+          type: string
+          description: Motivo de revocación
+          example: BLOCK
+          enum:
+          - BLOCK
+          - UNLINK
+          - FRAUD
+          - FAILED_ATTEMPTS
+          - POLICY
+          - REPLACED
+        renewalCount:
+          type: integer
+          description: Cantidad de renovaciones
+          format: int32
+          example: 0
+      description: Estado de credencial de sesión (sin token)
+    Pageable:
+      type: object
+      properties:
+        page:
+          minimum: 0
+          type: integer
+          format: int32
+        size:
+          minimum: 1
+          type: integer
+          format: int32
+        sort:
+          type: array
+          items:
+            type: string
+    AuditEntryResponse:
+      type: object
+      properties:
+        credentialId:
+          type: string
+          description: Identificador de la credencial
+          example: cred-abc123
+        channelLinkId:
+          type: string
+          description: Identificador del vínculo
+          example: link-abc123
+        bankUserId:
+          type: string
+          description: Usuario bancario
+          example: user-xyz789
+        action:
+          type: string
+          description: Acción registrada
+          example: ISSUED
+          enum:
+          - ISSUED
+          - RENEWED
+          - REVOKED
+          - VALIDATED
+          - VALIDATION_FAILED
+          - REPLACED
+        actor:
+          type: string
+          description: Actor que ejecutó la acción
+          example: CHANNEL
+          enum:
+          - CHANNEL
+          - PRODUCT
+          - BANK
+          - SYSTEM
+        reason:
+          type: string
+          description: Motivo o detalle adicional
+          example: REPLACED
+        performedAt:
+          type: string
+          description: Fecha de la acción UTC
+          format: date-time
+          example: 2026-06-23T10:00:00Z
+      description: Entrada de auditoría de credencial

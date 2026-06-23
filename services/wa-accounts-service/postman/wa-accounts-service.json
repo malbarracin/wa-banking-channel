@@ -1,0 +1,207 @@
+{
+  "info": {
+    "_postman_id": "wa-accounts-service-f1",
+    "name": "WA Accounts Service — F1 Piloto",
+    "description": "Colección para H4 piloto F1: listado de cuentas y consulta de saldo.\n\nRequiere credencial H2 en headers Authorization (Bearer) y X-Credential-Id.\nCon stub-enabled=true cualquier par credentialId/token es aceptado.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8083"
+    },
+    {
+      "key": "credentialId",
+      "value": "cred-demo-001"
+    },
+    {
+      "key": "token",
+      "value": "demo-token"
+    },
+    {
+      "key": "accountId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Accounts F1",
+      "item": [
+        {
+          "name": "List accounts (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Credential-Id",
+                "value": "{{credentialId}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts"]
+            },
+            "description": "Lista cuentas del titular autenticado. Copiar un id de la respuesta a la variable accountId para consultar saldo."
+          },
+          "response": [
+            {
+              "name": "200 — Cuentas del titular demo",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"accounts\": [\n    {\n      \"id\": \"674a1b2c3d4e5f6789012345\",\n      \"alias\": \"Cuenta Sueldo\",\n      \"type\": \"CHECKING\",\n      \"currency\": \"ARS\",\n      \"availableBalance\": 125000.50,\n      \"ledgerBalance\": 125000.50,\n      \"status\": \"ACTIVE\"\n    },\n    {\n      \"id\": \"674a1b2c3d4e5f6789012346\",\n      \"alias\": \"Caja de Ahorro USD\",\n      \"type\": \"SAVINGS\",\n      \"currency\": \"USD\",\n      \"availableBalance\": 1500.00,\n      \"ledgerBalance\": 1500.00,\n      \"status\": \"ACTIVE\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get account balance (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Credential-Id",
+                "value": "{{credentialId}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "{{accountId}}", "balance"]
+            },
+            "description": "Consulta saldo disponible y contable. Usar accountId obtenido del listado."
+          },
+          "response": [
+            {
+              "name": "200 — Saldo Cuenta Sueldo",
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"accountId\": \"674a1b2c3d4e5f6789012345\",\n  \"alias\": \"Cuenta Sueldo\",\n  \"currency\": \"ARS\",\n  \"availableBalance\": 125000.50,\n  \"ledgerBalance\": 125000.50\n}"
+            }
+          ]
+        },
+        {
+          "name": "List accounts — no auth (401)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts"]
+            },
+            "description": "Ejemplo sin headers de autenticación. Esperado: 401 UNAUTHORIZED."
+          },
+          "response": [
+            {
+              "name": "401 — Sin credencial",
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"Por seguridad, verificá tu identidad para ver tus cuentas.\",\n  \"details\": [],\n  \"timestamp\": \"2026-06-23T10:30:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get balance — account not found (404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "X-Credential-Id",
+                "value": "{{credentialId}}"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/accounts/missing-account-id/balance",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "accounts", "missing-account-id", "balance"]
+            },
+            "description": "Cuenta inexistente para el titular autenticado."
+          },
+          "response": [
+            {
+              "name": "404 — Cuenta no encontrada",
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"code\": \"NOT_FOUND\",\n  \"message\": \"Account not found: missing-account-id\",\n  \"details\": [],\n  \"timestamp\": \"2026-06-23T10:30:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Actuator",
+      "item": [
+        {
+          "name": "Health check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

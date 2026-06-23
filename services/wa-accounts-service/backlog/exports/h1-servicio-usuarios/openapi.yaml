@@ -1,0 +1,731 @@
+openapi: 3.0.1
+info:
+  title: WA Users Service API
+  description: Servicio de usuarios del canal bancario WA
+  contact:
+    name: licius-it
+    email: marceloalejandro.albarracin@gmail.com
+  version: v1
+servers:
+- url: http://localhost:8080
+  description: Generated server url
+tags:
+- name: Users V1
+  description: Operaciones de usuarios bancarios - API v1 (flujos U1–U4)
+paths:
+  /api/v1/users:
+    post:
+      tags:
+      - Users V1
+      summary: U1 - Alta de usuario bancario
+      description: Registra un nuevo usuario con estado ACTIVE. El documento (tipo
+        + número) debe ser único.
+      operationId: create
+      requestBody:
+        description: Datos del nuevo usuario bancario
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequestV1"
+            examples:
+              Alta usuario activo:
+                description: Alta usuario activo
+                value:
+                  documentType: DNI
+                  documentNumber: "12345678"
+                  displayName: John Doe
+                  email: john@example.com
+                  phone: "+541112345678"
+                  preferences:
+                    lang: es
+        required: true
+      responses:
+        "201":
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponseV1"
+              examples:
+                Usuario activo:
+                  description: Usuario activo
+                  value:
+                    id: 665f1a2b3c4d5e6f7a8b9c0d
+                    documentType: DNI
+                    documentNumber: "12345678"
+                    displayName: John Doe
+                    email: john@example.com
+                    phone: "+541112345678"
+                    preferences:
+                      lang: es
+                    status: ACTIVE
+                    canLinkChannel: true
+                    createdAt: 2026-06-22T10:30:00Z
+                    updatedAt: 2026-06-22T10:30:00Z
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+        "400":
+          description: Validación fallida o documento duplicado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Documento duplicado:
+                  description: Documento duplicado
+                  value:
+                    code: BAD_REQUEST
+                    message: User already exists with document DNI 12345678
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+                Error de validación:
+                  description: Error de validación
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Validation failed
+                    details:
+                    - "documentNumber: documentNumber is required"
+                    - "displayName: displayName is required"
+                    timestamp: 2026-06-22T10:30:00Z
+  /api/v1/users/{id}:
+    get:
+      tags:
+      - Users V1
+      summary: U2 - Consulta de usuario por identificador interno
+      description: Obtiene un usuario por su ID interno generado por MongoDB.
+      operationId: findById
+      parameters:
+      - name: id
+        in: path
+        description: Identificador interno del usuario
+        required: true
+        schema:
+          type: string
+        example: 665f1a2b3c4d5e6f7a8b9c0d
+      responses:
+        "200":
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponseV1"
+              examples:
+                Usuario activo:
+                  description: Usuario activo
+                  value:
+                    id: 665f1a2b3c4d5e6f7a8b9c0d
+                    documentType: DNI
+                    documentNumber: "12345678"
+                    displayName: John Doe
+                    email: john@example.com
+                    phone: "+541112345678"
+                    preferences:
+                      lang: es
+                    status: ACTIVE
+                    canLinkChannel: true
+                    createdAt: 2026-06-22T10:30:00Z
+                    updatedAt: 2026-06-22T10:30:00Z
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                No encontrado:
+                  description: No encontrado
+                  value:
+                    code: NOT_FOUND
+                    message: User not found with id 665f1a2b3c4d5e6f7a8b9c0d
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+    patch:
+      tags:
+      - Users V1
+      summary: U3 - Actualización de campos permitidos
+      description: "Actualiza parcialmente displayName, email, phone y preferences.\
+        \ Los campos documentType, documentNumber y status no son modificables."
+      operationId: update
+      parameters:
+      - name: id
+        in: path
+        description: Identificador interno del usuario
+        required: true
+        schema:
+          type: string
+        example: 665f1a2b3c4d5e6f7a8b9c0d
+      requestBody:
+        description: Campos mutables a actualizar (parcial)
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequestV1"
+            examples:
+              Update campos permitidos:
+                description: Update campos permitidos
+                value:
+                  displayName: Jane Doe
+                  email: jane@example.com
+                  phone: "+541198765432"
+                  preferences:
+                    lang: es
+                    notifications: true
+        required: true
+      responses:
+        "200":
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponseV1"
+              examples:
+                Usuario actualizado:
+                  description: Usuario actualizado
+                  value:
+                    id: 665f1a2b3c4d5e6f7a8b9c0d
+                    documentType: DNI
+                    documentNumber: "12345678"
+                    displayName: Jane Doe
+                    email: jane@example.com
+                    phone: "+541198765432"
+                    preferences:
+                      lang: es
+                      notifications: true
+                    status: ACTIVE
+                    canLinkChannel: true
+                    createdAt: 2026-06-22T10:30:00Z
+                    updatedAt: 2026-06-22T11:15:00Z
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                No encontrado:
+                  description: No encontrado
+                  value:
+                    code: NOT_FOUND
+                    message: User not found with id 665f1a2b3c4d5e6f7a8b9c0d
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+        "400":
+          description: Validación fallida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error de validación:
+                  description: Error de validación
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Validation failed
+                    details:
+                    - "documentNumber: documentNumber is required"
+                    - "displayName: displayName is required"
+                    timestamp: 2026-06-22T10:30:00Z
+  /api/v1/users/{id}/status:
+    patch:
+      tags:
+      - Users V1
+      summary: U4 - Cambio de estado operativo
+      description: "Cambia el estado del usuario. Transiciones permitidas: ACTIVE→\
+        SUSPENDED|SOFT_DELETED, SUSPENDED→ACTIVE|SOFT_DELETED. SOFT_DELETED es terminal\
+        \ (sin reactivación)."
+      operationId: changeStatus
+      parameters:
+      - name: id
+        in: path
+        description: Identificador interno del usuario
+        required: true
+        schema:
+          type: string
+        example: 665f1a2b3c4d5e6f7a8b9c0d
+      requestBody:
+        description: Nuevo estado operativo
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeUserStatusRequestV1"
+            examples:
+              Suspender usuario:
+                description: Suspender usuario
+                value:
+                  status: SUSPENDED
+              Baja lógica:
+                description: Baja lógica
+                value:
+                  status: SOFT_DELETED
+        required: true
+      responses:
+        "200":
+          description: Estado actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponseV1"
+              examples:
+                Usuario suspendido:
+                  description: Usuario suspendido
+                  value:
+                    id: 665f1a2b3c4d5e6f7a8b9c0d
+                    documentType: DNI
+                    documentNumber: "12345678"
+                    displayName: John Doe
+                    email: john@example.com
+                    phone: "+541112345678"
+                    preferences:
+                      lang: es
+                    status: SUSPENDED
+                    canLinkChannel: false
+                    createdAt: 2026-06-22T10:30:00Z
+                    updatedAt: 2026-06-22T12:00:00Z
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                No encontrado:
+                  description: No encontrado
+                  value:
+                    code: NOT_FOUND
+                    message: User not found with id 665f1a2b3c4d5e6f7a8b9c0d
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+        "400":
+          description: Transición de estado inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Transición inválida:
+                  description: Transición inválida
+                  value:
+                    code: BAD_REQUEST
+                    message: Transition from SOFT_DELETED to ACTIVE is not allowed
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+  /api/v1/users/{id}/audit:
+    get:
+      tags:
+      - Users V1
+      summary: Historial de auditoría paginado
+      description: Consulta el historial de auditoría de un usuario para soporte operativo.
+      operationId: getAuditHistory
+      parameters:
+      - name: id
+        in: path
+        description: Identificador interno del usuario
+        required: true
+        schema:
+          type: string
+        example: 665f1a2b3c4d5e6f7a8b9c0d
+      - name: pageable
+        in: query
+        required: true
+        schema:
+          $ref: "#/components/schemas/Pageable"
+      responses:
+        "200":
+          description: Historial de auditoría
+          content:
+            application/json:
+              examples:
+                Página de auditoría:
+                  description: Página de auditoría
+                  value:
+                    content:
+                    - id: audit-002
+                      userId: 665f1a2b3c4d5e6f7a8b9c0d
+                      action: STATUS_CHANGED
+                      previousStatus: ACTIVE
+                      newStatus: SUSPENDED
+                      changedFields: []
+                      performedAt: 2026-06-22T12:00:00Z
+                      result: SUCCESS
+                    - id: audit-001
+                      userId: 665f1a2b3c4d5e6f7a8b9c0d
+                      action: CREATED
+                      previousStatus: null
+                      newStatus: ACTIVE
+                      changedFields: []
+                      performedAt: 2026-06-22T10:30:00Z
+                      result: SUCCESS
+                    pageable:
+                      pageNumber: 0
+                      pageSize: 20
+                    totalElements: 2
+                    totalPages: 1
+                    last: true
+                    first: true
+                    size: 20
+                    number: 0
+                    numberOfElements: 2
+                    empty: false
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                No encontrado:
+                  description: No encontrado
+                  value:
+                    code: NOT_FOUND
+                    message: User not found with id 665f1a2b3c4d5e6f7a8b9c0d
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+  /api/v1/users/by-document:
+    get:
+      tags:
+      - Users V1
+      summary: U2 - Consulta de usuario por tipo y número de documento
+      description: Busca un usuario por la combinación única de tipo y número de documento.
+      operationId: findByDocument
+      parameters:
+      - name: documentType
+        in: query
+        description: Tipo de documento
+        required: true
+        schema:
+          type: string
+          enum:
+          - DNI
+          - LC
+          - LE
+          - PASSPORT
+          - CUIT
+        example: DNI
+      - name: documentNumber
+        in: query
+        description: Número de documento
+        required: true
+        schema:
+          type: string
+        example: 12345678
+      responses:
+        "200":
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponseV1"
+              examples:
+                Usuario activo:
+                  description: Usuario activo
+                  value:
+                    id: 665f1a2b3c4d5e6f7a8b9c0d
+                    documentType: DNI
+                    documentNumber: "12345678"
+                    displayName: John Doe
+                    email: john@example.com
+                    phone: "+541112345678"
+                    preferences:
+                      lang: es
+                    status: ACTIVE
+                    canLinkChannel: true
+                    createdAt: 2026-06-22T10:30:00Z
+                    updatedAt: 2026-06-22T10:30:00Z
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                No encontrado:
+                  description: No encontrado
+                  value:
+                    code: NOT_FOUND
+                    message: User not found with id 665f1a2b3c4d5e6f7a8b9c0d
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Error interno:
+                  description: Error interno
+                  value:
+                    code: INTERNAL_ERROR
+                    message: An unexpected error occurred
+                    details: []
+                    timestamp: 2026-06-22T10:30:00Z
+components:
+  schemas:
+    CreateUserRequestV1:
+      required:
+      - displayName
+      - documentNumber
+      - documentType
+      - email
+      - phone
+      type: object
+      properties:
+        documentType:
+          type: string
+          description: Tipo de documento de identidad
+          example: DNI
+          enum:
+          - DNI
+          - LC
+          - LE
+          - PASSPORT
+          - CUIT
+        documentNumber:
+          type: string
+          description: Número de documento (único por tipo)
+          example: "12345678"
+        displayName:
+          type: string
+          description: Nombre para mostrar del usuario
+          example: John Doe
+        email:
+          type: string
+          description: Correo electrónico del usuario
+          example: john@example.com
+        phone:
+          type: string
+          description: Teléfono de contacto en formato internacional
+          example: "+541112345678"
+        preferences:
+          type: object
+          additionalProperties:
+            type: object
+            description: Preferencias opcionales del usuario (clave-valor)
+            example:
+              lang: es
+          description: Preferencias opcionales del usuario (clave-valor)
+          example:
+            lang: es
+      description: Datos requeridos para alta de usuario bancario (U1)
+    UserResponseV1:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Identificador interno
+          example: 665f1a2b3c4d5e6f7a8b9c0d
+        documentType:
+          type: string
+          description: Tipo de documento
+          example: DNI
+          enum:
+          - DNI
+          - LC
+          - LE
+          - PASSPORT
+          - CUIT
+        documentNumber:
+          type: string
+          description: Número de documento
+          example: "12345678"
+        displayName:
+          type: string
+          description: Nombre para mostrar
+          example: John Doe
+        email:
+          type: string
+          description: Correo electrónico
+          example: john@example.com
+        phone:
+          type: string
+          description: Teléfono de contacto
+          example: "+541112345678"
+        preferences:
+          type: object
+          additionalProperties:
+            type: object
+            description: Preferencias del usuario
+            example:
+              lang: es
+          description: Preferencias del usuario
+          example:
+            lang: es
+        status:
+          type: string
+          description: Estado operativo actual
+          example: ACTIVE
+          enum:
+          - ACTIVE
+          - SUSPENDED
+          - SOFT_DELETED
+        canLinkChannel:
+          type: boolean
+          description: Indica si el usuario puede vincular canal (solo ACTIVE)
+          example: true
+        createdAt:
+          type: string
+          description: Fecha de creación
+          format: date-time
+          example: 2026-06-22T10:30:00Z
+        updatedAt:
+          type: string
+          description: Fecha de última actualización
+          format: date-time
+          example: 2026-06-22T10:30:00Z
+      description: Representación de un usuario bancario
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Código de error estandarizado
+          example: VALIDATION_ERROR
+          enum:
+          - NOT_FOUND
+          - VALIDATION_ERROR
+          - BAD_REQUEST
+          - INTERNAL_ERROR
+        message:
+          type: string
+          description: Descripción legible del error
+          example: Validation failed
+        details:
+          type: array
+          description: Detalles adicionales (ej. errores de campo en validación)
+          example:
+          - "documentNumber: documentNumber is required"
+          items:
+            type: string
+            description: Detalles adicionales (ej. errores de campo en validación)
+            example: "[\"documentNumber: documentNumber is required\"]"
+        timestamp:
+          type: string
+          description: Marca de tiempo ISO-8601
+          format: date-time
+          example: 2026-06-22T10:30:00Z
+      description: Contrato unificado de respuesta de error
+    UpdateUserRequestV1:
+      type: object
+      properties:
+        displayName:
+          type: string
+          description: Nombre para mostrar del usuario
+          example: Jane Doe
+        email:
+          type: string
+          description: Correo electrónico del usuario
+          example: jane@example.com
+        phone:
+          type: string
+          description: Teléfono de contacto
+          example: "+541198765432"
+        preferences:
+          type: object
+          additionalProperties:
+            type: object
+            description: Preferencias del usuario (clave-valor)
+            example:
+              lang: es
+              notifications: true
+          description: Preferencias del usuario (clave-valor)
+          example:
+            lang: es
+            notifications: true
+      description: Campos mutables para actualización parcial de usuario (U3)
+    ChangeUserStatusRequestV1:
+      required:
+      - status
+      type: object
+      properties:
+        status:
+          type: string
+          description: "Estado destino: ACTIVE, SUSPENDED o SOFT_DELETED"
+          example: SUSPENDED
+          enum:
+          - ACTIVE
+          - SUSPENDED
+          - SOFT_DELETED
+      description: Nuevo estado operativo solicitado para el usuario (U4)
+    Pageable:
+      type: object
+      properties:
+        page:
+          minimum: 0
+          type: integer
+          format: int32
+        size:
+          minimum: 1
+          type: integer
+          format: int32
+        sort:
+          type: array
+          items:
+            type: string

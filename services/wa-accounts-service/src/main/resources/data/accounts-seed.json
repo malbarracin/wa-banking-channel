@@ -1,0 +1,20 @@
+[
+  {
+    "bankUserId": "user-demo-001",
+    "alias": "Cuenta Sueldo",
+    "type": "CHECKING",
+    "currency": "ARS",
+    "availableBalance": 125000.50,
+    "ledgerBalance": 125000.50,
+    "status": "ACTIVE"
+  },
+  {
+    "bankUserId": "user-demo-001",
+    "alias": "Caja de Ahorro USD",
+    "type": "SAVINGS",
+    "currency": "USD",
+    "availableBalance": 1500.00,
+    "ledgerBalance": 1500.00,
+    "status": "ACTIVE"
+  }
+]

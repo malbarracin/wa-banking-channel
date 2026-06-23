@@ -1,0 +1,142 @@
+version: 1
+component: wa-auth-service
+session: h2-servicio-acceso-sesion
+spec:
+  title: "H2 — Servicio de Acceso y Sesión"
+  slug: h2-servicio-acceso-sesion
+artifact:
+  group_id: com.wa.banking
+  artifact_id: wa-auth-service
+  version: "0.0.1-SNAPSHOT"
+  base_package: com.wa.banking.auth
+pipeline:
+  epic_id: TASK-22
+  release_task: TASK-29
+  review_verdict: APPROVED
+  review_iteration: 1
+  completed_steps:
+    - validate
+    - plan
+    - scaffold
+    - build
+    - test
+    - docs
+    - review
+    - release
+artifacts:
+  - type: handoff
+    path: handoff.md
+    description: Guía de integración y prueba del componente
+  - type: dod
+    path: dod.md
+    description: Definition of Done y checklist quality gates
+  - type: stats
+    path: stats.md
+    description: Estadísticas de la corrida del pipeline
+  - type: openapi
+    path: openapi.yaml
+    description: Contrato REST OpenAPI 3.0.1 (snapshot /v3/api-docs.yaml)
+  - type: manifest
+    path: manifest.yaml
+    description: Índice del bundle de exportación
+provides:
+  - id: session-credentials-api-v1
+    kind: rest-api
+    base_path: /api/v1/sessions/credentials
+    port: 8082
+    openapi: openapi.yaml
+    operations:
+      - method: POST
+        path: /api/v1/sessions/credentials
+        flow: A1
+        operation_id: issue
+        summary: Emitir credencial tras verificación H3
+        consumer: h3-canal-whatsapp
+      - method: POST
+        path: /api/v1/sessions/credentials/validate
+        flow: validate
+        operation_id: validate
+        summary: Validar credencial para productos H4–H6
+        consumer: h4-h6-productos
+      - method: DELETE
+        path: /api/v1/sessions/credentials/{id}
+        flow: A3
+        operation_id: revoke
+        summary: Revocar inmediata (block/unlink H3)
+        consumer: h3-canal-whatsapp
+      - method: POST
+        path: /api/v1/sessions/credentials/{id}/renew
+        flow: A2
+        operation_id: renew
+        summary: Renovar TTL de credencial activa
+        consumer: canal
+      - method: POST
+        path: /api/v1/sessions/credentials/{id}/revoke
+        flow: A3
+        operation_id: revokeWithReason
+        summary: Revocar con motivo explícito (banco/riesgo)
+        consumer: banco-riesgo
+      - method: POST
+        path: /api/v1/sessions/credentials/revoke-by-user
+        flow: A3
+        operation_id: revokeByUser
+        summary: Revocar todas las credenciales activas de un usuario
+        consumer: admin
+      - method: GET
+        path: /api/v1/sessions/credentials/{id}
+        flow: query
+        operation_id: getStatus
+        summary: Consultar estado sin token
+        consumer: ops
+      - method: GET
+        path: /api/v1/sessions/credentials/{id}/audit
+        flow: audit
+        operation_id: getAuditHistory
+        summary: Historial paginado de auditoría
+        consumer: ops
+  - id: health-check
+    kind: actuator
+    path: /actuator/health
+    port: 8082
+  - id: openapi-live
+    kind: openapi-endpoint
+    port: 8082
+    paths:
+      json: /v3/api-docs
+      yaml: /v3/api-docs.yaml
+      ui: /swagger-ui/index.html
+consumers:
+  - component: h3-canal-whatsapp
+    port: 8081
+    integration:
+      base_url_property: integration.session.base-url
+      base_url_default: http://localhost:8082
+      stub_enabled_property: integration.session.stub-enabled
+      stub_enabled_integration: false
+    uses:
+      - session-credentials-api-v1
+    notes: >
+      POST issue con identityVerified=true (RN1) en complete-onboarding;
+      DELETE revoke en block/unlink. Desactivar stub para integración real.
+  - component: h4-h6-productos
+    uses:
+      - session-credentials-api-v1
+    notes: POST validate con credentialId + token antes de operaciones bancarias
+dependencies:
+  runtime:
+    - name: mongodb
+      version: "7.0"
+      uri_pattern: mongodb://localhost:27017/wa-auth
+  optional_upstream:
+    - component: h1-servicio-usuarios
+      port: 8080
+      property: integration.users.base-url
+      enabled_property: integration.users.enabled
+      default_enabled: false
+      notes: Validación opcional de bankUserId en emisión
+metrics:
+  endpoints: 8
+  tests: 40
+  coverage_line_ratio: 0.85
+  coverage_threshold: 0.70
+  verify_command: "./mvnw clean verify"

@@ -1,0 +1,19 @@
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/wa-auth-test
+
+integration:
+  users:
+    enabled: false
+    base-url: http://localhost:8080
+
+session:
+  credential:
+    ttl-hours: 24
+    pepper: test-pepper
+
+logging:
+  level:
+    root: WARN
+    com.wa.banking.auth: INFO

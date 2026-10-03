@@ -1,6 +1,7 @@
 package com.bank.users.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -22,14 +23,18 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bank.users.user.dto.AuditEventType;
+import com.bank.users.user.dto.AuditResult;
+import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.entity.AuditEvent;
 import com.bank.users.user.entity.DocumentType;
 import com.bank.users.user.entity.User;
 import com.bank.users.user.entity.UserStatus;
 import com.bank.users.user.repository.AuditEventRepository;
 import com.bank.users.user.repository.UserRepository;
+import com.bank.users.user.service.UserService;
 
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:userupdates;DB_CLOSE_DELAY=-1")
 @AutoConfigureMockMvc
@@ -50,6 +55,12 @@ class UserUpdateIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private UserService service;
+
+    @Autowired
+    private TransactionTemplate transactionTemplate;
 
     @AfterEach
     void cleanUp() {
@@ -160,6 +171,107 @@ class UserUpdateIntegrationTest {
 
         assertThat(row(user.getId())).isEqualTo(before);
         assertThat(auditRepository.findByUserIdOrderByOccurredAtDesc(user.getId())).isEmpty();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = UserStatus.class, names = {"ACTIVE", "SUSPENDED"})
+    @DisplayName("Cambiar solo displayName conserva email y persiste metadatos de auditoría sin PII")
+    void displayNameOnlyPersistsAuditMetadata(UserStatus userStatus) throws Exception {
+        // Given
+        User user = persist("name-only-" + userStatus, userStatus);
+        Map<String, Object> before = row(user.getId());
+
+        // When
+        mockMvc.perform(patch(URL, user.getId()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Tratamiento nuevo\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(user.getId()))
+                .andExpect(jsonPath("$.displayName").value("Tratamiento nuevo"))
+                .andExpect(jsonPath("$.email").value("juan@example.com"));
+
+        // Then
+        Map<String, Object> after = row(user.getId());
+        assertThat(after.get("DISPLAY_NAME")).isEqualTo("Tratamiento nuevo");
+        assertThat(after.get("UPDATED_AT")).isNotEqualTo(before.get("UPDATED_AT"));
+        for (String column : before.keySet()) {
+            if (!List.of("DISPLAY_NAME", "UPDATED_AT").contains(column)) {
+                assertThat(after.get(column)).as(column).isEqualTo(before.get(column));
+            }
+        }
+        assertThat(auditRepository.findByUserIdOrderByOccurredAtDesc(user.getId()))
+                .singleElement().satisfies(event -> {
+                    assertThat(event.getUserId()).isEqualTo(user.getId());
+                    assertThat(event.getEventType()).isEqualTo(AuditEventType.MODIFICACION_DATOS);
+                    assertThat(event.getModifiedFields()).isEqualTo("displayName");
+                    assertThat(event.getResult()).isEqualTo(AuditResult.OK);
+                    assertThat(event.getOccurredAt()).isNotNull();
+                    assertThat(event.getPreviousStatus()).isNull();
+                    assertThat(event.getNewStatus()).isNull();
+                    assertThat(event.getReason()).isNull();
+                });
+        assertThat(jdbc.queryForMap("select * from audit_events where user_id = ?", user.getId()).toString())
+                .doesNotContain("Tratamiento nuevo", "juan@example.com", "Juancho", user.getDocumentNumber());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = UserStatus.class, names = {"ACTIVE", "SUSPENDED"})
+    @DisplayName("Audita solo email cuando displayName se envía sin cambio efectivo")
+    void auditsOnlyEffectivelyChangedField(UserStatus userStatus) throws Exception {
+        // Given
+        User user = persist("effective-" + userStatus, userStatus);
+
+        // When
+        mockMvc.perform(patch(URL, user.getId()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Juancho\",\"email\":\"cambio@example.com\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("cambio@example.com"));
+
+        // Then
+        assertThat(row(user.getId()).get("EMAIL")).isEqualTo("cambio@example.com");
+        assertThat(auditRepository.findByUserIdOrderByOccurredAtDesc(user.getId()))
+                .singleElement().extracting(AuditEvent::getModifiedFields).isEqualTo("email");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"id", "documentType", "documentNumber", "firstName", "lastName",
+            "birthDate", "status", "createdAt", "updatedAt", "preferences", "unknownField"})
+    @DisplayName("Cada campo inmutable o desconocido se rechaza incluso con null y un cambio válido")
+    void rejectsEveryNonModifiableField(String field) throws Exception {
+        // Given
+        User user = persist("immutable-" + field, UserStatus.SUSPENDED);
+        Map<String, Object> before = row(user.getId());
+        String body = "{\"displayName\":\"No guardar\",\"" + field + "\":null}";
+
+        // When
+        mockMvc.perform(patch(URL, user.getId()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("campo no modificable por este servicio"));
+
+        // Then
+        assertThat(row(user.getId())).isEqualTo(before);
+        assertThat(auditRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("El rollback del caso de uso revierte tanto datos como auditoría ya escritos")
+    void rollsBackUserAndAuditTogether() {
+        // Given
+        User user = persist("rollback", UserStatus.ACTIVE);
+        Map<String, Object> before = row(user.getId());
+
+        // When
+        assertThatThrownBy(() -> transactionTemplate.executeWithoutResult(transaction -> {
+            service.update(user.getId(), new UpdateUserRequest("Cambio revertido", "rollback@example.com"));
+            auditRepository.flush();
+            assertThat(row(user.getId()).get("EMAIL")).isEqualTo("rollback@example.com");
+            assertThat(auditRepository.count()).isEqualTo(1);
+            throw new IllegalStateException("fallo posterior a la escritura");
+        })).isInstanceOf(IllegalStateException.class).hasMessage("fallo posterior a la escritura");
+
+        // Then
+        assertThat(row(user.getId())).isEqualTo(before);
+        assertThat(auditRepository.count()).isZero();
     }
 
     private Map<String, Object> row(Long id) {

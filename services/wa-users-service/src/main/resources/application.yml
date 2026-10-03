@@ -1,0 +1,35 @@
+# Configuración base (producción por defecto).
+# Datasource externo vía variables de entorno: DB_URL, DB_USER, DB_PASSWORD (sin credenciales en el repo).
+# Motor de BD / driver JDBC productivo y despliegue: a cargo de DevOps.
+#
+# Arranque sin BD de producción -> perfil "test" (H2 en memoria; usa el classpath de test,
+# donde viven H2 y src/test/resources/application-test.yml):
+#   ./mvnw spring-boot:test-run -Dspring-boot.run.profiles=test
+spring:
+  application:
+    name: wa-users-service
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  h2:
+    console:
+      enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  info:
+    env:
+      enabled: true
+
+info:
+  app:
+    name: wa-users-service
+    description: Servicio de Usuarios (H1)

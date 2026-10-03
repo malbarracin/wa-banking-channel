@@ -20,3 +20,6 @@ project.yaml
 backlog/
 packs/
 # <<< opensoma <<<
+
+# Build Maven (no versionar)
+target/

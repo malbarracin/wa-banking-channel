@@ -120,6 +120,49 @@ class UserCreationIntegrationTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"documentType", "documentNumber", "firstName", "lastName", "birthDate"})
+    @DisplayName("Un obligatorio null devuelve 400 sin persistir usuario ni auditoría")
+    void nullRequiredFieldIsRejected(String field) throws Exception {
+        // Given
+        ObjectNode request = payload("null-" + field);
+        request.putNull(field);
+
+        // When / Then
+        assertRejectedWithoutWrites(request, "VALIDATION_ERROR");
+    }
+
+    @Test
+    @DisplayName("El mismo número con distinto tipo permite dos usuarios con ids únicos y auditoría ALTA")
+    void sameNumberWithDifferentDocumentTypeIsAllowed() throws Exception {
+        // Given
+        String number = "composite-identity";
+        List<Long> ids = new ArrayList<>();
+        long rejectedBefore = rejectedCount();
+
+        // When
+        for (DocumentType type : List.of(DocumentType.DNI, DocumentType.PASAPORTE)) {
+            String response = mockMvc.perform(post(USERS).contentType(MediaType.APPLICATION_JSON)
+                            .content(payload(number).put("documentType", type.name()).toString()))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.status").value("ACTIVE"))
+                    .andReturn().getResponse().getContentAsString();
+            long id = objectMapper.readTree(response).get("id").asLong();
+            ids.add(id);
+
+            // Then
+            mockMvc.perform(get(USERS).param("documentType", type.name()).param("documentNumber", number))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(id));
+            assertThat(jdbc.queryForObject("select count(*) from audit_events where user_id = ? "
+                    + "and event_type = 'ALTA' and result = 'OK'", Long.class, id)).isEqualTo(1L);
+        }
+        assertThat(ids).doesNotHaveDuplicates().allSatisfy(id -> assertThat(id).isPositive());
+        assertThat(jdbc.queryForObject("select count(*) from users where document_number = ?",
+                Long.class, number)).isEqualTo(2L);
+        assertThat(rejectedCount()).isEqualTo(rejectedBefore);
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"documentNumber", "firstName", "lastName"})
     @DisplayName("Un obligatorio en blanco devuelve 400 VALIDATION_ERROR sin crear registro")
     void blankRequiredFieldIsRejected(String field) throws Exception {

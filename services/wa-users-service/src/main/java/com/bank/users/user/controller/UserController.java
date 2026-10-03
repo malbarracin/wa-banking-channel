@@ -2,6 +2,7 @@ package com.bank.users.user.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.bank.users.user.dto.CreateUserRequest;
 import com.bank.users.user.dto.EligibilityResponse;
+import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserResponse;
 import com.bank.users.user.entity.DocumentType;
 import com.bank.users.user.service.UserService;
@@ -23,7 +25,8 @@ import lombok.RequiredArgsConstructor;
 /**
  * API REST del Servicio de Usuarios ({@code /api/v1/users}).
  *
- * <p>El alta crea clientes {@code ACTIVE} sin duplicar documentos. Las consultas no requieren JWT en H1, no modifican datos y devuelven la misma respuesta para
+ * <p>El alta crea clientes {@code ACTIVE} sin duplicar documentos; la actualización solo admite
+ * {@code displayName} y {@code email}. Las consultas no requieren JWT en H1, no modifican datos y devuelven la misma respuesta para
  * todos los actores. Los errores siguen el contrato uniforme ({@code GlobalExceptionHandler}).</p>
  */
 @RestController
@@ -71,6 +74,20 @@ public class UserController {
     public UserResponse getByDocument(@RequestParam DocumentType documentType,
             @RequestParam @NotBlank String documentNumber) {
         return userService.findByDocument(documentType, documentNumber);
+    }
+
+    /**
+     * Actualiza los datos permitidos de un usuario ({@code ACTIVE} o {@code SUSPENDED}).
+     *
+     * @param id      identificador interno (numérico; otro formato → 400 {@code BAD_REQUEST})
+     * @param request {@code displayName} y/o {@code email} (al menos uno; email con formato válido)
+     * @return 200 con {@link UserResponse} actualizado; 400 {@code VALIDATION_ERROR} si el payload está
+     *         vacío o el email es inválido; 400 {@code BAD_REQUEST} «campo no modificable por este
+     *         servicio» si incluye cualquier otro campo; 404 {@code NOT_FOUND} si no existe
+     */
+    @PatchMapping("/{id}")
+    public UserResponse update(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest request) {
+        return userService.update(id, request);
     }
 
     /**

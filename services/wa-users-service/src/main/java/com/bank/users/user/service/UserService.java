@@ -1,18 +1,24 @@
 package com.bank.users.user.service;
 
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.bank.users.exception.InvalidStateTransitionException;
 import com.bank.users.exception.UserAlreadyExistsException;
 import com.bank.users.exception.UserNotFoundException;
 import com.bank.users.user.dto.AuditRejectionReason;
+import com.bank.users.user.dto.ChangeStatusRequest;
 import com.bank.users.user.dto.CreateUserRequest;
 import com.bank.users.user.dto.EligibilityResponse;
 import com.bank.users.user.dto.UpdateUserRequest;
@@ -37,6 +43,9 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>La actualización solo modifica los datos permitidos ({@code displayName}, {@code email}) y registra
  * {@code MODIFICACION_DATOS} con los nombres de los campos efectivamente cambiados.</p>
+ *
+ * <p>El cambio de estado aplica la tabla de transiciones de OQ-5 ({@code INACTIVE} es terminal) y registra
+ * {@code CAMBIO_ESTADO} con el estado anterior y el nuevo.</p>
  */
 @Slf4j
 @Service
@@ -45,6 +54,9 @@ public class UserService {
 
     private static final String FIELD_DISPLAY_NAME = "displayName";
     private static final String FIELD_EMAIL = "email";
+
+    /** Transiciones de estado permitidas (OQ-5). {@code INACTIVE} no tiene salidas: es terminal. */
+    private static final Map<UserStatus, Set<UserStatus>> ALLOWED_TRANSITIONS = allowedTransitions();
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
@@ -153,6 +165,46 @@ public class UserService {
         auditEventService.recordDataModified(saved.getId(), modifiedFields);
         log.info("User data modified: id={} fields={}", saved.getId(), modifiedFields);
         return userMapper.toResponse(saved);
+    }
+
+    /**
+     * Cambia el estado operativo de un usuario según la tabla de transiciones permitidas:
+     * {@code ACTIVE → SUSPENDED | INACTIVE} y {@code SUSPENDED → ACTIVE | INACTIVE}.
+     *
+     * <p>El cambio exitoso renueva {@code updatedAt} y registra {@code CAMBIO_ESTADO} (estado anterior y
+     * nuevo) en la misma transacción. La baja lógica conserva el registro, su documento único y su
+     * historial. Una transición rechazada no modifica el usuario ni genera evento.</p>
+     *
+     * @param id      identificador interno
+     * @param request estado destino ya validado ({@code reason} es informativo y no se persiste)
+     * @return proyección pública del usuario con el nuevo estado
+     * @throws UserNotFoundException            si no existe
+     * @throws InvalidStateTransitionException si el usuario está en baja lógica (estado terminal) o la
+     *                                          transición no está permitida (incluido el mismo estado)
+     */
+    @Transactional
+    public UserResponse changeStatus(Long id, ChangeStatusRequest request) {
+        User user = getUser(id);
+        UserStatus previous = user.getStatus();
+        UserStatus target = request.status();
+        if (previous == UserStatus.INACTIVE) {
+            throw InvalidStateTransitionException.terminalState();
+        }
+        if (!ALLOWED_TRANSITIONS.getOrDefault(previous, Set.of()).contains(target)) {
+            throw InvalidStateTransitionException.notAllowed(previous, target);
+        }
+        user.setStatus(target);
+        User saved = userRepository.saveAndFlush(user);
+        auditEventService.recordStatusChanged(saved.getId(), previous, target);
+        log.info("User status changed: id={} {} -> {}", saved.getId(), previous, target);
+        return userMapper.toResponse(saved);
+    }
+
+    private static Map<UserStatus, Set<UserStatus>> allowedTransitions() {
+        Map<UserStatus, Set<UserStatus>> transitions = new EnumMap<>(UserStatus.class);
+        transitions.put(UserStatus.ACTIVE, EnumSet.of(UserStatus.SUSPENDED, UserStatus.INACTIVE));
+        transitions.put(UserStatus.SUSPENDED, EnumSet.of(UserStatus.ACTIVE, UserStatus.INACTIVE));
+        return transitions;
     }
 
     private static List<String> modifiedFields(User user, UpdateUserRequest request) {

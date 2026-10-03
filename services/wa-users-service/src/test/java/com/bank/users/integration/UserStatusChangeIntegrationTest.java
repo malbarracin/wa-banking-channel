@@ -1,8 +1,10 @@
 package com.bank.users.integration;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -21,18 +23,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.bank.users.user.dto.AuditEventType;
 import com.bank.users.user.dto.AuditResult;
+import com.bank.users.user.dto.ChangeStatusRequest;
 import com.bank.users.user.entity.AuditEvent;
 import com.bank.users.user.entity.DocumentType;
 import com.bank.users.user.entity.User;
 import com.bank.users.user.entity.UserStatus;
 import com.bank.users.user.repository.AuditEventRepository;
 import com.bank.users.user.repository.UserRepository;
+import com.bank.users.user.service.UserService;
 
 @SpringBootTest(properties = "spring.datasource.url=jdbc:h2:mem:userstatus;DB_CLOSE_DELAY=-1")
 @AutoConfigureMockMvc
@@ -54,6 +59,9 @@ class UserStatusChangeIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private UserService service;
 
     @AfterEach
     void cleanUp() {
@@ -192,6 +200,130 @@ class UserStatusChangeIntegrationTest {
 
     private Map<String, Object> row(Long id) {
         return jdbc.queryForMap("select * from users where id = ?", id);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"ACTIVE, SUSPENDED", "ACTIVE, INACTIVE", "SUSPENDED, ACTIVE", "SUSPENDED, INACTIVE"})
+    @DisplayName("Las cuatro transiciones aceptan reason omitido y conservan todos los datos del cliente")
+    void transitionWithoutReason(UserStatus from, UserStatus to) throws Exception {
+        // Given
+        User user = persist("optional-" + from + "-" + to, from);
+        Map<String, Object> before = row(user.getId());
+
+        // When
+        mockMvc.perform(patch(URL, user.getId()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"" + to + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(to.name()));
+
+        // Then
+        Map<String, Object> after = row(user.getId());
+        for (String column : before.keySet()) {
+            if (!List.of("STATUS", "UPDATED_AT").contains(column)) {
+                assertThat(after.get(column)).as(column).isEqualTo(before.get(column));
+            }
+        }
+        assertThat(auditRepository.findByUserIdOrderByOccurredAtDesc(user.getId()))
+                .singleElement().satisfies(event -> {
+                    assertThat(event.getUserId()).isEqualTo(user.getId());
+                    assertThat(event.getPreviousStatus()).isEqualTo(from);
+                    assertThat(event.getNewStatus()).isEqualTo(to);
+                    assertThat(event.getReason()).isNull();
+                });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{}", "{\"status\":null}"})
+    @DisplayName("Estado ausente o null conserva la fila completa y no genera auditoría")
+    void invalidStatusPreservesWholeRecord(String body) throws Exception {
+        // Given
+        User user = persist("null-status", UserStatus.ACTIVE);
+        Map<String, Object> before = row(user.getId());
+
+        // When
+        mockMvc.perform(patch(URL, user.getId()).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details[0].field").value("status"));
+
+        // Then
+        assertThat(row(user.getId())).isEqualTo(before);
+        assertThat(auditRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("reason de 256 caracteres se rechaza sin modificar ni auditar")
+    void oversizedReasonIsRejected() throws Exception {
+        // Given
+        User user = persist("long-reason", UserStatus.ACTIVE);
+        Map<String, Object> before = row(user.getId());
+
+        // When
+        mockMvc.perform(patch(URL, user.getId()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"SUSPENDED\",\"reason\":\"" + "x".repeat(256) + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details[0].field").value("reason"));
+
+        // Then
+        assertThat(row(user.getId())).isEqualTo(before);
+        assertThat(auditRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("La baja lógica impide reutilizar el documento y mantiene el historial de estado")
+    void inactiveDocumentCannotBeReused() throws Exception {
+        // Given
+        User user = persist("reserved-document", UserStatus.ACTIVE);
+        mockMvc.perform(patch(URL, user.getId()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"INACTIVE\"}"))
+                .andExpect(status().isOk());
+        Map<String, Object> before = row(user.getId());
+        Long auditId = auditRepository.findByUserIdOrderByOccurredAtDesc(user.getId()).get(0).getId();
+
+        // When
+        mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content("""
+                {"documentType":"DNI","documentNumber":"reserved-document",
+                 "firstName":"Ana","lastName":"Perez","birthDate":"1990-05-20"}
+                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"));
+
+        // Then
+        assertThat(repository.count()).isEqualTo(1);
+        assertThat(row(user.getId())).isEqualTo(before);
+        assertThat(auditRepository.findByUserIdOrderByOccurredAtDesc(user.getId()))
+                .singleElement().extracting(AuditEvent::getId).isEqualTo(auditId);
+        mockMvc.perform(get("/api/v1/users").param("documentType", "DNI")
+                        .param("documentNumber", "reserved-document"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(user.getId()))
+                .andExpect(jsonPath("$.status").value("INACTIVE"));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"ACTIVE, SUSPENDED", "ACTIVE, INACTIVE", "SUSPENDED, ACTIVE", "SUSPENDED, INACTIVE"})
+    @DisplayName("Un fallo al persistir auditoría revierte estado y updatedAt en cada transición")
+    void auditFailureRollsBackStatus(UserStatus from, UserStatus to) throws Exception {
+        // Given: provocar un fallo real de persistencia sin reemplazar el servicio transaccional
+        User user = persist("audit-failure", from);
+        Map<String, Object> before = row(user.getId());
+        jdbc.execute("alter table audit_events add constraint reject_status_event "
+                + "check (event_type <> 'CAMBIO_ESTADO')");
+        try {
+            // When
+            assertThatThrownBy(() -> service.changeStatus(user.getId(), new ChangeStatusRequest(to, null)))
+                    .isInstanceOf(DataIntegrityViolationException.class);
+
+            // Then: consultar fuera de la transacción del endpoint
+            assertThat(row(user.getId())).isEqualTo(before);
+            assertThat(auditRepository.count()).isZero();
+            mockMvc.perform(get(ELIGIBLE_URL, user.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.eligible").value(from == UserStatus.ACTIVE));
+        } finally {
+            jdbc.execute("alter table audit_events drop constraint reject_status_event");
+        }
     }
 
     private User persist(String documentNumber, UserStatus userStatus) {

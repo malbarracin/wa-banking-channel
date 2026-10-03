@@ -1,6 +1,9 @@
 package com.bank.users.user.service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -12,6 +15,7 @@ import com.bank.users.exception.UserNotFoundException;
 import com.bank.users.user.dto.AuditRejectionReason;
 import com.bank.users.user.dto.CreateUserRequest;
 import com.bank.users.user.dto.EligibilityResponse;
+import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserResponse;
 import com.bank.users.user.entity.DocumentType;
 import com.bank.users.user.entity.User;
@@ -30,11 +34,17 @@ import lombok.extern.slf4j.Slf4j;
  *
  * <p>Las consultas son de solo lectura: no modifican datos ni estado, devuelven la misma proyección
  * para todos los actores H1 y no exponen auditoría, historial ni datos de canal.</p>
+ *
+ * <p>La actualización solo modifica los datos permitidos ({@code displayName}, {@code email}) y registra
+ * {@code MODIFICACION_DATOS} con los nombres de los campos efectivamente cambiados.</p>
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
+
+    private static final String FIELD_DISPLAY_NAME = "displayName";
+    private static final String FIELD_EMAIL = "email";
 
     private final UserRepository userRepository;
     private final UserMapper userMapper;
@@ -115,6 +125,45 @@ public class UserService {
     public EligibilityResponse checkEligibility(Long id) {
         User user = getUser(id);
         return new EligibilityResponse(user.getId(), user.getStatus() == UserStatus.ACTIVE);
+    }
+
+    /**
+     * Actualiza los datos permitidos ({@code displayName}, {@code email}) de un usuario, en cualquier
+     * estado del ciclo de vida. Los campos omitidos conservan su valor; la identidad legal, el estado y
+     * {@code createdAt} no se modifican.
+     *
+     * <p>Si hay cambios efectivos se renueva {@code updatedAt} y se registra {@code MODIFICACION_DATOS}
+     * en la misma transacción, solo con los nombres de los campos cambiados (nunca sus valores). Si los
+     * valores informados coinciden con los actuales, no hay modificación ni evento de auditoría.</p>
+     *
+     * @param id      identificador interno
+     * @param request datos permitidos ya validados (al menos uno informado)
+     * @return proyección pública del usuario con los cambios guardados
+     * @throws UserNotFoundException si no existe
+     */
+    @Transactional
+    public UserResponse update(Long id, UpdateUserRequest request) {
+        User user = getUser(id);
+        List<String> modifiedFields = modifiedFields(user, request);
+        if (modifiedFields.isEmpty()) {
+            return userMapper.toResponse(user);
+        }
+        userMapper.updateEntity(request, user);
+        User saved = userRepository.saveAndFlush(user);
+        auditEventService.recordDataModified(saved.getId(), modifiedFields);
+        log.info("User data modified: id={} fields={}", saved.getId(), modifiedFields);
+        return userMapper.toResponse(saved);
+    }
+
+    private static List<String> modifiedFields(User user, UpdateUserRequest request) {
+        List<String> fields = new ArrayList<>();
+        if (request.getDisplayName() != null && !Objects.equals(request.getDisplayName(), user.getDisplayName())) {
+            fields.add(FIELD_DISPLAY_NAME);
+        }
+        if (request.getEmail() != null && !Objects.equals(request.getEmail(), user.getEmail())) {
+            fields.add(FIELD_EMAIL);
+        }
+        return fields;
     }
 
     private UserAlreadyExistsException rejectDuplicate() {

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.bank.users.user.dto.ChangeStatusRequest;
 import com.bank.users.user.dto.CreateUserRequest;
 import com.bank.users.user.dto.EligibilityResponse;
 import com.bank.users.user.dto.UpdateUserRequest;
@@ -26,7 +27,8 @@ import lombok.RequiredArgsConstructor;
  * API REST del Servicio de Usuarios ({@code /api/v1/users}).
  *
  * <p>El alta crea clientes {@code ACTIVE} sin duplicar documentos; la actualización solo admite
- * {@code displayName} y {@code email}. Las consultas no requieren JWT en H1, no modifican datos y devuelven la misma respuesta para
+ * {@code displayName} y {@code email}; el cambio de estado sigue la tabla de transiciones (baja lógica
+ * terminal). Las consultas no requieren JWT en H1, no modifican datos y devuelven la misma respuesta para
  * todos los actores. Los errores siguen el contrato uniforme ({@code GlobalExceptionHandler}).</p>
  */
 @RestController
@@ -88,6 +90,21 @@ public class UserController {
     @PatchMapping("/{id}")
     public UserResponse update(@PathVariable Long id, @Valid @RequestBody UpdateUserRequest request) {
         return userService.update(id, request);
+    }
+
+    /**
+     * Cambia el estado operativo del usuario (suspensión, reactivación, baja lógica). No requiere JWT en H1.
+     *
+     * @param id      identificador interno (numérico; otro formato → 400 {@code BAD_REQUEST})
+     * @param request {@code status} destino obligatorio y {@code reason} opcional
+     * @return 200 con {@link UserResponse} en el nuevo estado; 400 {@code VALIDATION_ERROR} si falta
+     *         {@code status}; 400 {@code BAD_REQUEST} si el estado es desconocido, la transición no está
+     *         permitida (incluido el mismo estado) o el usuario está en baja lógica («la baja lógica es un
+     *         estado terminal»); 404 {@code NOT_FOUND} si no existe
+     */
+    @PatchMapping("/{id}/status")
+    public UserResponse changeStatus(@PathVariable Long id, @Valid @RequestBody ChangeStatusRequest request) {
+        return userService.changeStatus(id, request);
     }
 
     /**

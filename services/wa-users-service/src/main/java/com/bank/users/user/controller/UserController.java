@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bank.users.user.dto.CreateUserRequest;
+import com.bank.users.user.dto.ChangeUserStatusRequest;
 import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserResponse;
 import com.bank.users.user.service.UserService;
@@ -28,6 +29,12 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
     private final UserService service;
+
+    /** Cambia el estado según la matriz H1 y devuelve 200 con el usuario persistido y su aptitud de canal. */
+    @PatchMapping("/{id}/status")
+    public UserResponse changeStatus(@PathVariable UUID id, @Valid @RequestBody ChangeUserStatusRequest request) {
+        return service.changeStatus(id, request);
+    }
 
     /** Actualiza los campos permitidos presentes y devuelve 200 con los datos persistidos. */
     @PatchMapping("/{id}")

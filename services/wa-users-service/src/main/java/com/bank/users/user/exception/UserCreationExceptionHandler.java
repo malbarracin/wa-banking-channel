@@ -1,5 +1,8 @@
 package com.bank.users.user.exception;
 
+import java.util.Map;
+import java.util.UUID;
+
 import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.core.Ordered;
@@ -10,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.HandlerMapping;
 
 import com.bank.users.audit.entity.AuditAction;
 import com.bank.users.audit.entity.AuditDetail;
@@ -21,7 +25,7 @@ import com.bank.users.user.controller.UserController;
 
 import lombok.RequiredArgsConstructor;
 
-/** Audita los rechazos de alta anteriores al service reutilizando el contrato global de errores. */
+/** Audita rechazos anteriores al service y reutiliza el contrato global de errores de usuarios. */
 @RestControllerAdvice(assignableTypes = UserController.class)
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RequiredArgsConstructor
@@ -36,6 +40,7 @@ public class UserCreationExceptionHandler {
         if ("POST".equals(request.getMethod())) {
             auditService.recordRejection(null, AuditAction.ALTA, AuditDetail.DATOS_INVALIDOS);
         }
+        recordInvalidStatus(request);
         return globalHandler.handleValidation(exception);
     }
 
@@ -45,7 +50,13 @@ public class UserCreationExceptionHandler {
         if ("POST".equals(request.getMethod())) {
             auditService.recordRejection(null, AuditAction.ALTA, AuditDetail.DATOS_INVALIDOS);
         }
+        recordInvalidStatus(request);
         return globalHandler.handleBadRequest(exception);
+    }
+
+    @ExceptionHandler(InvalidUserStatusTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidTransition(InvalidUserStatusTransitionException exception) {
+        return globalHandler.handleConflict(exception);
     }
 
     @ExceptionHandler(DuplicateUserException.class)
@@ -69,5 +80,14 @@ public class UserCreationExceptionHandler {
             auditService.recordRejection(null, AuditAction.ALTA, AuditDetail.OPERACION_FALLIDA);
         }
         return globalHandler.handleUnexpected(exception);
+    }
+
+    private void recordInvalidStatus(HttpServletRequest request) {
+        Object pattern = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+        if ("PATCH".equals(request.getMethod()) && "/api/v1/users/{id}/status".equals(pattern)
+                && request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE) instanceof Map<?, ?> variables
+                && variables.get("id") instanceof String id) {
+            auditService.recordRejection(UUID.fromString(id), AuditAction.CAMBIO_ESTADO, AuditDetail.DATOS_INVALIDOS);
+        }
     }
 }

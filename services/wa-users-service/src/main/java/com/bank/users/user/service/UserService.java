@@ -16,9 +16,12 @@ import com.bank.users.audit.entity.AuditAction;
 import com.bank.users.audit.entity.AuditDetail;
 import com.bank.users.audit.service.AuditService;
 import com.bank.users.user.dto.CreateUserRequest;
+import com.bank.users.user.dto.ChangeUserStatusRequest;
 import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserResponse;
 import com.bank.users.user.entity.User;
+import com.bank.users.user.entity.UserStatus;
+import com.bank.users.user.exception.InvalidUserStatusTransitionException;
 import com.bank.users.user.exception.DuplicateUserException;
 import com.bank.users.user.exception.UserNotFoundException;
 import com.bank.users.user.mapper.UserMapper;
@@ -35,6 +38,29 @@ public class UserService {
     private final UserMapper mapper;
     private final AuditService auditService;
     private final PlatformTransactionManager transactionManager;
+
+    /** Persiste el estado y su auditoría; los rechazos se confirman en una transacción independiente. */
+    @Transactional
+    public UserResponse changeStatus(UUID id, ChangeUserStatusRequest request) {
+        User user = repository.findById(id).orElseThrow(() -> {
+            auditService.recordRejection(id, AuditAction.CAMBIO_ESTADO, AuditDetail.USUARIO_NO_ENCONTRADO);
+            return new UserNotFoundException();
+        });
+        UserStatus target = request.status();
+        boolean allowed = switch (user.getStatus()) {
+            case ACTIVO -> target == UserStatus.SUSPENDIDO || target == UserStatus.BAJA_LOGICA;
+            case SUSPENDIDO -> target == UserStatus.ACTIVO || target == UserStatus.BAJA_LOGICA;
+            case BAJA_LOGICA -> false;
+        };
+        if (!allowed) {
+            auditService.recordRejection(id, AuditAction.CAMBIO_ESTADO, AuditDetail.TRANSICION_NO_PERMITIDA);
+            throw new InvalidUserStatusTransitionException();
+        }
+        user.setStatus(target);
+        repository.flush();
+        auditService.recordSuccess(id, AuditAction.CAMBIO_ESTADO);
+        return mapper.toResponse(user, auditService.findHistory(id));
+    }
 
     /** Confirma los cambios permitidos y su auditoría en una misma transacción. */
     @Transactional

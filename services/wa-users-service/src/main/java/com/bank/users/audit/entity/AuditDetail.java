@@ -3,6 +3,7 @@ package com.bank.users.audit.entity;
 /** Motivos cerrados: nunca incorporar documentos, contactos ni datos del canal. */
 public enum AuditDetail {
     OPERACION_CONFIRMADA,
+    OPERACION_FALLIDA,
     DATOS_INVALIDOS,
     USUARIO_DUPLICADO,
     USUARIO_NO_ENCONTRADO,

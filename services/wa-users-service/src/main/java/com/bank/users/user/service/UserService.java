@@ -2,12 +2,14 @@ package com.bank.users.user.service;
 
 import java.util.Objects;
 import java.util.Locale;
+import java.util.UUID;
 
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bank.users.audit.entity.AuditAction;
@@ -17,6 +19,7 @@ import com.bank.users.user.dto.CreateUserRequest;
 import com.bank.users.user.dto.UserResponse;
 import com.bank.users.user.entity.User;
 import com.bank.users.user.exception.DuplicateUserException;
+import com.bank.users.user.exception.UserNotFoundException;
 import com.bank.users.user.mapper.UserMapper;
 import com.bank.users.user.repository.UserRepository;
 
@@ -31,6 +34,13 @@ public class UserService {
     private final UserMapper mapper;
     private final AuditService auditService;
     private final PlatformTransactionManager transactionManager;
+
+    /** Consulta por UUID con historial resumido, también para usuarios suspendidos o en baja lógica. */
+    @Transactional(readOnly = true)
+    public UserResponse findById(UUID id) {
+        User user = repository.findById(id).orElseThrow(UserNotFoundException::new);
+        return mapper.toResponse(user, auditService.findHistory(id));
+    }
 
     /** Crea un usuario activo y confirma usuario y auditoría OK en la misma transacción. */
     public UserResponse create(CreateUserRequest request) {

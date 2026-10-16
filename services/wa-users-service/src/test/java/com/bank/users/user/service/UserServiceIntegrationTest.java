@@ -17,6 +17,7 @@ import org.springframework.test.util.AopTestUtils;
 import com.bank.users.audit.entity.AuditAction;
 import com.bank.users.audit.service.AuditService;
 import com.bank.users.user.dto.CreateUserRequest;
+import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.exception.DuplicateUserException;
 import com.bank.users.user.repository.UserRepository;
 
@@ -112,5 +113,21 @@ class UserServiceIntegrationTest {
                 select count(*) from audit_entries where user_id is null and action = 'ALTA'
                 and result = 'RECHAZADO' and occurred_at is not null
                 """, Long.class);
+    }
+
+    @Test
+    @DisplayName("Si falla la auditoría de actualización se revierten los cambios persistidos")
+    void revierteActualizacionSiFallaAuditoria() {
+        UUID id = service.create(new CreateUserRequest("DNI", UUID.randomUUID().toString(),
+                "Cliente", null, null)).id();
+        AuditService auditTarget = AopTestUtils.getUltimateTargetObject(auditService);
+        doThrow(new IllegalStateException("Falla simulada"))
+                .when(auditTarget).recordSuccess(id, AuditAction.ACTUALIZACION);
+
+        assertThatExceptionOfType(IllegalStateException.class).isThrownBy(() -> service.update(id,
+                UpdateUserRequest.fromJson(java.util.Map.of("nombreTratamiento", "Nuevo"))));
+
+        assertThat(repository.findById(id).orElseThrow().getNombreTratamiento()).isEqualTo("Cliente");
+        assertThat(auditService.findHistory(id)).noneMatch(entry -> entry.getAction() == AuditAction.ACTUALIZACION);
     }
 }

@@ -31,14 +31,20 @@ public class UserCreationExceptionHandler {
     private final GlobalExceptionHandler globalHandler;
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
-        auditService.recordRejection(null, AuditAction.ALTA, AuditDetail.DATOS_INVALIDOS);
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException exception,
+            HttpServletRequest request) {
+        if ("POST".equals(request.getMethod())) {
+            auditService.recordRejection(null, AuditAction.ALTA, AuditDetail.DATOS_INVALIDOS);
+        }
         return globalHandler.handleValidation(exception);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException exception) {
-        auditService.recordRejection(null, AuditAction.ALTA, AuditDetail.DATOS_INVALIDOS);
+    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException exception,
+            HttpServletRequest request) {
+        if ("POST".equals(request.getMethod())) {
+            auditService.recordRejection(null, AuditAction.ALTA, AuditDetail.DATOS_INVALIDOS);
+        }
         return globalHandler.handleBadRequest(exception);
     }
 

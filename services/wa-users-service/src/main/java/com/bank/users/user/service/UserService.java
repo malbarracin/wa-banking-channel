@@ -16,6 +16,7 @@ import com.bank.users.audit.entity.AuditAction;
 import com.bank.users.audit.entity.AuditDetail;
 import com.bank.users.audit.service.AuditService;
 import com.bank.users.user.dto.CreateUserRequest;
+import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserResponse;
 import com.bank.users.user.entity.User;
 import com.bank.users.user.exception.DuplicateUserException;
@@ -25,7 +26,7 @@ import com.bank.users.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
-/** Alta con unicidad y auditoría; el rechazo se registra después del rollback de la operación. */
+/** Casos de uso de usuarios con persistencia y auditoría transaccional. */
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -34,6 +35,16 @@ public class UserService {
     private final UserMapper mapper;
     private final AuditService auditService;
     private final PlatformTransactionManager transactionManager;
+
+    /** Confirma los cambios permitidos y su auditoría en una misma transacción. */
+    @Transactional
+    public UserResponse update(UUID id, UpdateUserRequest request) {
+        User user = repository.findById(id).orElseThrow(UserNotFoundException::new);
+        mapper.update(request, user);
+        repository.flush();
+        auditService.recordSuccess(id, AuditAction.ACTUALIZACION);
+        return mapper.toResponse(user, auditService.findHistory(id));
+    }
 
     /** Consulta por UUID con historial resumido, también para usuarios suspendidos o en baja lógica. */
     @Transactional(readOnly = true)

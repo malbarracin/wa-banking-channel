@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,18 +15,25 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bank.users.user.dto.CreateUserRequest;
+import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserResponse;
 import com.bank.users.user.service.UserService;
 
 import lombok.RequiredArgsConstructor;
 
-/** API de alta y consulta de clientes bancarios para H1. */
+/** API de alta, consulta y actualización de clientes bancarios para H1. */
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserService service;
+
+    /** Actualiza los campos permitidos presentes y devuelve 200 con los datos persistidos. */
+    @PatchMapping("/{id}")
+    public UserResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request) {
+        return service.update(id, request);
+    }
 
     /** Devuelve los datos autorizados del piloto y hasta 20 eventos recientes sin datos de canal. */
     @GetMapping("/{id}")

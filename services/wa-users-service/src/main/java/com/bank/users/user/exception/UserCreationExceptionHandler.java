@@ -1,5 +1,7 @@
 package com.bank.users.user.exception;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.ResponseEntity;
@@ -7,12 +9,14 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import com.bank.users.audit.entity.AuditAction;
 import com.bank.users.audit.entity.AuditDetail;
 import com.bank.users.audit.service.AuditService;
 import com.bank.users.exception.ErrorResponse;
 import com.bank.users.exception.GlobalExceptionHandler;
+import com.bank.users.exception.NotFoundException;
 import com.bank.users.user.controller.UserController;
 
 import lombok.RequiredArgsConstructor;
@@ -43,9 +47,21 @@ public class UserCreationExceptionHandler {
         return globalHandler.handleConflict(exception);
     }
 
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(NotFoundException exception) {
+        return globalHandler.handleNotFound(exception);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleBadRequest(MethodArgumentTypeMismatchException exception) {
+        return globalHandler.handleBadRequest(exception);
+    }
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleUnexpected(Exception exception) {
-        auditService.recordRejection(null, AuditAction.ALTA, AuditDetail.OPERACION_FALLIDA);
+    public ResponseEntity<ErrorResponse> handleUnexpected(Exception exception, HttpServletRequest request) {
+        if ("POST".equals(request.getMethod())) {
+            auditService.recordRejection(null, AuditAction.ALTA, AuditDetail.OPERACION_FALLIDA);
+        }
         return globalHandler.handleUnexpected(exception);
     }
 }

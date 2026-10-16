@@ -14,11 +14,19 @@ import com.bank.users.user.dto.CreateUserRequest;
 import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserAuditResponse;
 import com.bank.users.user.dto.UserResponse;
+import com.bank.users.user.dto.UserChannelEligibilityResponse;
 import com.bank.users.user.entity.User;
 
 /** Mapeo de los contratos HTTP sin exponer la entidad persistente. */
 @Mapper(componentModel = "spring", collectionMappingStrategy = CollectionMappingStrategy.TARGET_IMMUTABLE)
 public interface UserMapper {
+
+    @BeanMapping(ignoreByDefault = true)
+    @Mapping(target = "userId", source = "id")
+    @Mapping(target = "status", source = "status")
+    @Mapping(target = "aptoParaVinculoCanal",
+            expression = "java(user.getStatus() == com.bank.users.user.entity.UserStatus.ACTIVO)")
+    UserChannelEligibilityResponse toChannelEligibilityResponse(User user);
 
     @BeanMapping(ignoreByDefault = true)
     @Mapping(target = "tipoDocumento", source = "tipoDocumento")

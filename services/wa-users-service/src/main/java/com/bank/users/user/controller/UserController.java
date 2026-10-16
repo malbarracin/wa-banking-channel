@@ -18,6 +18,7 @@ import com.bank.users.user.dto.CreateUserRequest;
 import com.bank.users.user.dto.ChangeUserStatusRequest;
 import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserResponse;
+import com.bank.users.user.dto.UserChannelEligibilityResponse;
 import com.bank.users.user.service.UserService;
 
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,12 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
     private final UserService service;
+
+    /** Devuelve únicamente identidad interna, estado y aptitud de vínculo, sin datos personales ni historial. */
+    @GetMapping("/{id}/channel-eligibility")
+    public UserChannelEligibilityResponse channelEligibility(@PathVariable UUID id) {
+        return service.channelEligibility(id);
+    }
 
     /** Cambia el estado según la matriz H1 y devuelve 200 con el usuario persistido y su aptitud de canal. */
     @PatchMapping("/{id}/status")

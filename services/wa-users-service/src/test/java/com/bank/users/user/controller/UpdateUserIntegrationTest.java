@@ -153,6 +153,51 @@ class UpdateUserIntegrationTest {
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"{\"email\":\"nuevo@example.com\",\"nombreTratamiento\":42}",
+            "{\"nombreTratamiento\":\"Cambio\",\"email\":true}",
+            "{\"nombreTratamiento\":\"Cambio\",\"telefonoContacto\":[]}",
+            "{\"nombreTratamiento\":\"Cambio\",\"preferencias\":\"es\"}",
+            "{\"nombreTratamiento\":\"Cambio\",\"preferencias\":{\"idioma\":null}}"})
+    @DisplayName("Los tipos incorrectos rechazan también los cambios válidos del mismo body")
+    void rechazaTiposInvalidosSinAplicarCambios(String body) throws Exception {
+        User user = createUser();
+        long auditBefore = jdbc.queryForObject("select count(*) from audit_entries", Long.class);
+
+        mockMvc.perform(patch("/api/v1/users/{id}", user.getId()).contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.message").isString())
+                .andExpect(jsonPath("$.timestamp").isString())
+                .andExpect(jsonPath("$.trace").doesNotExist());
+
+        assertThat(repository.findById(user.getId()).orElseThrow())
+                .usingRecursiveComparison().isEqualTo(user);
+        assertThat(jdbc.queryForObject("select count(*) from audit_entries", Long.class)).isEqualTo(auditBefore);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"nombreTratamiento", "email", "telefonoContacto"})
+    @DisplayName("El límite de longitud se valida antes de persistir cualquier cambio")
+    void rechazaTextoQueSuperaElLimiteSinMutacion(String field) throws Exception {
+        User user = createUser();
+        String value = "a".repeat(256) + "@example.com";
+        long auditBefore = jdbc.queryForObject("select count(*) from audit_entries", Long.class);
+
+        mockMvc.perform(patch("/api/v1/users/{id}", user.getId()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"preferencias\":{\"idioma\":\"en\"},\"" + field + "\":\"" + value + "\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details[*].field").value(org.hamcrest.Matchers.hasItem(field)))
+                .andExpect(jsonPath("$.timestamp").isString());
+
+        assertThat(repository.findById(user.getId()).orElseThrow())
+                .usingRecursiveComparison().isEqualTo(user);
+        assertThat(jdbc.queryForObject("select count(*) from audit_entries", Long.class)).isEqualTo(auditBefore);
+    }
+
     private User createUser() {
         User user = new User();
         user.setTipoDocumento("DNI");

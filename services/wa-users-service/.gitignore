@@ -20,3 +20,17 @@ project.yaml
 backlog/
 packs/
 # <<< opensoma <<<
+target/
+.maven-local/
+.env
+.env.*
+!.env.example
+*.log
+*.pem
+*.key
+*.p12
+*.jks
+.idea/
+*.iml
+.vscode/
+.DS_Store

@@ -97,7 +97,14 @@ class UserRepositoryTest {
     void actualizaEstadoYTimestamp() {
         User usuario = repository.saveAndFlush(nuevoUsuario("DNI", "12345678"));
         Instant creacion = usuario.getCreatedAt();
-        Instant actualizacion = usuario.getUpdatedAt();
+        Instant actualizacion = creacion.minusSeconds(60);
+        // Una fecha previa evita depender de la resolución del reloj entre dos flush consecutivos.
+        entityManager.getEntityManager().createNativeQuery("update users set updated_at = :fecha where id = :id")
+                .setParameter("fecha", actualizacion)
+                .setParameter("id", usuario.getId())
+                .executeUpdate();
+        entityManager.clear();
+        usuario = repository.findById(usuario.getId()).orElseThrow();
         usuario.setStatus(UserStatus.SUSPENDIDO);
 
         repository.flush();

@@ -1,0 +1,623 @@
+{
+  "info": {
+    "name": "wa-users-service",
+    "description": "API H1 de usuarios bancarios del canal WhatsApp. Orden sugerido: 1. Flujo feliz → 2. Errores → 3. Salud. Sin JWT ni secretos.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "userId", "value": "" },
+    { "key": "docNumber", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Flujo feliz",
+      "description": "Alta → consulta → actualización → cambio de estado → aptitud de canal.",
+      "item": [
+        {
+          "name": "Alta de usuario (mínimo)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('docNumber', String(Date.now()).slice(-8));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('estado ACTIVO y apto', () => {",
+                  "  pm.expect(body.status).to.eql('ACTIVO');",
+                  "  pm.expect(body.aptoParaVinculoCanal).to.eql(true);",
+                  "  pm.expect(body.id).to.be.a('string');",
+                  "});",
+                  "pm.collectionVariables.set('userId', body.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoDocumento\": \"DNI\",\n  \"numeroDocumento\": \"{{docNumber}}\",\n  \"nombreTratamiento\": \"Ana Pérez\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "Crea usuario ACTIVO. Unicidad por tipo+número de documento. 201, 400, 409."
+          },
+          "response": [
+            {
+              "name": "201 - creado",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tipoDocumento\": \"DNI\",\n  \"numeroDocumento\": \"30111222\",\n  \"nombreTratamiento\": \"Ana Pérez\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"tipoDocumento\": \"DNI\",\n  \"numeroDocumento\": \"30111222\",\n  \"nombreTratamiento\": \"Ana Pérez\",\n  \"email\": null,\n  \"telefonoContacto\": null,\n  \"preferencias\": {},\n  \"status\": \"ACTIVO\",\n  \"aptoParaVinculoCanal\": true,\n  \"createdAt\": \"2026-10-15T12:00:00Z\",\n  \"updatedAt\": \"2026-10-15T12:00:00Z\",\n  \"historialResumido\": []\n}"
+            }
+          ]
+        },
+        {
+          "name": "Consultar usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('incluye historial', () => pm.expect(body.historialResumido).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}"]
+            },
+            "description": "Consulta por UUID con historial resumido (hasta 20). 200, 400, 404."
+          },
+          "response": [
+            {
+              "name": "200 - encontrado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "a1b2c3d4-e5f6-7890-abcd-ef1234567890"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"tipoDocumento\": \"DNI\",\n  \"numeroDocumento\": \"30111222\",\n  \"nombreTratamiento\": \"Ana Pérez\",\n  \"email\": \"ana.perez@example.com\",\n  \"telefonoContacto\": \"+5491112345678\",\n  \"preferencias\": {\"idioma\": \"es\"},\n  \"status\": \"ACTIVO\",\n  \"aptoParaVinculoCanal\": true,\n  \"createdAt\": \"2026-10-15T12:00:00Z\",\n  \"updatedAt\": \"2026-10-15T12:00:00Z\",\n  \"historialResumido\": [\n    {\n      \"occurredAt\": \"2026-10-15T12:00:00Z\",\n      \"action\": \"ALTA\",\n      \"result\": \"OK\",\n      \"detail\": \"OPERACION_CONFIRMADA\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Actualizar datos permitidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('email actualizado', () => pm.expect(body.email).to.eql('ana.perez@example.com'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombreTratamiento\": \"Ana Pérez\",\n  \"email\": \"ana.perez@example.com\",\n  \"telefonoContacto\": \"+5491112345678\",\n  \"preferencias\": {\"idioma\": \"es\"}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}"]
+            },
+            "description": "Solo campos permitidos. 200, 400, 404."
+          },
+          "response": [
+            {
+              "name": "200 - actualizado",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nombreTratamiento\": \"Ana Pérez\",\n  \"email\": \"ana.perez@example.com\",\n  \"telefonoContacto\": \"+5491112345678\",\n  \"preferencias\": {\"idioma\": \"es\"}\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "a1b2c3d4-e5f6-7890-abcd-ef1234567890"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"tipoDocumento\": \"DNI\",\n  \"numeroDocumento\": \"30111222\",\n  \"nombreTratamiento\": \"Ana Pérez\",\n  \"email\": \"ana.perez@example.com\",\n  \"telefonoContacto\": \"+5491112345678\",\n  \"preferencias\": {\"idioma\": \"es\"},\n  \"status\": \"ACTIVO\",\n  \"aptoParaVinculoCanal\": true,\n  \"createdAt\": \"2026-10-15T12:00:00Z\",\n  \"updatedAt\": \"2026-10-15T12:00:00Z\",\n  \"historialResumido\": [\n    {\n      \"occurredAt\": \"2026-10-15T12:00:00Z\",\n      \"action\": \"ACTUALIZACION\",\n      \"result\": \"OK\",\n      \"detail\": \"OPERACION_CONFIRMADA\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Cambiar estado a SUSPENDIDO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('suspendido no apto', () => {",
+                  "  pm.expect(body.status).to.eql('SUSPENDIDO');",
+                  "  pm.expect(body.aptoParaVinculoCanal).to.eql(false);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SUSPENDIDO\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}", "status"]
+            },
+            "description": "Matriz H1: ACTIVO↔SUSPENDIDO; ACTIVO|SUSPENDIDO→BAJA_LOGICA. 200, 400, 404, 409."
+          },
+          "response": [
+            {
+              "name": "200 - suspendido",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"status\": \"SUSPENDIDO\"\n}" },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "status"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"tipoDocumento\": \"DNI\",\n  \"numeroDocumento\": \"30111222\",\n  \"nombreTratamiento\": \"Ana Pérez\",\n  \"email\": \"ana.perez@example.com\",\n  \"telefonoContacto\": \"+5491112345678\",\n  \"preferencias\": {\"idioma\": \"es\"},\n  \"status\": \"SUSPENDIDO\",\n  \"aptoParaVinculoCanal\": false,\n  \"createdAt\": \"2026-10-15T12:00:00Z\",\n  \"updatedAt\": \"2026-10-15T12:05:00Z\",\n  \"historialResumido\": [\n    {\n      \"occurredAt\": \"2026-10-15T12:05:00Z\",\n      \"action\": \"CAMBIO_ESTADO\",\n      \"result\": \"OK\",\n      \"detail\": \"OPERACION_CONFIRMADA\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Consultar aptitud de canal",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('no apto si suspendido', () => pm.expect(body.aptoParaVinculoCanal).to.eql(false));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/channel-eligibility",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}", "channel-eligibility"]
+            },
+            "description": "Contrato mínimo para H3: userId, status, aptoParaVinculoCanal. 200, 400, 404."
+          },
+          "response": [
+            {
+              "name": "200 - no apto",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890/channel-eligibility",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "channel-eligibility"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"userId\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"status\": \"SUSPENDIDO\",\n  \"aptoParaVinculoCanal\": false\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Errores",
+      "description": "Casos reales del contrato uniforme de errores.",
+      "item": [
+        {
+          "name": "Alta — validación (400 VALIDATION_ERROR)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 VALIDATION_ERROR', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "Body vacío: faltan campos obligatorios."
+          },
+          "response": [
+            {
+              "name": "400 - validación",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{}" },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"La solicitud tiene datos inválidos\",\n  \"details\": [\n    {\"field\": \"tipoDocumento\", \"message\": \"El campo tiene un valor inválido\"},\n    {\"field\": \"numeroDocumento\", \"message\": \"El campo tiene un valor inválido\"},\n    {\"field\": \"nombreTratamiento\", \"message\": \"El campo tiene un valor inválido\"}\n  ],\n  \"timestamp\": \"2026-10-15T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Alta — documento duplicado (409 CONFLICT)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const doc = pm.collectionVariables.get('docNumber') || String(Date.now()).slice(-8);",
+                  "pm.collectionVariables.set('dupDoc', doc);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 CONFLICT', () => {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().code).to.eql('CONFLICT');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoDocumento\": \"DNI\",\n  \"numeroDocumento\": \"{{dupDoc}}\",\n  \"nombreTratamiento\": \"Ana Pérez\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "Reutiliza el documento del alta del flujo feliz. Ejecutar tras el alta."
+          },
+          "response": [
+            {
+              "name": "409 - conflicto",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tipoDocumento\": \"DNI\",\n  \"numeroDocumento\": \"30111222\",\n  \"nombreTratamiento\": \"Ana Pérez\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users"]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"La operación entra en conflicto con el estado actual\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-15T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Consulta — no encontrado (404 NOT_FOUND)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 NOT_FOUND', () => {",
+                  "  pm.response.to.have.status(404);",
+                  "  pm.expect(pm.response.json().code).to.eql('NOT_FOUND');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/00000000-0000-0000-0000-000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "00000000-0000-0000-0000-000000000000"]
+            },
+            "description": "UUID inexistente."
+          },
+          "response": [
+            {
+              "name": "404 - no encontrado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/00000000-0000-0000-0000-000000000000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "00000000-0000-0000-0000-000000000000"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"NOT_FOUND\",\n  \"message\": \"El recurso solicitado no existe\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-15T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Cambio de estado — transición inválida (409)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Requiere userId en BAJA_LOGICA o intentar BAJA_LOGICA→ACTIVO.",
+                  "// Tras flujo feliz el usuario está SUSPENDIDO: BAJA_LOGICA es válida.",
+                  "// Este pedido fuerza conflicto pidiendo ACTIVO desde BAJA_LOGICA si se preparó así;",
+                  "// con usuario SUSPENDIDO, pedir un status ilegible vía body inválido no aplica.",
+                  "// Pedido: mismo status SUSPENDIDO→SUSPENDIDO (no permitido por la matriz)."
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 CONFLICT', () => {",
+                  "  pm.response.to.have.status(409);",
+                  "  pm.expect(pm.response.json().code).to.eql('CONFLICT');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SUSPENDIDO\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}", "status"]
+            },
+            "description": "Tras el flujo feliz el usuario está SUSPENDIDO; pedir SUSPENDIDO otra vez no está en la matriz (solo ACTIVO o BAJA_LOGICA)."
+          },
+          "response": [
+            {
+              "name": "409 - transición no permitida",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"status\": \"SUSPENDIDO\"\n}" },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "status"]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"La operación entra en conflicto con el estado actual\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-15T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Actualización — campos no permitidos (400 BAD_REQUEST)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 BAD_REQUEST', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().code).to.eql('BAD_REQUEST');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"domicilioLegal\": \"Calle Falsa 123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{userId}}"]
+            },
+            "description": "Datos legales sensibles no son actualizables en H1."
+          },
+          "response": [
+            {
+              "name": "400 - bad request",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"domicilioLegal\": \"Calle Falsa 123\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "a1b2c3d4-e5f6-7890-abcd-ef1234567890"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"La solicitud no es válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-15T12:00:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Salud",
+      "item": [
+        {
+          "name": "Actuator health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Salud del servicio."
+          },
+          "response": [
+            {
+              "name": "200 - up",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/actuator/health",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["actuator", "health"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/vnd.spring-boot.actuator.v3+json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"status\": \"UP\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

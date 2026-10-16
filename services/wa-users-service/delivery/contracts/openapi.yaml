@@ -1,0 +1,698 @@
+openapi: 3.1.0
+info:
+  title: Servicio de usuarios
+  description: "Registro de usuarios bancarios del canal WhatsApp (H1). Alta, consulta,\
+    \ actualización de datos permitidos, cambio de estado y aptitud de vínculo para\
+    \ consumidores (H3). Sin autenticación JWT, sin Kafka y sin gestión de WhatsApp\
+    \ en este hito."
+  version: 0.1.0-SNAPSHOT
+servers:
+- url: http://localhost:8080
+  description: Local
+tags:
+- name: Usuarios
+  description: "Alta, consulta, actualización y estado de usuarios bancarios (H1)"
+paths:
+  /api/v1/users:
+    post:
+      tags:
+      - Usuarios
+      summary: Dar de alta un usuario
+      description: "Crea un usuario en estado ACTIVO con aptitud de vínculo verdadera.\
+        \ Obligatorio: tipoDocumento, numeroDocumento, nombreTratamiento. Contacto\
+        \ opcional. El par documental no puede repetirse."
+      operationId: create
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+            examples:
+              Minimo:
+                summary: Alta con datos mínimos
+                description: Minimo
+                value:
+                  tipoDocumento: DNI
+                  numeroDocumento: "30111222"
+                  nombreTratamiento: Ana Pérez
+              ConContacto:
+                summary: Alta con contacto
+                description: ConContacto
+                value:
+                  tipoDocumento: DNI
+                  numeroDocumento: "30111222"
+                  nombreTratamiento: Ana Pérez
+                  email: ana.perez@example.com
+                  telefonoContacto: "+5491112345678"
+        required: true
+      responses:
+        "201":
+          description: Usuario creado
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+              examples:
+                Creado:
+                  description: Creado
+                  value:
+                    id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    tipoDocumento: DNI
+                    numeroDocumento: "30111222"
+                    nombreTratamiento: Ana Pérez
+                    email: null
+                    telefonoContacto: null
+                    preferencias: {}
+                    status: ACTIVO
+                    aptoParaVinculoCanal: true
+                    createdAt: 2026-10-15T12:00:00Z
+                    updatedAt: 2026-10-15T12:00:00Z
+                    historialResumido: []
+        "400":
+          description: Datos inválidos o JSON ilegible
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Validacion:
+                  $ref: "#/components/examples/ValidationError"
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "409":
+          description: Documento ya registrado
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                ConflictDuplicate:
+                  $ref: "#/components/examples/ConflictDuplicate"
+        "500":
+          description: Error interno
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/users/{id}:
+    get:
+      tags:
+      - Usuarios
+      summary: Consultar usuario por id
+      description: "Devuelve los datos autorizados del piloto, el estado, la aptitud\
+        \ de canal y hasta 20 eventos recientes de auditoría sin datos de canal ni\
+        \ PII en el detalle."
+      operationId: findById
+      parameters:
+      - name: id
+        in: path
+        description: Identificador interno del usuario
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+      responses:
+        "200":
+          description: Usuario encontrado
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+              example:
+                id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                tipoDocumento: DNI
+                numeroDocumento: "30111222"
+                nombreTratamiento: Ana Pérez
+                email: ana.perez@example.com
+                telefonoContacto: "+5491112345678"
+                preferencias:
+                  idioma: es
+                status: ACTIVO
+                aptoParaVinculoCanal: true
+                createdAt: 2026-10-15T12:00:00Z
+                updatedAt: 2026-10-15T12:00:00Z
+                historialResumido:
+                - occurredAt: 2026-10-15T12:00:00Z
+                  action: ALTA
+                  result: OK
+                  detail: OPERACION_CONFIRMADA
+        "400":
+          description: UUID inválido
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "404":
+          description: Usuario no encontrado
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "500":
+          description: Error interno
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+    patch:
+      tags:
+      - Usuarios
+      summary: Actualizar datos permitidos
+      description: "Acepta solo nombreTratamiento, email, telefonoContacto y preferencias.\
+        \ Campos omitidos se conservan; null explícito o campos ajenos (p. ej. datos\
+        \ legales) se rechazan. Audita ACTUALIZACION OK."
+      operationId: update
+      parameters:
+      - name: id
+        in: path
+        description: Identificador interno del usuario
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+            examples:
+              ContactoYPreferencias:
+                description: ContactoYPreferencias
+                value:
+                  nombreTratamiento: Ana Pérez
+                  email: ana.perez@example.com
+                  telefonoContacto: "+5491112345678"
+                  preferencias:
+                    idioma: es
+        required: true
+      responses:
+        "200":
+          description: Usuario actualizado
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+              example:
+                id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                tipoDocumento: DNI
+                numeroDocumento: "30111222"
+                nombreTratamiento: Ana Pérez
+                email: ana.perez@example.com
+                telefonoContacto: "+5491112345678"
+                preferencias:
+                  idioma: es
+                status: ACTIVO
+                aptoParaVinculoCanal: true
+                createdAt: 2026-10-15T12:00:00Z
+                updatedAt: 2026-10-15T12:00:00Z
+                historialResumido:
+                - occurredAt: 2026-10-15T12:00:00Z
+                  action: ALTA
+                  result: OK
+                  detail: OPERACION_CONFIRMADA
+        "400":
+          description: Datos o campos no permitidos
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Validacion:
+                  $ref: "#/components/examples/ValidationError"
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "404":
+          description: Usuario no encontrado
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "500":
+          description: Error interno
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/users/{id}/status:
+    patch:
+      tags:
+      - Usuarios
+      summary: Cambiar estado operativo
+      description: "Aplica la matriz H1: ACTIVO↔SUSPENDIDO; ACTIVO|SUSPENDIDO→BAJA_LOGICA.\
+        \ Desde BAJA_LOGICA no se reactiva en este hito. Audita OK o RECHAZADO."
+      operationId: changeStatus
+      parameters:
+      - name: id
+        in: path
+        description: Identificador interno del usuario
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeUserStatusRequest"
+            examples:
+              Suspender:
+                summary: ACTIVO → SUSPENDIDO
+                description: Suspender
+                value:
+                  status: SUSPENDIDO
+              Reactivar:
+                summary: SUSPENDIDO → ACTIVO
+                description: Reactivar
+                value:
+                  status: ACTIVO
+              BajaLogica:
+                summary: → BAJA_LOGICA
+                description: BajaLogica
+                value:
+                  status: BAJA_LOGICA
+        required: true
+      responses:
+        "200":
+          description: Estado actualizado
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+              examples:
+                Suspendido:
+                  description: Suspendido
+                  value:
+                    id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    tipoDocumento: DNI
+                    numeroDocumento: "30111222"
+                    nombreTratamiento: Ana Pérez
+                    email: ana.perez@example.com
+                    telefonoContacto: "+5491112345678"
+                    preferencias:
+                      idioma: es
+                    status: SUSPENDIDO
+                    aptoParaVinculoCanal: false
+                    createdAt: 2026-10-15T12:00:00Z
+                    updatedAt: 2026-10-15T12:05:00Z
+                    historialResumido:
+                    - occurredAt: 2026-10-15T12:05:00Z
+                      action: CAMBIO_ESTADO
+                      result: OK
+                      detail: OPERACION_CONFIRMADA
+        "400":
+          description: Body o estado inválido
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Validacion:
+                  $ref: "#/components/examples/ValidationError"
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "404":
+          description: Usuario no encontrado
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "409":
+          description: Transición no permitida
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                ConflictTransition:
+                  $ref: "#/components/examples/ConflictTransition"
+        "500":
+          description: Error interno
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/users/{id}/channel-eligibility:
+    get:
+      tags:
+      - Usuarios
+      summary: Consultar aptitud de vínculo de canal
+      description: "Devuelve identidad interna, estado y si el usuario puede iniciar\
+        \ un nuevo vínculo de canal. Solo ACTIVO es apto. Pensado para servicios consumidores\
+        \ (H3)."
+      operationId: channelEligibility
+      parameters:
+      - name: id
+        in: path
+        description: Identificador interno del usuario
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+      responses:
+        "200":
+          description: Aptitud evaluada
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserChannelEligibilityResponse"
+              examples:
+                ActivoApto:
+                  description: ActivoApto
+                  value:
+                    userId: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                    status: ACTIVO
+                    aptoParaVinculoCanal: true
+        "400":
+          description: UUID inválido
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "404":
+          description: Usuario no encontrado
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "500":
+          description: Error interno
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+components:
+  schemas:
+    CreateUserRequest:
+      type: object
+      description: Solicitud de alta de usuario bancario
+      properties:
+        tipoDocumento:
+          type: string
+          description: Tipo de documento de identidad
+          example: DNI
+          maxLength: 255
+          minLength: 0
+        numeroDocumento:
+          type: string
+          description: Número de documento; único junto con el tipo
+          example: "30111222"
+          maxLength: 255
+          minLength: 0
+        nombreTratamiento:
+          type: string
+          description: Nombre para tratamiento comercial
+          example: Ana Pérez
+          maxLength: 255
+          minLength: 0
+        email:
+          type: string
+          format: email
+          description: Correo de contacto opcional
+          example: ana.perez@example.com
+          maxLength: 255
+          minLength: 0
+        telefonoContacto:
+          type: string
+          description: Teléfono de contacto opcional; no es vínculo WhatsApp
+          example: "+5491112345678"
+          maxLength: 255
+          minLength: 0
+      required:
+      - nombreTratamiento
+      - numeroDocumento
+      - tipoDocumento
+    UserAuditResponse:
+      type: object
+      description: Evento de auditoría resumido sin PII ni datos de canal
+      properties:
+        occurredAt:
+          type: string
+          format: date-time
+          description: Momento del evento en UTC ISO-8601
+          example: 2026-10-15T12:00:00Z
+        action:
+          type: string
+          description: Acción auditada
+          enum:
+          - ALTA
+          - ACTUALIZACION
+          - CAMBIO_ESTADO
+          example: ALTA
+        result:
+          type: string
+          description: Resultado de la operación
+          enum:
+          - OK
+          - RECHAZADO
+          example: OK
+        detail:
+          type: string
+          description: Motivo controlado sin PII
+          example: OPERACION_CONFIRMADA
+    UserResponse:
+      type: object
+      description: Representación autorizada del usuario bancario
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador interno UUID
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        tipoDocumento:
+          type: string
+          description: Tipo de documento
+          example: DNI
+        numeroDocumento:
+          type: string
+          description: Número de documento
+          example: "30111222"
+        nombreTratamiento:
+          type: string
+          description: Nombre para tratamiento
+          example: Ana Pérez
+        email:
+          type: string
+          description: Correo de contacto
+          example: ana.perez@example.com
+        telefonoContacto:
+          type: string
+          description: Teléfono de contacto
+          example: "+5491112345678"
+        preferencias:
+          type: object
+          additionalProperties: {}
+          description: Preferencias generales no sensibles
+          example:
+            idioma: es
+        status:
+          type: string
+          description: Estado operativo
+          enum:
+          - ACTIVO
+          - SUSPENDIDO
+          - BAJA_LOGICA
+          example: ACTIVO
+        aptoParaVinculoCanal:
+          type: boolean
+          description: True solo si status es ACTIVO
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Alta en UTC ISO-8601
+          example: 2026-10-15T12:00:00Z
+        updatedAt:
+          type: string
+          format: date-time
+          description: Última modificación en UTC ISO-8601
+          example: 2026-10-15T12:00:00Z
+        historialResumido:
+          type: array
+          description: Hasta 20 eventos recientes de auditoría sin PII de canal
+          items:
+            $ref: "#/components/schemas/UserAuditResponse"
+    ErrorResponse:
+      type: object
+      description: Error HTTP uniforme de la API
+      properties:
+        code:
+          type: string
+          description: Código estable del contrato
+          enum:
+          - VALIDATION_ERROR
+          - BAD_REQUEST
+          - NOT_FOUND
+          - CONFLICT
+          - INTERNAL_ERROR
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Mensaje público sin datos sensibles
+          example: La solicitud tiene datos inválidos
+        details:
+          type: array
+          description: Detalle por campo; lista vacía si no aplica
+          items:
+            $ref: "#/components/schemas/FieldError"
+        timestamp:
+          type: string
+          format: date-time
+          description: Instante UTC ISO-8601
+          example: 2026-10-15T12:00:00Z
+    FieldError:
+      type: object
+      description: Detalle de validación por campo
+      properties:
+        field:
+          type: string
+          description: Nombre del campo
+          example: tipoDocumento
+        message:
+          type: string
+          description: Motivo público sin el valor rechazado
+          example: El campo tiene un valor inválido
+    UpdateUserRequest:
+      type: object
+      description: Actualización parcial de campos permitidos
+      properties:
+        nombreTratamiento:
+          type: string
+          description: Nombre para tratamiento; omitir para conservar
+          example: Ana Pérez
+          maxLength: 255
+          minLength: 0
+          pattern: (?s).*\S.*
+        email:
+          type: string
+          format: email
+          description: Correo de contacto; omitir para conservar
+          example: ana.perez@example.com
+          maxLength: 255
+          minLength: 0
+        telefonoContacto:
+          type: string
+          description: Teléfono de contacto; omitir para conservar
+          example: "+5491112345678"
+          maxLength: 255
+          minLength: 0
+        preferencias:
+          type: object
+          additionalProperties: {}
+          description: Preferencias generales no sensibles; reemplaza el mapa completo
+          example:
+            idioma: es
+    ChangeUserStatusRequest:
+      type: object
+      description: Solicitud de cambio de estado operativo
+      properties:
+        status:
+          type: string
+          description: Nuevo estado operativo
+          enum:
+          - ACTIVO
+          - SUSPENDIDO
+          - BAJA_LOGICA
+          example: SUSPENDIDO
+      required:
+      - status
+    UserChannelEligibilityResponse:
+      type: object
+      description: Aptitud de vínculo de canal para servicios consumidores (H3)
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Identificador interno del usuario
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        status:
+          type: string
+          description: Estado operativo actual
+          enum:
+          - ACTIVO
+          - SUSPENDIDO
+          - BAJA_LOGICA
+          example: ACTIVO
+        aptoParaVinculoCanal:
+          type: boolean
+          description: True únicamente si el usuario está ACTIVO
+          example: true
+  examples:
+    ValidationError:
+      value:
+        code: VALIDATION_ERROR
+        message: La solicitud tiene datos inválidos
+        details:
+        - field: tipoDocumento
+          message: El campo tiene un valor inválido
+        - field: numeroDocumento
+          message: El campo tiene un valor inválido
+        - field: nombreTratamiento
+          message: El campo tiene un valor inválido
+        timestamp: 2026-10-15T12:00:00Z
+    BadRequest:
+      value:
+        code: BAD_REQUEST
+        message: La solicitud no es válida
+        details: []
+        timestamp: 2026-10-15T12:00:00Z
+    NotFound:
+      value:
+        code: NOT_FOUND
+        message: El recurso solicitado no existe
+        details: []
+        timestamp: 2026-10-15T12:00:00Z
+    ConflictDuplicate:
+      value:
+        code: CONFLICT
+        message: La operación entra en conflicto con el estado actual
+        details: []
+        timestamp: 2026-10-15T12:00:00Z
+    ConflictTransition:
+      value:
+        code: CONFLICT
+        message: La operación entra en conflicto con el estado actual
+        details: []
+        timestamp: 2026-10-15T12:00:00Z
+    InternalError:
+      value:
+        code: INTERNAL_ERROR
+        message: Error interno
+        details: []
+        timestamp: 2026-10-15T12:00:00Z

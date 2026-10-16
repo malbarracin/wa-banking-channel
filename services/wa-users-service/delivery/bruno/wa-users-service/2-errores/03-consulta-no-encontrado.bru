@@ -1,0 +1,19 @@
+meta {
+  name: Consulta — no encontrado (404 NOT_FOUND)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/00000000-0000-0000-0000-000000000000
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+}
+
+docs {
+  UUID inexistente. code=NOT_FOUND.
+}

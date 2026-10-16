@@ -1,0 +1,10 @@
+name: CD template (no deployment)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  instructions:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Template manual. Configurar cluster, Secret y environment protegido antes de habilitar un deploy. Ver delivery/devops-local.md.'

@@ -1,0 +1,29 @@
+meta {
+  name: Cambiar estado a SUSPENDIDO
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/{{userId}}/status
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "status": "SUSPENDIDO"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Matriz H1: ACTIVO↔SUSPENDIDO; ACTIVO|SUSPENDIDO→BAJA_LOGICA. 200, 400, 404, 409.
+}

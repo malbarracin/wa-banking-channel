@@ -1,0 +1,29 @@
+meta {
+  name: Cambio de estado — transición inválida (409)
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/{{userId}}/status
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "status": "SUSPENDIDO"
+  }
+}
+
+assert {
+  res.status: eq 409
+}
+
+docs {
+  Tras el flujo feliz el usuario está SUSPENDIDO; pedir SUSPENDIDO otra vez no está en la matriz.
+}

@@ -1,0 +1,27 @@
+meta {
+  name: Alta — validación (400 VALIDATION_ERROR)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/users
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {}
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  Body vacío: faltan campos obligatorios. code=VALIDATION_ERROR.
+}

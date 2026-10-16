@@ -1,0 +1,25 @@
+meta {
+  name: Consultar aptitud de canal
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/{{userId}}/channel-eligibility
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Contrato mínimo para H3: userId, status, aptoParaVinculoCanal. 200, 400, 404.
+  Ejemplo (suspendido):
+  {
+    "userId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "status": "SUSPENDIDO",
+    "aptoParaVinculoCanal": false
+  }
+}

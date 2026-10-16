@@ -19,6 +19,7 @@ import com.bank.users.user.dto.CreateUserRequest;
 import com.bank.users.user.dto.ChangeUserStatusRequest;
 import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserResponse;
+import com.bank.users.user.dto.UserChannelEligibilityResponse;
 import com.bank.users.user.entity.User;
 import com.bank.users.user.entity.UserStatus;
 import com.bank.users.user.exception.InvalidUserStatusTransitionException;
@@ -38,6 +39,13 @@ public class UserService {
     private final UserMapper mapper;
     private final AuditService auditService;
     private final PlatformTransactionManager transactionManager;
+
+    /** Consulta la aptitud de un usuario existente sin cargar ni exponer su historial de auditoría. */
+    @Transactional(readOnly = true)
+    public UserChannelEligibilityResponse channelEligibility(UUID id) {
+        User user = repository.findById(id).orElseThrow(UserNotFoundException::new);
+        return mapper.toChannelEligibilityResponse(user);
+    }
 
     /** Persiste el estado y su auditoría; los rechazos se confirman en una transacción independiente. */
     @Transactional

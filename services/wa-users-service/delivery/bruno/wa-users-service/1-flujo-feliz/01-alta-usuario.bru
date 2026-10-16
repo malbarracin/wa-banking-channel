@@ -1,0 +1,55 @@
+meta {
+  name: Alta de usuario (mínimo)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/users
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "tipoDocumento": "DNI",
+    "numeroDocumento": "{{docNumber}}",
+    "nombreTratamiento": "Ana Pérez"
+  }
+}
+
+script:pre-request {
+  bru.setVar("docNumber", String(Date.now()).slice(-8));
+}
+
+assert {
+  res.status: eq 201
+}
+
+script:post-response {
+  bru.setVar("userId", res.body.id);
+}
+
+docs {
+  Crea un usuario ACTIVO. Unicidad por tipo+número de documento.
+  Respuestas: 201 creado, 400 datos inválidos, 409 documento repetido.
+  Ejemplo 201:
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "tipoDocumento": "DNI",
+    "numeroDocumento": "30111222",
+    "nombreTratamiento": "Ana Pérez",
+    "email": null,
+    "telefonoContacto": null,
+    "preferencias": {},
+    "status": "ACTIVO",
+    "aptoParaVinculoCanal": true,
+    "createdAt": "2026-10-15T12:00:00Z",
+    "updatedAt": "2026-10-15T12:00:00Z",
+    "historialResumido": []
+  }
+}

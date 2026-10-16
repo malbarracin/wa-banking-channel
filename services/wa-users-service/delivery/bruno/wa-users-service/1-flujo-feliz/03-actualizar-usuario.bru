@@ -1,0 +1,32 @@
+meta {
+  name: Actualizar datos permitidos
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/{{userId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "nombreTratamiento": "Ana Pérez",
+    "email": "ana.perez@example.com",
+    "telefonoContacto": "+5491112345678",
+    "preferencias": {"idioma": "es"}
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Solo campos permitidos. 200, 400, 404.
+}

@@ -1,0 +1,29 @@
+meta {
+  name: Actualización — campos no permitidos (400 BAD_REQUEST)
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/{{userId}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "domicilioLegal": "Calle Falsa 123"
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  Datos legales sensibles no son actualizables en H1. code=BAD_REQUEST.
+}

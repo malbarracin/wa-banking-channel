@@ -1,0 +1,31 @@
+meta {
+  name: Alta — documento duplicado (409 CONFLICT)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/users
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "tipoDocumento": "DNI",
+    "numeroDocumento": "{{docNumber}}",
+    "nombreTratamiento": "Ana Pérez"
+  }
+}
+
+assert {
+  res.status: eq 409
+}
+
+docs {
+  Reutiliza el documento del alta del flujo feliz. code=CONFLICT.
+}

@@ -30,7 +30,10 @@ import com.bank.users.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
-/** Casos de uso de usuarios con persistencia y auditoría transaccional. */
+/**
+ * Casos de uso de usuarios con persistencia y auditoría transaccional.
+ * Orquesta unicidad documental, matriz de estados H1 y aptitud de vínculo de canal.
+ */
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -40,14 +43,25 @@ public class UserService {
     private final AuditService auditService;
     private final PlatformTransactionManager transactionManager;
 
-    /** Consulta la aptitud de un usuario existente sin cargar ni exponer su historial de auditoría. */
+    /**
+     * Consulta la aptitud de un usuario existente sin cargar ni exponer su historial de auditoría.
+     *
+     * @param id identificador interno del usuario
+     * @return contrato mínimo para consumidores (id, estado, aptitud)
+     */
     @Transactional(readOnly = true)
     public UserChannelEligibilityResponse channelEligibility(UUID id) {
         User user = repository.findById(id).orElseThrow(UserNotFoundException::new);
         return mapper.toChannelEligibilityResponse(user);
     }
 
-    /** Persiste el estado y su auditoría; los rechazos se confirman en una transacción independiente. */
+    /**
+     * Persiste el estado y su auditoría; los rechazos se confirman en una transacción independiente.
+     *
+     * @param id identificador interno del usuario
+     * @param request estado destino solicitado
+     * @return usuario actualizado con historial resumido
+     */
     @Transactional
     public UserResponse changeStatus(UUID id, ChangeUserStatusRequest request) {
         User user = repository.findById(id).orElseThrow(() -> {
@@ -70,7 +84,13 @@ public class UserService {
         return mapper.toResponse(user, auditService.findHistory(id));
     }
 
-    /** Confirma los cambios permitidos y su auditoría en una misma transacción. */
+    /**
+     * Confirma los cambios permitidos y su auditoría en una misma transacción.
+     *
+     * @param id identificador interno del usuario
+     * @param request campos permitidos presentes en el body
+     * @return usuario actualizado con historial resumido
+     */
     @Transactional
     public UserResponse update(UUID id, UpdateUserRequest request) {
         User user = repository.findById(id).orElseThrow(UserNotFoundException::new);
@@ -80,14 +100,25 @@ public class UserService {
         return mapper.toResponse(user, auditService.findHistory(id));
     }
 
-    /** Consulta por UUID con historial resumido, también para usuarios suspendidos o en baja lógica. */
+    /**
+     * Consulta por UUID con historial resumido, también para usuarios suspendidos o en baja lógica.
+     *
+     * @param id identificador interno del usuario
+     * @return datos autorizados del piloto e historial (hasta 20 eventos)
+     */
     @Transactional(readOnly = true)
     public UserResponse findById(UUID id) {
         User user = repository.findById(id).orElseThrow(UserNotFoundException::new);
         return mapper.toResponse(user, auditService.findHistory(id));
     }
 
-    /** Crea un usuario activo y confirma usuario y auditoría OK en la misma transacción. */
+    /**
+     * Crea un usuario activo y confirma usuario y auditoría OK en la misma transacción.
+     * Duplicados por unicidad documental se rechazan con auditoría independiente.
+     *
+     * @param request datos mínimos y contacto opcional
+     * @return usuario creado sin historial previo
+     */
     public UserResponse create(CreateUserRequest request) {
         TransactionTemplate transaction = new TransactionTemplate(transactionManager);
         transaction.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);

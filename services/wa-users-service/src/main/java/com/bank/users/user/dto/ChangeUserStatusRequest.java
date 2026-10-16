@@ -9,10 +9,21 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 
 import com.bank.users.user.entity.UserStatus;
 
-/** Estado operativo solicitado; solo se aceptan las transiciones habilitadas en H1. */
-public record ChangeUserStatusRequest(@NotNull UserStatus status) {
+import io.swagger.v3.oas.annotations.media.Schema;
 
-    /** Rechaza ordinales numéricos y campos ajenos al contrato de cambio de estado. */
+/**
+ * Estado operativo solicitado; solo se aceptan las transiciones habilitadas en H1.
+ */
+@Schema(description = "Solicitud de cambio de estado operativo")
+public record ChangeUserStatusRequest(
+        @Schema(description = "Nuevo estado operativo", example = "SUSPENDIDO",
+                requiredMode = Schema.RequiredMode.REQUIRED,
+                allowableValues = {"ACTIVO", "SUSPENDIDO", "BAJA_LOGICA"})
+        @NotNull UserStatus status) {
+
+    /**
+     * Rechaza ordinales numéricos y campos ajenos al contrato de cambio de estado.
+     */
     @JsonCreator(mode = JsonCreator.Mode.DELEGATING)
     public static ChangeUserStatusRequest fromJson(Map<String, Object> fields) {
         if (!Set.of("status").containsAll(fields.keySet())) {

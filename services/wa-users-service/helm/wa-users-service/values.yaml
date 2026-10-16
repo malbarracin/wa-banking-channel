@@ -1,0 +1,22 @@
+replicaCount: 1
+image:
+  repository: wa-users-service
+  tag: local
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+service:
+  port: 8080
+database:
+  # Usar un Secret preexistente con DB_URL, DB_USERNAME y DB_PASSWORD.
+  existingSecret: wa-users-db
+  createSecret: false
+  url: ""
+  username: ""
+  password: ""
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 768Mi

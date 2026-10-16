@@ -1,0 +1,3 @@
+replicaCount: 1
+database:
+  existingSecret: wa-users-db-dev

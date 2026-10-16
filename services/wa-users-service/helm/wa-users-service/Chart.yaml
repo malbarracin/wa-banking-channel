@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wa-users-service
+description: Servicio de usuarios del canal WhatsApp del banco
+type: application
+version: 0.1.0
+appVersion: "0.1.0-SNAPSHOT"

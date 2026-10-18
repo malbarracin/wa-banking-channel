@@ -119,7 +119,10 @@ class ChangeStatusIntegrationTest {
     @CsvSource(value = {
         "{}|VALIDATION_ERROR", "{\"status\":null}|VALIDATION_ERROR",
         "{\"status\":\"UNKNOWN\"}|BAD_REQUEST", "{\"status\":\"active\"}|BAD_REQUEST",
-        "{\"status\":{}}|BAD_REQUEST", "null|BAD_REQUEST"
+        "{\"status\":{}}|BAD_REQUEST", "null|BAD_REQUEST",
+        "{\"status\":\"\"}|BAD_REQUEST", "{\"status\":[]}|BAD_REQUEST",
+        "{\"status\":true}|BAD_REQUEST", "{\"status\":99}|BAD_REQUEST",
+        "{\"status\":|BAD_REQUEST", "[]|BAD_REQUEST"
     }, delimiter = '|')
     @DisplayName("Estado ausente o inválido respeta el contrato común sin persistir cambios")
     void rejectsInvalidStatus(String body, String code) throws Exception {
@@ -173,6 +176,7 @@ class ChangeStatusIntegrationTest {
     @Test
     @DisplayName("Un fallo tras insertar auditoría revierte tanto el estado enviado a BD como la auditoría")
     void rollsBackStatusAndAudit() throws Exception {
+        User beforeChange = repository.findById(userId).orElseThrow();
         AuditService auditTarget = AopTestUtils.getUltimateTargetObject(auditService);
         doAnswer(invocation -> {
             invocation.callRealMethod();
@@ -184,6 +188,11 @@ class ChangeStatusIntegrationTest {
 
         assertQueries(UserStatus.ACTIVE);
         assertThat(auditRepository.count()).isZero();
+        User afterFailure = repository.findById(userId).orElseThrow();
+        assertThat(afterFailure.getUpdatedAt()).isEqualTo(beforeChange.getUpdatedAt());
+        assertThat(afterFailure.getDocumentType()).isEqualTo(beforeChange.getDocumentType());
+        assertThat(afterFailure.getDocumentNumber()).isEqualTo(beforeChange.getDocumentNumber());
+        assertThat(repository.count()).isEqualTo(1);
     }
 
     private ResultActions change(UserStatus destination) throws Exception {

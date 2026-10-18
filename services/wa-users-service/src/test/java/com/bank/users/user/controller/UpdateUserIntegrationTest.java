@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -215,6 +216,51 @@ class UpdateUserIntegrationTest {
                 .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"));
 
         assertUnchanged();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"email,ana@example.com,", "phone,,+5491112345678"})
+    @DisplayName("Eliminar el único contacto se rechaza aunque el otro campo se omita")
+    void rechazaEliminarElUnicoContacto(String contactField, String email, String phone) throws Exception {
+        User user = persisted();
+        user.setEmail(email);
+        user.setPhone(phone);
+        repository.saveAndFlush(user);
+
+        mockMvc.perform(patch("/api/v1/users/{id}", userId).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Cambio\",\"" + contactField + "\":null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details[0].field").value("contact"))
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        User unchanged = persisted();
+        assertThat(unchanged.getDisplayName()).isEqualTo("Ana");
+        assertThat(unchanged.getEmail()).isEqualTo(user.getEmail());
+        assertThat(unchanged.getPhone()).isEqualTo(user.getPhone());
+        assertThat(auditRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Sustituye el único contacto atómicamente y audita solo los nombres de campos")
+    void sustituyeElUnicoContactoSinAuditarValores() throws Exception {
+        User user = persisted();
+        user.setPhone(null);
+        repository.saveAndFlush(user);
+
+        mockMvc.perform(patch("/api/v1/users/{id}", userId).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":null,\"phone\":\"+34911234567\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.phone").value("+34911234567"));
+
+        assertThat(persisted().getEmail()).isNull();
+        assertThat(persisted().getPhone()).isEqualTo("+34911234567");
+        assertThat(persisted().getPreferences()).containsExactlyEntriesOf(Map.of("language", "es"));
+        assertThat(auditRepository.findAll()).singleElement().satisfies(audit -> {
+            assertThat(audit.getAction()).isEqualTo(AuditAction.USER_UPDATED);
+            assertThat(audit.getUserId()).isEqualTo(userId);
+            assertThat(audit.getDetail()).isEqualTo("fields=email,phone");
+        });
     }
 
     private void patchSuccessfully(String body) throws Exception {

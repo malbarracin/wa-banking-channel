@@ -1,3 +1,21 @@
+
+target/
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.jks
+secrets/
+.idea/
+*.iml
+.vscode/
+.github/agents/
+.github/skills/
+
 # >>> opensoma: agentes y configuración de soma (no van al repositorio) >>>
 .opensoma/
 .opencode/
@@ -20,20 +38,3 @@ project.yaml
 backlog/
 packs/
 # <<< opensoma <<<
-
-target/
-*.log
-.DS_Store
-.env
-.env.*
-!.env.example
-*.key
-*.pem
-*.p12
-*.jks
-secrets/
-.idea/
-*.iml
-.vscode/
-.github/agents/
-.github/skills/

@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bank.users.user.dto.CreateUserRequest;
+import com.bank.users.user.dto.ChangeStatusRequest;
 import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserResponse;
 import com.bank.users.user.entity.DocumentType;
@@ -35,6 +36,12 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
     private final UserService userService;
+
+    /** Aplica una transición operativa válida y devuelve 200 con el estado y aptitud actuales. */
+    @PatchMapping("/{id}/status")
+    public UserResponse changeStatus(@PathVariable UUID id, @Valid @RequestBody ChangeStatusRequest request) {
+        return userService.changeStatus(id, request);
+    }
 
     /** Actualiza los campos permitidos presentes y devuelve los datos persistidos con estado 200. */
     @PatchMapping("/{id}")

@@ -1,5 +1,8 @@
 package com.bank.users.user.service;
 
+import java.util.LinkedHashSet;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
@@ -16,9 +19,13 @@ import org.springframework.validation.annotation.Validated;
 
 import com.bank.users.audit.service.AuditService;
 import com.bank.users.user.dto.CreateUserRequest;
+import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserResponse;
 import com.bank.users.user.entity.DocumentType;
 import com.bank.users.user.entity.User;
+import com.bank.users.user.entity.UserStatus;
+import com.bank.users.user.exception.InvalidUserUpdateException;
+import com.bank.users.user.exception.UserUpdateConflictException;
 import com.bank.users.user.exception.DuplicateUserException;
 import com.bank.users.user.exception.UserNotFoundException;
 import com.bank.users.user.mapper.UserMapper;
@@ -26,7 +33,7 @@ import com.bank.users.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
-/** Aplica el alta auditada y las consultas de datos autorizados del usuario. */
+/** Aplica altas, actualizaciones auditadas y consultas de datos autorizados del usuario. */
 @Service
 @Validated
 @RequiredArgsConstructor
@@ -35,6 +42,39 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final AuditService auditService;
+
+    /** Aplica solo campos presentes y confirma cambios relevantes y auditoría en una transacción. */
+    @Transactional
+    public UserResponse update(@NotNull UUID id, @NotNull @Valid UpdateUserRequest request) {
+        User user = userRepository.findById(id).orElseThrow(UserNotFoundException::new);
+        if (user.getStatus() == UserStatus.LOGICALLY_DELETED) {
+            throw new UserUpdateConflictException();
+        }
+        String email = request.hasField("email") ? request.getEmail() : user.getEmail();
+        String phone = request.hasField("phone") ? request.getPhone() : user.getPhone();
+        if ((email == null || email.isBlank()) && (phone == null || phone.isBlank())) {
+            throw new InvalidUserUpdateException("contact", "Debe indicar al menos email o teléfono");
+        }
+        Set<String> changedFields = new LinkedHashSet<>();
+        if (request.hasField("displayName") && !Objects.equals(user.getDisplayName(), request.getDisplayName())) {
+            changedFields.add("displayName");
+        }
+        if (!Objects.equals(user.getEmail(), email)) {
+            changedFields.add("email");
+        }
+        if (!Objects.equals(user.getPhone(), phone)) {
+            changedFields.add("phone");
+        }
+        if (request.hasField("preferences") && !Objects.equals(user.getPreferences(), request.getPreferences())) {
+            changedFields.add("preferences");
+        }
+        if (!changedFields.isEmpty()) {
+            userMapper.update(request, user);
+            userRepository.saveAndFlush(user);
+            auditService.recordUserUpdated(id, changedFields);
+        }
+        return userMapper.toResponse(user);
+    }
 
     /** Consulta cualquier estado operativo por ID o informa que no existe el usuario. */
     @Transactional(readOnly = true)

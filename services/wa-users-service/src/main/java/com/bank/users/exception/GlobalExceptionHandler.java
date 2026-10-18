@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import com.bank.users.user.exception.InvalidUserUpdateException;
+import com.bank.users.user.exception.NonUpdatableFieldException;
+
 import lombok.extern.slf4j.Slf4j;
 
 /** Traduce excepciones al contrato público sin exponer detalles internos. */
@@ -45,7 +48,29 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({IllegalArgumentException.class, HttpMessageNotReadableException.class,
             MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception exception) {
+        Throwable cause = exception;
+        while (cause != null) {
+            if (cause instanceof NonUpdatableFieldException fieldException) {
+                return handleNonUpdatableField(fieldException);
+            }
+            if (cause instanceof InvalidUserUpdateException updateException) {
+                return handleInvalidUpdate(updateException);
+            }
+            cause = cause.getCause();
+        }
         return build(HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST, "Solicitud inválida", List.of());
+    }
+
+    @ExceptionHandler(NonUpdatableFieldException.class)
+    public ResponseEntity<ErrorResponse> handleNonUpdatableField(NonUpdatableFieldException exception) {
+        return build(HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST, exception.getMessage(),
+                List.of(new FieldError(exception.getField(), exception.getMessage())));
+    }
+
+    @ExceptionHandler(InvalidUserUpdateException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidUpdate(InvalidUserUpdateException exception) {
+        return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, "La solicitud tiene datos inválidos",
+                List.of(new FieldError(exception.getField(), exception.getMessage())));
     }
 
     @ExceptionHandler(NotFoundException.class)

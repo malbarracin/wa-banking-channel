@@ -11,6 +11,7 @@ import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,13 +20,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bank.users.user.dto.CreateUserRequest;
+import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserResponse;
 import com.bank.users.user.entity.DocumentType;
 import com.bank.users.user.service.UserService;
 
 import lombok.RequiredArgsConstructor;
 
-/** API de alta y consulta de usuarios bancarios. */
+/** API de alta, consulta y actualización de datos permitidos de usuarios bancarios. */
 @RestController
 @RequestMapping("/api/v1/users")
 @Validated
@@ -33,6 +35,12 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
     private final UserService userService;
+
+    /** Actualiza los campos permitidos presentes y devuelve los datos persistidos con estado 200. */
+    @PatchMapping("/{id}")
+    public UserResponse update(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request) {
+        return userService.update(id, request);
+    }
 
     /** Devuelve los datos autorizados y la aptitud para canal del identificador indicado. */
     @GetMapping("/{id}")

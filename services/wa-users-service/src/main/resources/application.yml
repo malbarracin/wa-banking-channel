@@ -36,3 +36,9 @@ management:
 springdoc:
   api-docs.path: /v3/api-docs
   swagger-ui.path: /swagger-ui.html
+
+# Los errores de unicidad JDBC incluyen el documento en el mensaje del driver.
+# El handler global registra únicamente el tipo de error inesperado.
+logging:
+  level:
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF

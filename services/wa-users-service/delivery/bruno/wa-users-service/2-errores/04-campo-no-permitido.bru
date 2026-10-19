@@ -1,0 +1,25 @@
+meta {
+  name: Campo no permitido en PATCH (400)
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/{{userId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "documentNumber": "11111111"
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  BAD_REQUEST: documentNumber no es actualizable.
+}

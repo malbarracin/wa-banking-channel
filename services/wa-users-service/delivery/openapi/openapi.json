@@ -1,0 +1,975 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "wa-users-service",
+    "description" : "Servicio de usuarios del canal WhatsApp del banco. Administra altas, consultas, actualización de datos permitidos y transiciones de estado operativo (activo, suspendido, baja lógica). La API está versionada bajo /api/v1. Fuera de alcance H1: vínculo WhatsApp (H3), sesiones (H2) y productos.",
+    "contact" : {
+      "name" : "Equipo backend",
+      "url" : "https://app.notion.com/p/H1-Servicio-de-Usuarios-36875bb08ca78197a853e85505bf49a5"
+    },
+    "version" : "0.1.0-SNAPSHOT"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:8080",
+    "description" : "Servidor local de desarrollo"
+  } ],
+  "tags" : [ {
+    "name" : "Usuarios",
+    "description" : "Alta, consulta, actualización de datos permitidos y cambio de estado operativo de usuarios"
+  } ],
+  "paths" : {
+    "/api/v1/users" : {
+      "get" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Consultar usuario por documento",
+        "description" : "Busca un usuario por tipo y número de documento. Ambos parámetros son obligatorios. La búsqueda usa la clave compuesta (tipo + número).",
+        "operationId" : "findByDocument",
+        "parameters" : [ {
+          "name" : "documentType",
+          "in" : "query",
+          "description" : "Tipo de documento",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "description" : "Tipo de documento de identidad admitido en el alta del usuario",
+            "enum" : [ "DNI", "PASSPORT", "LC", "LE", "CUIT", "DNI", "PASSPORT", "LC", "LE", "CUIT" ]
+          },
+          "example" : "DNI"
+        }, {
+          "name" : "documentNumber",
+          "in" : "query",
+          "description" : "Número de documento, alfanumérico sin espacios",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "maxLength" : 64,
+            "minLength" : 0,
+            "pattern" : "[A-Za-z0-9]+"
+          },
+          "example" : 30111222
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Usuario encontrado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                },
+                "examples" : {
+                  "Usuario encontrado" : {
+                    "description" : "Usuario encontrado",
+                    "value" : {
+                      "id" : "550e8400-e29b-41d4-a716-446655440000",
+                      "documentType" : "DNI",
+                      "documentNumber" : "30111222",
+                      "displayName" : "Ana Pérez",
+                      "email" : "ana@example.com",
+                      "phone" : "+5491112345678",
+                      "birthDate" : "1990-01-02",
+                      "status" : "ACTIVE",
+                      "preferences" : { },
+                      "channelLinkEligible" : true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Parámetros ausentes, tipo inválido o formato incorrecto",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "BadRequest" : {
+                    "description" : "BadRequest",
+                    "value" : {
+                      "code" : "BAD_REQUEST",
+                      "message" : "Solicitud inválida",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  },
+                  "ValidationError" : {
+                    "description" : "ValidationError",
+                    "value" : {
+                      "code" : "VALIDATION_ERROR",
+                      "message" : "La solicitud tiene datos inválidos",
+                      "details" : [ {
+                        "field" : "documentType",
+                        "message" : "no debe estar vacío"
+                      } ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Usuario inexistente",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "NotFound" : {
+                    "description" : "NotFound",
+                    "value" : {
+                      "code" : "NOT_FOUND",
+                      "message" : "No existe el usuario solicitado",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Dar de alta un usuario",
+        "description" : "Crea un usuario en estado ACTIVO con los datos mínimos (tipo y número de documento, nombre para tratamiento, contacto y fecha de nacimiento). El tipo y número de documento no pueden repetirse. Al menos uno de email o phone es obligatorio.",
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateUserRequest"
+              },
+              "examples" : {
+                "Con email" : {
+                  "description" : "Con email",
+                  "value" : {
+                    "documentType" : "DNI",
+                    "documentNumber" : "30111222",
+                    "displayName" : "Ana Pérez",
+                    "email" : "ana@example.com",
+                    "birthDate" : "1990-01-02"
+                  }
+                },
+                "Con teléfono" : {
+                  "description" : "Con teléfono",
+                  "value" : {
+                    "documentType" : "DNI",
+                    "documentNumber" : "30111222",
+                    "displayName" : "Ana Pérez",
+                    "phone" : "+5491112345678",
+                    "birthDate" : "1990-01-02"
+                  }
+                },
+                "Con ambos contactos" : {
+                  "description" : "Con ambos contactos",
+                  "value" : {
+                    "documentType" : "DNI",
+                    "documentNumber" : "30111222",
+                    "displayName" : "Ana Pérez",
+                    "email" : "ana@example.com",
+                    "phone" : "+549112345678",
+                    "birthDate" : "1990-01-02"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Usuario creado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                },
+                "examples" : {
+                  "Usuario activo creado" : {
+                    "description" : "Usuario activo creado",
+                    "value" : {
+                      "id" : "550e8400-e29b-41d4-a716-446655440000",
+                      "documentType" : "DNI",
+                      "documentNumber" : "30111222",
+                      "displayName" : "Ana Pérez",
+                      "email" : "ana@example.com",
+                      "phone" : "+5491112345678",
+                      "birthDate" : "1990-01-02",
+                      "status" : "ACTIVE",
+                      "preferences" : { },
+                      "channelLinkEligible" : true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Datos faltantes o formato inválido",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "ValidationError" : {
+                    "description" : "ValidationError",
+                    "value" : {
+                      "code" : "VALIDATION_ERROR",
+                      "message" : "La solicitud tiene datos inválidos",
+                      "details" : [ {
+                        "field" : "documentType",
+                        "message" : "no debe estar vacío"
+                      } ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  },
+                  "BadRequest" : {
+                    "description" : "BadRequest",
+                    "value" : {
+                      "code" : "BAD_REQUEST",
+                      "message" : "Solicitud inválida",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Documento ya registrado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "Duplicate" : {
+                    "description" : "Duplicate",
+                    "value" : {
+                      "code" : "CONFLICT",
+                      "message" : "Ya existe un usuario con ese documento",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "InternalError" : {
+                    "description" : "InternalError",
+                    "value" : {
+                      "code" : "INTERNAL_ERROR",
+                      "message" : "Error interno",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}" : {
+      "get" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Consultar usuario por ID interno",
+        "description" : "Devuelve los datos autorizados del usuario (id, documento, nombre, contacto, fecha de nacimiento, estado, preferencias) y el flag channelLinkEligible. No expone datos legales sensibles ni información de verificación de canal.",
+        "operationId" : "findById",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Identificador interno del usuario",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "example" : "550e8400-e29b-41d4-a716-446655440000"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Usuario encontrado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                },
+                "examples" : {
+                  "Usuario activo" : {
+                    "description" : "Usuario activo",
+                    "value" : {
+                      "id" : "550e8400-e29b-41d4-a716-446655440000",
+                      "documentType" : "DNI",
+                      "documentNumber" : "30111222",
+                      "displayName" : "Ana Pérez",
+                      "email" : "ana@example.com",
+                      "phone" : "+5491112345678",
+                      "birthDate" : "1990-01-02",
+                      "status" : "ACTIVE",
+                      "preferences" : { },
+                      "channelLinkEligible" : true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "UUID mal formado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "BadRequest" : {
+                    "description" : "BadRequest",
+                    "value" : {
+                      "code" : "BAD_REQUEST",
+                      "message" : "Solicitud inválida",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Usuario inexistente",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "NotFound" : {
+                    "description" : "NotFound",
+                    "value" : {
+                      "code" : "NOT_FOUND",
+                      "message" : "No existe el usuario solicitado",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Actualizar datos permitidos",
+        "description" : "Actualización parcial (PATCH) de displayName, email, phone y preferences. Una clave ausente se omite; una clave con valor null la elimina. Las preferencias reemplazan el mapa completo. Tras aplicar el cambio, debe quedar al menos un contacto (email o phone). Cualquier otra propiedad devuelve 400 BAD_REQUEST.",
+        "operationId" : "update",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Identificador interno del usuario",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "example" : "550e8400-e29b-41d4-a716-446655440000"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateUserRequest"
+              },
+              "examples" : {
+                "DisplayName y preferences" : {
+                  "description" : "DisplayName y preferences",
+                  "value" : {
+                    "displayName" : "Nuevo nombre",
+                    "preferences" : {
+                      "language" : "es"
+                    }
+                  }
+                },
+                "Reemplazar contacto" : {
+                  "description" : "Reemplazar contacto",
+                  "value" : {
+                    "email" : null,
+                    "phone" : "+34911234567"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Datos actualizados",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                },
+                "examples" : {
+                  "Actualizado" : {
+                    "description" : "Actualizado",
+                    "value" : {
+                      "id" : "550e8400-e29b-41d4-a716-446655440000",
+                      "documentType" : "DNI",
+                      "documentNumber" : "30111222",
+                      "displayName" : "Nuevo nombre",
+                      "email" : "ana@example.com",
+                      "phone" : "+5491112345678",
+                      "birthDate" : "1990-01-02",
+                      "status" : "ACTIVE",
+                      "preferences" : {
+                        "language" : "es"
+                      },
+                      "channelLinkEligible" : true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Valor inválido o campo no permitido",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "ValidationError" : {
+                    "description" : "ValidationError",
+                    "value" : {
+                      "code" : "VALIDATION_ERROR",
+                      "message" : "La solicitud tiene datos inválidos",
+                      "details" : [ {
+                        "field" : "documentType",
+                        "message" : "no debe estar vacío"
+                      } ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  },
+                  "BadRequest" : {
+                    "description" : "BadRequest",
+                    "value" : {
+                      "code" : "BAD_REQUEST",
+                      "message" : "Solicitud inválida",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Usuario inexistente",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "NotFound" : {
+                    "description" : "NotFound",
+                    "value" : {
+                      "code" : "NOT_FOUND",
+                      "message" : "No existe el usuario solicitado",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Baja lógica impide modificaciones",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "Conflict" : {
+                    "description" : "Conflict",
+                    "value" : {
+                      "code" : "CONFLICT",
+                      "message" : "No se pueden actualizar datos de un usuario dado de baja lógica",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "InternalError" : {
+                    "description" : "InternalError",
+                    "value" : {
+                      "code" : "INTERNAL_ERROR",
+                      "message" : "Error interno",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{id}/status" : {
+      "patch" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Cambiar estado operativo",
+        "description" : "Aplica una transición de estado permitida: ACTIVE→SUSPENDED, ACTIVE→LOGICALLY_DELETED (terminal), SUSPENDED→ACTIVE, SUSPENDED→LOGICALLY_DELETED. LOGICALLY_DELETED es estado terminal y no admite transiciones.",
+        "operationId" : "changeStatus",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "description" : "Identificador interno del usuario",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "example" : "550e8400-e29b-41d4-a716-446655440000"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeStatusRequest"
+              },
+              "examples" : {
+                "Suspender" : {
+                  "summary" : "ACTIVE → SUSPENDED",
+                  "description" : "Suspender",
+                  "value" : {
+                    "status" : "SUSPENDED"
+                  }
+                },
+                "Reactivar" : {
+                  "summary" : "SUSPENDED → ACTIVE",
+                  "description" : "Reactivar",
+                  "value" : {
+                    "status" : "ACTIVE"
+                  }
+                },
+                "Baja lógica" : {
+                  "summary" : "ACTIVE|SUSPENDED → LOGICALLY_DELETED",
+                  "description" : "Baja lógica",
+                  "value" : {
+                    "status" : "LOGICALLY_DELETED"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Estado aplicado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                },
+                "examples" : {
+                  "Suspendido" : {
+                    "description" : "Suspendido",
+                    "value" : {
+                      "id" : "550e8400-e29b-41d4-a716-446655440000",
+                      "documentType" : "DNI",
+                      "documentNumber" : "30111222",
+                      "displayName" : "Ana Pérez",
+                      "email" : "ana@example.com",
+                      "phone" : "+5491112345678",
+                      "birthDate" : "1990-01-02",
+                      "status" : "SUSPENDED",
+                      "preferences" : { },
+                      "channelLinkEligible" : false
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Estado inválido o ausente",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "ValidationError" : {
+                    "description" : "ValidationError",
+                    "value" : {
+                      "code" : "VALIDATION_ERROR",
+                      "message" : "La solicitud tiene datos inválidos",
+                      "details" : [ {
+                        "field" : "documentType",
+                        "message" : "no debe estar vacío"
+                      } ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  },
+                  "BadRequest" : {
+                    "description" : "BadRequest",
+                    "value" : {
+                      "code" : "BAD_REQUEST",
+                      "message" : "Solicitud inválida",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Usuario inexistente",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "NotFound" : {
+                    "description" : "NotFound",
+                    "value" : {
+                      "code" : "NOT_FOUND",
+                      "message" : "No existe el usuario solicitado",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Transición de estado no permitida",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "InvalidTransition" : {
+                    "description" : "InvalidTransition",
+                    "value" : {
+                      "code" : "CONFLICT",
+                      "message" : "La transición de estado solicitada no está permitida",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "InternalError" : {
+                    "description" : "InternalError",
+                    "value" : {
+                      "code" : "INTERNAL_ERROR",
+                      "message" : "Error interno",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-05T14:30:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ErrorResponse" : {
+        "type" : "object",
+        "description" : "Contrato único de error HTTP de la API",
+        "properties" : {
+          "code" : {
+            "type" : "string",
+            "description" : "Código estable del error",
+            "enum" : [ "VALIDATION_ERROR", "BAD_REQUEST", "NOT_FOUND", "CONFLICT", "INTERNAL_ERROR" ],
+            "example" : "VALIDATION_ERROR"
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Mensaje público seguro",
+            "example" : "La solicitud tiene datos inválidos"
+          },
+          "details" : {
+            "type" : "array",
+            "description" : "Detalle por campo; nunca null (puede ser lista vacía)",
+            "items" : {
+              "$ref" : "#/components/schemas/FieldError"
+            }
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Marca de tiempo UTC ISO-8601",
+            "example" : "2026-10-05T14:30:00Z"
+          }
+        }
+      },
+      "CreateUserRequest" : {
+        "type" : "object",
+        "properties" : {
+          "documentType" : {
+            "type" : "string",
+            "description" : "Tipo de documento de identidad",
+            "enum" : [ "DNI", "PASSPORT", "LC", "LE", "CUIT" ],
+            "example" : "DNI",
+            "minLength" : 1,
+            "pattern" : "DNI|PASSPORT|LC|LE|CUIT"
+          },
+          "documentNumber" : {
+            "type" : "string",
+            "description" : "Número de documento, alfanumérico sin espacios",
+            "example" : "30111222",
+            "maxLength" : 64,
+            "minLength" : 0,
+            "pattern" : "[A-Za-z0-9]+"
+          },
+          "displayName" : {
+            "type" : "string",
+            "description" : "Nombre para tratamiento del usuario",
+            "example" : "Ana Pérez",
+            "maxLength" : 120,
+            "minLength" : 0
+          },
+          "email" : {
+            "type" : [ "string", "null" ],
+            "format" : "email",
+            "description" : "Dirección de email de contacto",
+            "example" : "ana@example.com",
+            "maxLength" : 254,
+            "minLength" : 0,
+            "pattern" : "(?s).*\\S.*"
+          },
+          "phone" : {
+            "type" : [ "string", "null" ],
+            "description" : "Teléfono de contacto con formato internacional",
+            "example" : "+5491112345678",
+            "pattern" : "\\+?[0-9][0-9 ()-]{5,30}[0-9]"
+          },
+          "birthDate" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Fecha de nacimiento; debe ser una fecha pasada (ISO-8601)",
+            "example" : "1990-01-02"
+          }
+        },
+        "required" : [ "birthDate", "displayName", "documentNumber", "documentType" ]
+      },
+      "UserResponse" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Identificador interno único asignado en el alta",
+            "example" : "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "documentType" : {
+            "type" : "string",
+            "description" : "Tipo de documento del usuario",
+            "enum" : [ "DNI", "PASSPORT", "LC", "LE", "CUIT", "DNI", "PASSPORT", "LC", "LE", "CUIT" ]
+          },
+          "documentNumber" : {
+            "type" : "string",
+            "description" : "Número de documento sin espacios",
+            "example" : "30111222"
+          },
+          "displayName" : {
+            "type" : "string",
+            "description" : "Nombre para tratamiento",
+            "example" : "Ana Pérez"
+          },
+          "email" : {
+            "type" : [ "string", "null" ],
+            "description" : "Dirección de email de contacto, nullable",
+            "example" : "ana@example.com"
+          },
+          "phone" : {
+            "type" : [ "string", "null" ],
+            "description" : "Teléfono de contacto, nullable",
+            "example" : "+5491112345678"
+          },
+          "birthDate" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Fecha de nacimiento en formato ISO-8601 (yyyy-MM-dd)",
+            "example" : "1990-01-02"
+          },
+          "status" : {
+            "type" : "string",
+            "description" : "Estado operativo del usuario",
+            "enum" : [ "ACTIVE", "SUSPENDED", "LOGICALLY_DELETED", "ACTIVE", "SUSPENDED", "LOGICALLY_DELETED" ]
+          },
+          "preferences" : {
+            "type" : "object",
+            "additionalProperties" : { },
+            "description" : "Preferencias generales no sensibles del usuario"
+          },
+          "channelLinkEligible" : {
+            "type" : "boolean",
+            "description" : "True solo cuando el usuario está ACTIVE y puede vincularse a un canal",
+            "example" : true
+          }
+        }
+      },
+      "FieldError" : {
+        "type" : "object",
+        "description" : "Detalle de un campo inválido sin exponer el valor rechazado",
+        "properties" : {
+          "field" : {
+            "type" : "string",
+            "description" : "Nombre del campo",
+            "example" : "documentType"
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Motivo de rechazo",
+            "example" : "no debe estar vacío"
+          }
+        }
+      },
+      "UpdateUserRequest" : {
+        "description" : "Actualización parcial de datos permitidos. Claves: displayName, email, phone, preferences. Ausente = omitir; null = eliminar. Debe quedar al menos un contacto.",
+        "example" : {
+          "displayName" : "Nuevo nombre",
+          "preferences" : {
+            "language" : "es"
+          }
+        }
+      },
+      "ChangeStatusRequest" : {
+        "type" : "object",
+        "properties" : {
+          "status" : {
+            "type" : "string",
+            "description" : "Estado operativo al que se transita",
+            "enum" : [ "ACTIVE", "SUSPENDED", "LOGICALLY_DELETED" ],
+            "example" : "SUSPENDED"
+          }
+        },
+        "required" : [ "status" ]
+      }
+    },
+    "examples" : {
+      "ValidationError" : {
+        "description" : "Respuesta de validación con campos inválidos",
+        "value" : {
+          "code" : "VALIDATION_ERROR",
+          "message" : "La solicitud tiene datos inválidos",
+          "details" : [ {
+            "field" : "documentType",
+            "message" : "no debe estar vacío"
+          } ],
+          "timestamp" : "2026-10-05T14:30:00Z"
+        }
+      },
+      "BadRequest" : {
+        "description" : "Solicitud inválida (parámetros, formato o campo no permitido)",
+        "value" : {
+          "code" : "BAD_REQUEST",
+          "message" : "Solicitud inválida",
+          "details" : [ ],
+          "timestamp" : "2026-10-05T14:30:00Z"
+        }
+      },
+      "NotFound" : {
+        "description" : "Recurso no encontrado",
+        "value" : {
+          "code" : "NOT_FOUND",
+          "message" : "No existe el usuario solicitado",
+          "details" : [ ],
+          "timestamp" : "2026-10-05T14:30:00Z"
+        }
+      },
+      "Duplicate" : {
+        "description" : "Conflicto de dominio: documento duplicado",
+        "value" : {
+          "code" : "CONFLICT",
+          "message" : "Ya existe un usuario con ese documento",
+          "details" : [ ],
+          "timestamp" : "2026-10-05T14:30:00Z"
+        }
+      },
+      "InvalidTransition" : {
+        "description" : "Conflicto de dominio: transición de estado no permitida",
+        "value" : {
+          "code" : "CONFLICT",
+          "message" : "La transición de estado solicitada no está permitida",
+          "details" : [ ],
+          "timestamp" : "2026-10-05T14:30:00Z"
+        }
+      },
+      "Conflict" : {
+        "description" : "Conflicto de dominio (transición inválida, baja lógica)",
+        "value" : {
+          "code" : "CONFLICT",
+          "message" : "No se pueden actualizar datos de un usuario dado de baja lógica",
+          "details" : [ ],
+          "timestamp" : "2026-10-05T14:30:00Z"
+        }
+      },
+      "InternalError" : {
+        "description" : "Error interno inesperado",
+        "value" : {
+          "code" : "INTERNAL_ERROR",
+          "message" : "Error interno",
+          "details" : [ ],
+          "timestamp" : "2026-10-05T14:30:00Z"
+        }
+      }
+    }
+  }
+}

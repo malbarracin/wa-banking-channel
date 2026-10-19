@@ -1,0 +1,26 @@
+meta {
+  name: Actualizar datos permitidos
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/{{userId}}
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "displayName": "Nuevo nombre",
+    "preferences": { "language": "es" }
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  PATCH de displayName y preferences. Respuestas: 200, 400, 404, 409.
+}

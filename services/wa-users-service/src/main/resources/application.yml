@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: wa-users-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/wa_users}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+  h2:
+    console:
+      enabled: false
+  mvc:
+    problemdetails:
+      enabled: false
+
+server:
+  port: ${PORT:8080}
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  api-docs.path: /v3/api-docs
+  swagger-ui.path: /swagger-ui.html
+  swagger-ui.operationsSorter: method
+  default-produces-media-type: application/json
+
+# Los errores de unicidad JDBC incluyen el documento en el mensaje del driver.
+# El handler global registra únicamente el tipo de error inesperado.
+logging:
+  level:
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF

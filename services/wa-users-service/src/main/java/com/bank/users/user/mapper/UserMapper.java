@@ -13,6 +13,13 @@ import com.bank.users.user.dto.UpdateUserRequest;
 import com.bank.users.user.dto.UserResponse;
 import com.bank.users.user.entity.User;
 
+/**
+ * Conversor de MapStruct entre la entidad {@link User} y los DTOs de la API.
+ * <p>
+ * No contiene lógica de negocio: únicamente asigna y filtra campos. La aptitud
+ * para vínculo de canal se deriva del estado mediante {@link User#isChannelLinkEligible()}.
+ * </p>
+ */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR,
         collectionMappingStrategy = CollectionMappingStrategy.TARGET_IMMUTABLE)
 public interface UserMapper {

@@ -72,6 +72,7 @@ public class User {
     @Column(nullable = false)
     private Instant updatedAt;
 
+    /** Determina si el usuario puede vincularse a un canal: solo cuando está {@code ACTIVE}. */
     public boolean isChannelLinkEligible() {
         return status == UserStatus.ACTIVE;
     }

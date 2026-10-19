@@ -1,0 +1,25 @@
+meta {
+  name: Baja lógica
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/{{userId}}/status
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "status": "LOGICALLY_DELETED"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  ACTIVE → LOGICALLY_DELETED (terminal).
+}

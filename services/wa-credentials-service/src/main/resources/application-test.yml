@@ -1,4 +1,6 @@
 credencial:
+  renovacion:
+    habilitada: false
   jwt:
     secret: clave-exclusiva-de-tests-de-al-menos-32-bytes
 

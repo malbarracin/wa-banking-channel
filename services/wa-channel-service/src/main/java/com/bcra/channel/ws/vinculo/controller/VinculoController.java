@@ -17,6 +17,8 @@ import com.bcra.channel.ws.vinculo.CredencialCanal;
 import com.bcra.channel.ws.vinculo.CredencialHeaders;
 import com.bcra.channel.ws.vinculo.dto.AceptarTerminosRequest;
 import com.bcra.channel.ws.vinculo.dto.ActualizarPreferenciasRequest;
+import com.bcra.channel.ws.vinculo.dto.BloquearVinculoRequest;
+import com.bcra.channel.ws.vinculo.dto.DesvincularRequest;
 import com.bcra.channel.ws.vinculo.dto.HistorialVinculoResponse;
 import com.bcra.channel.ws.vinculo.dto.PerfilCanalResponse;
 import com.bcra.channel.ws.vinculo.dto.VerificacionResultadoResponse;
@@ -112,5 +114,35 @@ public class VinculoController {
     public ResponseEntity<VinculoResponse> aceptarTerminos(@Valid @RequestBody AceptarTerminosRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(vinculoService.aceptarTerminos(request.numeroWhatsapp()));
+    }
+
+    /**
+     * Bloquea el vínculo (cliente o política del banco) y solicita revocación a H2.
+     * @param numero número de WhatsApp
+     * @param request motivo y confirmación
+     * @param credencialValida obligatorio si el motivo es solicitud del cliente
+     * @return 200 con estado {@code BLOQUEADO}
+     */
+    @PatchMapping("/{numero}/bloqueo")
+    public VinculoResponse bloquear(@PathVariable String numero,
+            @Valid @RequestBody BloquearVinculoRequest request,
+            @RequestHeader(value = CredencialCanal.HEADER_CREDENCIAL_VALIDA, required = false)
+            String credencialValida) {
+        return vinculoService.bloquear(numero, request, credencialValida);
+    }
+
+    /**
+     * Desvincula el canal a pedido del cliente y solicita revocación a H2.
+     * @param numero número de WhatsApp
+     * @param request confirmación explícita
+     * @param credencialValida contexto de credencial válida obligatorio
+     * @return 200 con estado {@code DESVINCULADO}
+     */
+    @PatchMapping("/{numero}/desvinculacion")
+    public VinculoResponse desvincular(@PathVariable String numero,
+            @Valid @RequestBody DesvincularRequest request,
+            @RequestHeader(value = CredencialCanal.HEADER_CREDENCIAL_VALIDA, required = false)
+            String credencialValida) {
+        return vinculoService.desvincular(numero, request, credencialValida);
     }
 }

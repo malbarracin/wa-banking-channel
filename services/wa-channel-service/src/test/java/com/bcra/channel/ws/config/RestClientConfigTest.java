@@ -21,7 +21,6 @@ import com.bcra.channel.ws.vinculo.client.CredencialesServiceClient;
 import com.bcra.channel.ws.vinculo.client.UsersServiceClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DisplayName("Configuración HTTP de los clientes externos")
@@ -90,8 +89,7 @@ class RestClientConfigTest {
             assertThatThrownBy(() -> usuarios.consultarEstado("DNI", "30111222"))
                     .isInstanceOf(ResourceAccessException.class)
                     .hasRootCauseInstanceOf(java.net.SocketTimeoutException.class);
-            assertThatCode(() -> credenciales.solicitarRevocacion("5491112345678", "SOLICITUD_CLIENTE"))
-                    .doesNotThrowAnyException();
+            assertThat(credenciales.solicitarRevocacion("5491112345678", "SOLICITUD_CLIENTE")).isFalse();
             assertThat(solicitudes.getCount()).isZero();
         } finally {
             liberarRespuestas.countDown();

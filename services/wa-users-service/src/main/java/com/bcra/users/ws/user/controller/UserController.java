@@ -1,11 +1,14 @@
 package com.bcra.users.ws.user.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bcra.users.ws.user.dto.UserResponse;
+import com.bcra.users.ws.user.dto.UpdateUserRequest;
 import com.bcra.users.ws.user.dto.UserStatusResponse;
 import com.bcra.users.ws.user.mapper.UserMapper;
 import com.bcra.users.ws.user.service.UserService;
@@ -20,6 +23,17 @@ public class UserController {
 
     private final UserService service;
     private final UserMapper mapper;
+
+    /**
+     * Actualiza datos permitidos o devuelve 404. UpdateUserRequest rechaza propiedades desconocidas
+     * con JsonAnySetter; UserUpdateExceptionHandler responde 400 y audita el rechazo sin aplicar cambios.
+     * @return datos guardados del usuario
+     */
+    @PatchMapping("/{tipo}/{numero}")
+    public UserResponse actualizar(@PathVariable String tipo, @PathVariable String numero,
+            @RequestBody UpdateUserRequest request) {
+        return mapper.toResponse(service.actualizar(tipo, numero, request));
+    }
 
     /**
      * Devuelve los datos completos definidos para este hito o 404 si el usuario no existe.

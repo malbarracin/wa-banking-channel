@@ -136,6 +136,45 @@ class EmisionIntegrationTest {
     }
 
     @Test
+    @DisplayName("El JWT emitido deja de autorizar inmediatamente después de la revocación de H3")
+    void rechazaJwtEmitidoTrasRevocacion() throws Exception {
+        var emitida = emitir();
+        String solicitud = objectMapper.writeValueAsString(
+                new ValidarCredencialRequest(emitida.get("credencial").asText()));
+        mockMvc.perform(post("/api/v1/credenciales/validar")
+                .contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isOk());
+        var activa = repository.findByNumeroWhatsappAndEstado(NUMERO, CredencialEstado.ACTIVA).orElseThrow();
+
+        mockMvc.perform(post("/api/v1/credenciales/{numero}/revocacion", NUMERO)
+                .contentType(MediaType.APPLICATION_JSON).content("{\"motivo\":\"SOLICITUD_CLIENTE\"}"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/api/v1/credenciales/validar")
+                .contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.trace").doesNotExist());
+        assertThat(repository.findByNumeroWhatsappAndEstado(NUMERO, CredencialEstado.ACTIVA)).isEmpty();
+        assertThat(auditRepository.findAll().stream()
+                .filter(evento -> evento.getAccion() == AuditAccion.REVOCACION))
+                .singleElement().satisfies(evento -> {
+                    assertThat(evento.getResultado()).isEqualTo(AuditResultado.EXITOSO);
+                    assertThat(evento.getJti()).isEqualTo(activa.getJti());
+                    assertThat(evento.getMotivo()).isEqualTo("BLOQUEO");
+                });
+        assertThat(auditRepository.findAll().stream()
+                .filter(evento -> evento.getAccion() == AuditAccion.VALIDACION_FALLIDA))
+                .singleElement().satisfies(evento -> {
+                    assertThat(evento.getResultado()).isEqualTo(AuditResultado.RECHAZADO);
+                    assertThat(evento.getJti()).isEqualTo(activa.getJti());
+                    assertThat(evento.getNumeroWhatsapp()).isEqualTo(NUMERO);
+                });
+    }
+
+    @Test
     @DisplayName("Rechaza sin confirmación de identidad o vínculo y conserva auditoría de rechazo")
     void rechazaSinConfirmacion() throws Exception {
         rechazar(REQUEST.replace("\"identidadVerificada\":true", "\"identidadVerificada\":false"), 403, "FORBIDDEN");

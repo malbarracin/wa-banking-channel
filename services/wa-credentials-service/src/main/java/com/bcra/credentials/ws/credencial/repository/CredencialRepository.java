@@ -18,6 +18,11 @@ import com.bcra.credentials.ws.credencial.entity.CredencialSesion;
 public interface CredencialRepository extends JpaRepository<CredencialSesion, UUID> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from CredencialSesion c where c.numeroWhatsapp = :numero "
+            + "and c.estado = com.bcra.credentials.ws.credencial.entity.CredencialEstado.ACTIVA")
+    Optional<CredencialSesion> findActivaParaRevocar(@Param("numero") String numero);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from CredencialSesion c where c.estado = :estado order by c.id")
     List<CredencialSesion> buscarPorEstadoParaRevocar(@Param("estado") CredencialEstado estado);
 

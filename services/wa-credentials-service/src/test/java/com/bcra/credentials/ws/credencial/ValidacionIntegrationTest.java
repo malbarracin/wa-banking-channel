@@ -157,6 +157,53 @@ class ValidacionIntegrationTest {
                 .isInstanceOf(UnauthorizedException.class);
     }
 
+    @Test
+    @DisplayName("Rechaza una credencial activa que ya tiene fecha de revocación")
+    void rechazaActivaConFechaRevocacion() throws Exception {
+        guardar(CredencialEstado.ACTIVA, expiracion);
+        CredencialSesion credencial = repository.findByJti(jti).orElseThrow();
+        credencial.setFechaRevocacion(Instant.now().minusSeconds(1));
+        repository.saveAndFlush(credencial);
+
+        verificarRechazoAntesDeConsultarH1();
+    }
+
+    @Test
+    @DisplayName("Rechaza una credencial cuya emisión persistida todavía no ocurrió")
+    void rechazaFechaEmisionFuturaEnBase() throws Exception {
+        repository.saveAndFlush(CredencialSesion.builder().jti(jti).numeroWhatsapp(NUMERO)
+                .documentoTipo("DNI").documentoNumero("12345678").vinculoId(UUID.randomUUID())
+                .estado(CredencialEstado.ACTIVA).fechaEmision(expiracion.minusSeconds(1))
+                .fechaExpiracion(expiracion).build());
+
+        verificarRechazoAntesDeConsultarH1();
+    }
+
+    private void verificarRechazoAntesDeConsultarH1() throws Exception {
+        String jwt = token("valido");
+
+        var respuesta = mockMvc.perform(post("/api/v1/credenciales/validar")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new ValidarCredencialRequest(jwt))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value(new UnauthorizedException().getMessage()))
+                .andExpect(jsonPath("$.details", hasSize(0)))
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andReturn();
+
+        assertThat(respuesta.getResponse().getContentAsString()).doesNotContain(jwt, NUMERO, "12345678");
+        verifyNoInteractions(usersClient);
+        assertThat(auditRepository.findAll()).singleElement().satisfies(evento -> {
+            assertThat(evento.getAccion()).isEqualTo(AuditAccion.VALIDACION_FALLIDA);
+            assertThat(evento.getResultado())
+                    .isEqualTo(com.bcra.credentials.ws.credencial.entity.AuditResultado.RECHAZADO);
+            assertThat(evento.getJti()).isEqualTo(jti);
+            assertThat(evento.getNumeroWhatsapp()).isEqualTo(NUMERO);
+            assertThat(evento.getMotivo()).isEqualTo("Credencial no válida");
+        });
+    }
+
     private void guardar(CredencialEstado estado, Instant fechaExpiracion) {
         repository.save(CredencialSesion.builder().jti(jti).numeroWhatsapp(NUMERO)
                 .documentoTipo("DNI").documentoNumero("12345678").vinculoId(UUID.randomUUID())

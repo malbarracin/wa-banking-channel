@@ -113,6 +113,39 @@ class CreateUserIntegrationTest {
                 .containsExactlyInAnyOrder(AuditAction.ALTA, AuditAction.ACTUALIZACION);
     }
 
+    @Test
+    @DisplayName("El alta duplicada tras una actualización conserva los datos y audita el rechazo como ALTA")
+    void rechazaAltaDuplicadaTrasActualizarUsuario() throws Exception {
+        String solicitud = solicitudValida().toString();
+        mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isCreated());
+        var original = userRepository.findByDocumentoTipoAndDocumentoNumero("DNI", "123").orElseThrow();
+        mockMvc.perform(patch("/api/v1/users/DNI/123").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"contacto actualizado\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+
+        assertThat(userRepository.count()).isEqualTo(1);
+        assertThat(userRepository.findById(original.getId())).hasValueSatisfying(usuario -> {
+            assertThat(usuario.getEmail()).isEqualTo("contacto actualizado");
+            assertThat(usuario.getEstado()).isEqualTo(UserStatus.ACTIVE);
+        });
+        assertThat(auditLogRepository.findAll()).hasSize(3)
+                .filteredOn(registro -> registro.getResultado() == AuditResult.RECHAZADO)
+                .singleElement().satisfies(registro -> {
+                    assertThat(registro.getAccion()).isEqualTo(AuditAction.ALTA);
+                    assertThat(registro.getMotivo()).isEqualTo("Documento duplicado");
+                    assertThat(registro.getTipoDocumento()).isEqualTo("DNI");
+                    assertThat(registro.getNumeroDocumento()).isEqualTo("123");
+                    assertThat(registro.getFecha()).isNotNull();
+                });
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"email", "telefono", "ambos"})
     @DisplayName("Crea y audita el usuario activo con cualquiera de los contactos")

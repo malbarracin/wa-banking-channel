@@ -1,11 +1,13 @@
 ---
 title: Origen de los requisitos
-status: aprobada
+status: borrador
 source: https://app.notion.com/p/H1-Servicio-de-Usuarios-36875bb08ca78197a853e85505bf49a5
-updated: 2026-10-26T12:38:38.021Z
+updated: 2026-10-26T15:01:16.869Z
 ---
 
 # Origen de los requisitos
+
+## H1 — Servicio de Usuarios
 
 | Campo | Valor |
 |-------|-------|
@@ -20,13 +22,13 @@ allá de las propiedades del hito (Dominio: Usuarios). Se buscó en el workspace
 usuario o de privacidad de datos que complementara el hito y no se encontró ninguna: queda registrado como
 pregunta abierta en `usuarios/spec`.
 
-## Decisiones tomadas con la persona
+### Decisiones tomadas con la persona
 
 | Pregunta | Resolución | Dónde queda |
 |----------|------------|-------------|
 | Campos mínimos de alta e identificador único (U1/U2) | Opción A: documento (tipo+número) + nombre + apellido + fecha de nacimiento + un dato de contacto (email o teléfono). Identificador único: documento. | `usuarios/spec` — sección "Decisión registrada" y requisitos "Alta de usuario bancario", "Unicidad por documento", "Consulta de usuario por identificador" |
 
-## Requisito → fuente
+### Requisito → fuente
 
 | Requisito | Área | Id en la fuente |
 |-----------|------|-----------------|
@@ -37,3 +39,39 @@ pregunta abierta en `usuarios/spec`.
 | Cambio de estado del usuario | usuarios | H1 — sección 6, flujo U4; sección 7, criterio 4 |
 | Restricción de vínculo de canal para usuarios no activos | usuarios | H1 — sección 5, regla 1 y regla 3; sección 7, criterio 5; sección 8 (dependencia con H3) |
 | Auditoría de operaciones del usuario | usuarios | H1 — sección 5, regla 5; sección 7, criterio 4 |
+
+## H3 — Servicio Canal WhatsApp
+
+| Campo | Valor |
+|-------|-------|
+| Proyecto | wa-banking-channel (services/wa-channel-service) |
+| Fuente | Notion |
+| Link | https://app.notion.com/p/H3-Servicio-Canal-WhatsApp-38275bb08ca781c0bc08d80366637aa5 |
+| Página | 💬 H3 — Servicio Canal WhatsApp (Hitos — Canal WhatsApp Banco) |
+| Actualizado | 2026-10-26 |
+
+La página de Notion es autocontenida para este hito: no tiene subpáginas ni bases de datos hijas en alcance más
+allá de las propiedades del hito (Dominio: Canal). El hito depende funcionalmente de H1 (ya especificado en
+`usuarios/spec`, consulta de existencia/estado de cliente) y de H2 (emisión/revocación de credencial, fuera de
+este hito). Varios puntos quedan explícitamente delegados por la fuente a una política del banco/Compliance aún
+no definida (método de verificación, límite de intentos, criterios de bloqueo por riesgo): se dejaron como
+`## Preguntas abiertas` en `canal-whatsapp/spec` sin bloquear el resto del hito, siguiendo el mismo criterio que
+`usuarios/spec` con la política de privacidad pendiente de Compliance.
+
+### Requisito → fuente
+
+| Requisito | Área | Id en la fuente |
+|-----------|------|-----------------|
+| Aceptación de términos del canal antes de identificarse | canal-whatsapp | H3 — sección 6.1, paso 2; sección 6.1 regla 1; sección 7 (criterio de bienvenida/términos) |
+| Vinculación con cliente existente y activo en H1 | canal-whatsapp | H3 — sección 5, regla 2; sección 6.1, paso 4; sección 6.1 flujo alternativo; sección 7 (criterios de cliente inexistente/suspendido) |
+| Verificación de identidad con límite de intentos | canal-whatsapp | H3 — sección 5, regla 5; sección 6.1, paso 5; sección 7 (criterio de intentos agotados) |
+| Unicidad del vínculo activo por número | canal-whatsapp | H3 — sección 5, regla 1; sección 6.1, paso 6; sección 7 (criterio de segundo vínculo rechazado) |
+| Resultado verificable de identidad/vínculo para la credencial de sesión | canal-whatsapp | H3 — sección 1 (resumen); sección 5, regla 3; sección 6.1, paso 8; sección 7 (criterio de credencial coordinada con H2) |
+| Consulta de perfil en el canal | canal-whatsapp | H3 — sección 3 (en alcance); sección 5, regla 6; sección 6, flujo F2 |
+| Preferencias del canal | canal-whatsapp | H3 — sección 3 (en alcance); sección 6, flujo F2 |
+| Bloqueo del vínculo | canal-whatsapp | H3 — sección 3 (en alcance); sección 5, regla 4; sección 6, flujo F3; sección 7 (criterio de bloqueo/desvinculación) |
+| Desvinculación del canal | canal-whatsapp | H3 — sección 3 (en alcance); sección 5, regla 4; sección 6, flujo F3; sección 7 (criterio de bloqueo/desvinculación) |
+| Re-vinculación tras cambio de dispositivo o número | canal-whatsapp | H3 — sección 3 (en alcance); sección 5, regla 7; sección 6, flujo F4; sección 7 (criterio de re-vinculación) |
+| Consulta de vínculo por número (anti-duplicados y fraude) | canal-whatsapp | H3 — sección 3 (en alcance); sección 5, regla 1 |
+| Historial resumido de interacciones para soporte | canal-whatsapp | H3 — sección 3 (en alcance); sección 4 (actor soporte) |
+| Auditoría de las acciones del vínculo | canal-whatsapp | H3 — sección 5, regla 8; sección 6.1, regla 6; sección 7 (criterio de secuencia auditada) |

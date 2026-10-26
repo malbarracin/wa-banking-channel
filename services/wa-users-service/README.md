@@ -42,5 +42,10 @@ El servicio asigna fecha UTC y persiste en `REQUIRES_NEW`, conservando la audito
 Las futuras operaciones deben invocarlo a través del bean Spring al determinar su resultado;
 la integración con esas operaciones corresponde a sus tareas. Producción necesita crear la tabla
 `user_audit_log` antes de activar la validación del esquema.
-MapStruct queda preparado para los contratos HTTP de las siguientes tareas; auditoría no utiliza DTOs.
+Las consultas usan MapStruct para devolver DTOs; auditoría no utiliza DTOs.
+GET `/api/v1/users/{tipo}/{numero}` devuelve el UserResponse completo y el estado actual.
+El filtrado de campos por perfil queda pendiente de parametrizar cuando Compliance defina la política.
+GET `/api/v1/users/{tipo}/{numero}/status` devuelve únicamente documento (tipo y número) y estado,
+incluidos SUSPENDED y LOGICAL_DELETE. H3 aplica la restricción de nuevos vínculos de canal.
+Ambas consultas responden 404 NOT_FOUND cuando no existe el documento, sin datos personales en el error.
 Docker, migraciones y documentación completa se entregan en sus tareas correspondientes.

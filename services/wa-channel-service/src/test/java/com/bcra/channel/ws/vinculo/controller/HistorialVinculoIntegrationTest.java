@@ -112,6 +112,40 @@ class HistorialVinculoIntegrationTest {
         assertThat(respuesta).doesNotContain(NUMERO, "VinculoNotFoundException");
     }
 
+    @Test
+    @DisplayName("Selecciona estado y documento por fecha aunque el vínculo antiguo se inserte después")
+    void seleccionaVinculoPorFechaDeEstado() throws Exception {
+        guardarVinculo(VinculoEstado.ACTIVO, FECHA_RECIENTE);
+        Vinculo antiguo = guardarVinculo(VinculoEstado.DESVINCULADO, FECHA_ANTIGUA);
+        antiguo.setDocumentoTipo("PASAPORTE");
+        antiguo.setDocumentoNumero("87654321");
+        vinculoRepository.saveAndFlush(antiguo);
+
+        mockMvc.perform(get(RUTA, NUMERO))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numeroWhatsapp").value(NUMERO))
+                .andExpect(jsonPath("$.estadoActual").value("ACTIVO"))
+                .andExpect(jsonPath("$.documentoTipo").value("DNI"))
+                .andExpect(jsonPath("$.documentoNumero").value("12345678"));
+    }
+
+    @Test
+    @DisplayName("Devuelve NOT_FOUND cuando el número no tiene vínculos ni auditoría")
+    void rechazaNumeroSinNingunRegistro() throws Exception {
+        assertThat(vinculoRepository.findFirstByNumeroWhatsappOrderByFechaUltimoCambioEstadoDesc(NUMERO))
+                .isEmpty();
+        assertThat(auditRepository.findByNumeroWhatsappOrderByFechaDesc(NUMERO)).isEmpty();
+
+        mockMvc.perform(get(RUTA, NUMERO))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.trace").doesNotExist());
+    }
+
     private Vinculo guardarVinculo(VinculoEstado estado, Instant fecha) {
         Vinculo vinculo = new Vinculo();
         vinculo.setNumeroWhatsapp(NUMERO);

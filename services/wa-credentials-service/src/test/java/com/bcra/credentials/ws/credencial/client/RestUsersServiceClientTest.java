@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -95,6 +96,39 @@ class RestUsersServiceClientTest {
         assertThatThrownBy(() -> client.consultarEstado("", "12345678"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> client.consultarEstado("DNI", " "))
+                .isInstanceOf(IllegalArgumentException.class);
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {400, 401, 403, 409, 429, 502, 503, 504})
+    @DisplayName("Traduce errores HTTP a indisponibilidad sin reintentar ni filtrar el cuerpo remoto")
+    void controlaOtrosErroresHttp(int status) {
+        server.expect(requestTo("http://h1.test/api/v1/users/DNI/12345678/status"))
+                .andRespond(withStatus(HttpStatus.valueOf(status)).body("documento=12345678"));
+
+        assertThatThrownBy(() -> client.consultarEstado("DNI", "12345678"))
+                .isInstanceOf(UsersServiceUnavailableException.class)
+                .hasMessage("No se pudo consultar el estado del cliente").hasNoCause();
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "\t"})
+    @DisplayName("Rechaza tipos de documento ausentes antes de llamar a H1")
+    void rechazaTipoAusente(String tipo) {
+        assertThatThrownBy(() -> client.consultarEstado(tipo, "12345678"))
+                .isInstanceOf(IllegalArgumentException.class);
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "\t"})
+    @DisplayName("Rechaza números de documento ausentes antes de llamar a H1")
+    void rechazaNumeroAusente(String numero) {
+        assertThatThrownBy(() -> client.consultarEstado("DNI", numero))
                 .isInstanceOf(IllegalArgumentException.class);
         server.verify();
     }

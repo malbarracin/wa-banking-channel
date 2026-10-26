@@ -6,6 +6,7 @@ import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -157,6 +158,54 @@ class CreateUserIntegrationTest {
             assertThat(registro.getTipoDocumento()).isEqualTo("DNI");
             assertThat(registro.getNumeroDocumento()).isEqualTo("123");
         });
+    }
+
+    @ParameterizedTest
+    @CsvSource({"PASAPORTE, 123", "DNI, 456"})
+    @DisplayName("Permite repetir un componente del documento cuando el par es diferente")
+    void permiteDocumentoConTipoONumeroDiferente(String tipo, String numero) throws Exception {
+        ObjectNode solicitud = solicitudValida();
+        mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
+                        .content(solicitud.toString()))
+                .andExpect(status().isCreated());
+        ObjectNode documento = (ObjectNode) solicitud.get("documento");
+        documento.put("tipo", tipo);
+        documento.put("numero", numero);
+
+        mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
+                        .content(solicitud.toString()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.documento.tipo").value(tipo))
+                .andExpect(jsonPath("$.documento.numero").value(numero))
+                .andExpect(jsonPath("$.estado").value("ACTIVE"));
+
+        assertThat(userRepository.count()).isEqualTo(2);
+        assertThat(userRepository.findByDocumentoTipoAndDocumentoNumero(tipo, numero)).isPresent();
+        assertThat(auditLogRepository.findAll()).hasSize(2).allSatisfy(registro -> {
+            assertThat(registro.getAccion()).isEqualTo(AuditAction.ALTA);
+            assertThat(registro.getResultado()).isEqualTo(AuditResult.EXITOSO);
+        });
+    }
+
+    @ParameterizedTest
+    @CsvSource({"'  ', contacto", "contacto, '  '", "'', contacto", "contacto, ''"})
+    @DisplayName("Acepta un contacto presente aunque el otro esté vacío y conserva ambos valores")
+    void aceptaUnContactoAunqueElOtroEsteVacio(String email, String telefono) throws Exception {
+        ObjectNode solicitud = solicitudValida();
+        solicitud.put("email", email);
+        solicitud.put("telefono", telefono);
+
+        String respuesta = mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
+                        .content(solicitud.toString()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.telefono").value(telefono))
+                .andReturn().getResponse().getContentAsString();
+
+        var usuario = userRepository.findByDocumentoTipoAndDocumentoNumero("DNI", "123").orElseThrow();
+        assertThat(usuario.getEmail()).isEqualTo(email);
+        assertThat(usuario.getTelefono()).isEqualTo(telefono);
+        assertThat(objectMapper.readTree(respuesta).get("id").asText()).isEqualTo(usuario.getId().toString());
     }
 
     private ObjectNode solicitudValida() throws Exception {

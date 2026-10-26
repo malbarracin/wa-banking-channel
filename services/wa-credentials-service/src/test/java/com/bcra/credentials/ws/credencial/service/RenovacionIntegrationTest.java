@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -21,6 +23,7 @@ import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.web.servlet.MockMvc;
 
 import com.bcra.credentials.ws.credencial.client.UsersServiceClient;
 import com.bcra.credentials.ws.credencial.entity.AuditAccion;
@@ -36,14 +39,19 @@ import com.bcra.credentials.ws.exception.UnauthorizedException;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {"credencial.vigencia-minutos=120", "credencial.renovacion-ventana-minutos=15"})
 @ActiveProfiles("test")
+@AutoConfigureMockMvc
 class RenovacionIntegrationTest {
 
     private static final String NUMERO = "+5491123456789";
@@ -53,8 +61,10 @@ class RenovacionIntegrationTest {
     private RenovacionService service;
     @Autowired
     private ValidacionService validacionService;
-    @Autowired
+    @MockitoSpyBean
     private CredencialAuditLogRepository auditRepository;
+    @Autowired
+    private MockMvc mockMvc;
     @MockitoSpyBean
     private CredencialRepository repository;
     @MockitoSpyBean
@@ -175,6 +185,53 @@ class RenovacionIntegrationTest {
         assertThat(repository.count()).isEqualTo(1);
         assertThat(auditRepository.count()).isZero();
         verifyNoInteractions(jwtEncoder);
+    }
+
+    @Test
+    @DisplayName("El JWT anterior deja de autorizar por HTTP después de confirmar la renovación")
+    void rechazaJwtAnteriorTrasRenovar() throws Exception {
+        CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
+        String token = firmar(anterior);
+
+        service.renovarProximasAExpirar();
+
+        verificarRechazoHttp(token);
+        verifyNoInteractions(usersServiceClient);
+    }
+
+    @Test
+    @DisplayName("El riesgo deriva al canal mediante un rechazo HTTP con el contrato de errores")
+    void rechazaPorHttpCredencialConRiesgo() throws Exception {
+        CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, true);
+        String token = firmar(anterior);
+
+        service.renovarProximasAExpirar();
+
+        verificarRechazoHttp(token);
+        verifyNoInteractions(jwtEncoder, usersServiceClient);
+    }
+
+    @Test
+    @DisplayName("Una falla en la auditoría exitosa revierte también la nueva credencial y la revocación")
+    void revierteRotacionSiFallaAuditoriaExitosa() {
+        CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
+        doThrow(new DataIntegrityViolationException("detalle protegido")).when(auditRepository)
+                .save(argThat(evento -> evento.getAccion() == AuditAccion.RENOVACION
+                        && evento.getResultado() == AuditResultado.EXITOSO));
+
+        assertThatThrownBy(service::renovarProximasAExpirar).isInstanceOf(DataIntegrityViolationException.class);
+
+        verificarRollback(anterior);
+    }
+
+    private void verificarRechazoHttp(String token) throws Exception {
+        mockMvc.perform(post("/api/v1/credenciales/validar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"credencial\":\"" + token + "\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
     }
 
     private CredencialSesion guardar(long segundosRestantes, CredencialEstado estado, boolean riesgo) {

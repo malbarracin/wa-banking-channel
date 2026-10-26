@@ -1,0 +1,19 @@
+meta {
+  name: Consultar estado
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}/status
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Documento + estado para evaluación de vínculos H3.
+}

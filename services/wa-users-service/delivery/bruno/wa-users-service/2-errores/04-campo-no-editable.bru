@@ -1,0 +1,30 @@
+meta {
+  name: Actualización campo no editable — 400 BAD_REQUEST
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "nuevo@example.test",
+    "fechaNacimiento": "1991-01-01"
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  fechaNacimiento no es editable. Esperado: code BAD_REQUEST.
+}

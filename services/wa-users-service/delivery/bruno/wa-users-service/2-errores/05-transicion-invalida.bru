@@ -1,0 +1,51 @@
+meta {
+  name: Transición inválida LOGICAL_DELETE→ACTIVE — 400
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/DNI/{{logicalDoc}}/status
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "estado": "ACTIVE"
+  }
+}
+
+script:pre-request {
+  const n = "88" + String(Date.now()).slice(-6);
+  bru.setVar("logicalDoc", n);
+  const base = bru.getEnvVar("baseUrl");
+  await fetch(base + "/api/v1/users", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      documento: { tipo: "DNI", numero: n },
+      nombre: "Luis",
+      apellido: "Gómez",
+      fechaNacimiento: "1985-03-10",
+      email: "luis@example.test"
+    })
+  });
+  await fetch(base + "/api/v1/users/DNI/" + n + "/status", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ estado: "LOGICAL_DELETE" })
+  });
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  Desde LOGICAL_DELETE no hay reactivación en H1 → 400 BAD_REQUEST (no 409).
+}

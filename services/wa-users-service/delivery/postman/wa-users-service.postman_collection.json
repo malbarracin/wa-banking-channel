@@ -1,0 +1,616 @@
+{
+  "info": {
+    "name": "wa-users-service",
+    "description": "API H1 de usuarios bancarios. Orden sugerido: 1. Flujo feliz → 2. Errores → 3. Salud. El alta genera docNumber único.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "docTipo", "value": "DNI" },
+    { "key": "docNumber", "value": "30111222" }
+  ],
+  "item": [
+    {
+      "name": "1. Flujo feliz",
+      "item": [
+        {
+          "name": "Alta de usuario",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('docNumber', String(Date.now()).slice(-8));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('estado ACTIVE', () => pm.expect(body.estado).to.eql('ACTIVE'));",
+                  "pm.test('devuelve id', () => pm.expect(body.id).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": { \"tipo\": \"{{docTipo}}\", \"numero\": \"{{docNumber}}\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\",\n  \"telefono\": \"5551234\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "Crea usuario ACTIVE. Obligatorios: documento, nombre, apellido, fechaNacimiento y email o teléfono."
+          },
+          "response": [
+            {
+              "name": "201 - creado",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\",\n  \"telefono\": \"5551234\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\",\n  \"telefono\": \"5551234\",\n  \"nombreTratamiento\": null,\n  \"preferencias\": null,\n  \"estado\": \"ACTIVE\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Consultar usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('mismo documento', () => pm.expect(body.documento.numero).to.eql(pm.collectionVariables.get('docNumber')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{docTipo}}", "{{docNumber}}"]
+            },
+            "description": "UserResponse completo (provisional hasta Compliance)."
+          },
+          "response": [
+            {
+              "name": "200 - encontrado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/30111222",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "30111222"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\",\n  \"telefono\": \"5551234\",\n  \"nombreTratamiento\": null,\n  \"preferencias\": null,\n  \"estado\": \"ACTIVE\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Consultar estado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('estado presente', () => pm.expect(pm.response.json().estado).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{docTipo}}", "{{docNumber}}", "status"]
+            },
+            "description": "Documento + estado para H3."
+          },
+          "response": [
+            {
+              "name": "200 - estado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/30111222/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "30111222", "status"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"estado\": \"ACTIVE\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Actualizar datos permitidos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('email actualizado', () => pm.expect(pm.response.json().email).to.eql('nuevo@example.test'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nuevo@example.test\",\n  \"telefono\": \"555999\",\n  \"nombreTratamiento\": \"Anita\",\n  \"preferencias\": \"canal:whatsapp\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{docTipo}}", "{{docNumber}}"]
+            },
+            "description": "Solo email, telefono, nombreTratamiento, preferencias."
+          },
+          "response": [
+            {
+              "name": "200 - actualizado",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"nuevo@example.test\",\n  \"telefono\": \"555999\",\n  \"nombreTratamiento\": \"Anita\",\n  \"preferencias\": \"canal:whatsapp\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/30111222",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "30111222"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"nuevo@example.test\",\n  \"telefono\": \"555999\",\n  \"nombreTratamiento\": \"Anita\",\n  \"preferencias\": \"canal:whatsapp\",\n  \"estado\": \"ACTIVE\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Cambiar estado a SUSPENDED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('SUSPENDED', () => pm.expect(pm.response.json().estado).to.eql('SUSPENDED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"SUSPENDED\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{docTipo}}", "{{docNumber}}", "status"]
+            },
+            "description": "ACTIVE→SUSPENDED. Desde LOGICAL_DELETE no hay reactivación en H1."
+          },
+          "response": [
+            {
+              "name": "200 - suspendido",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"estado\": \"SUSPENDED\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/30111222/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "30111222", "status"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"estado\": \"SUSPENDED\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Errores",
+      "item": [
+        {
+          "name": "Alta sin nombre — 400 VALIDATION_ERROR",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('VALIDATION_ERROR', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"99900001\" },\n  \"nombre\": \"\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "Validación Bean Validation."
+          },
+          "response": [
+            {
+              "name": "400 - validación",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"99900001\" },\n  \"nombre\": \"\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"La solicitud tiene datos inválidos\",\n  \"details\": [\n    { \"field\": \"nombre\", \"message\": \"El nombre es obligatorio\" }\n  ],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Alta documento duplicado — 409 CONFLICT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409', () => pm.response.to.have.status(409));",
+                  "pm.test('CONFLICT', () => pm.expect(pm.response.json().code).to.eql('CONFLICT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": { \"tipo\": \"{{docTipo}}\", \"numero\": \"{{docNumber}}\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"otra@example.test\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "Requiere haber corrido el flujo feliz antes (mismo docNumber)."
+          },
+          "response": [
+            {
+              "name": "409 - duplicado",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"otra@example.test\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users"]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"Ya existe un usuario con ese documento (duplicado)\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Consulta inexistente — 404 NOT_FOUND",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404', () => pm.response.to.have.status(404));",
+                  "pm.test('NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('NOT_FOUND'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/DNI/00000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "DNI", "00000000"]
+            },
+            "description": "Sin PII en el cuerpo de error."
+          },
+          "response": [
+            {
+              "name": "404 - no encontrado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/00000000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "00000000"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"NOT_FOUND\",\n  \"message\": \"Usuario no encontrado\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Actualización campo no editable — 400 BAD_REQUEST",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('BAD_REQUEST', () => pm.expect(pm.response.json().code).to.eql('BAD_REQUEST'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nuevo@example.test\",\n  \"fechaNacimiento\": \"1991-01-01\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{docTipo}}", "{{docNumber}}"]
+            },
+            "description": "fechaNacimiento no es editable."
+          },
+          "response": [
+            {
+              "name": "400 - no editable",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"nuevo@example.test\",\n  \"fechaNacimiento\": \"1991-01-01\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/30111222",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "30111222"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"El campo no es editable por este servicio\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Transición inválida desde LOGICAL_DELETE — 400",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const n = '88' + String(Date.now()).slice(-6);",
+                  "pm.collectionVariables.set('badDoc', n);",
+                  "const base = pm.environment.get('baseUrl') || pm.collectionVariables.get('baseUrl');",
+                  "pm.sendRequest({",
+                  "  url: base + '/api/v1/users',",
+                  "  method: 'POST',",
+                  "  header: { 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({",
+                  "    documento: { tipo: 'DNI', numero: n },",
+                  "    nombre: 'Luis', apellido: 'Gómez', fechaNacimiento: '1985-03-10',",
+                  "    email: 'luis@example.test'",
+                  "  })}",
+                  "}, (err, res) => {",
+                  "  pm.sendRequest({",
+                  "    url: base + '/api/v1/users/DNI/' + n + '/status',",
+                  "    method: 'PATCH',",
+                  "    header: { 'Content-Type': 'application/json' },",
+                  "    body: { mode: 'raw', raw: '{\"estado\":\"LOGICAL_DELETE\"}' }",
+                  "  }, () => {});",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('BAD_REQUEST', () => pm.expect(pm.response.json().code).to.eql('BAD_REQUEST'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"ACTIVE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/DNI/{{badDoc}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "DNI", "{{badDoc}}", "status"]
+            },
+            "description": "LOGICAL_DELETE no admite reactivación en H1 → 400 BAD_REQUEST."
+          },
+          "response": [
+            {
+              "name": "400 - transición inválida",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"estado\": \"ACTIVE\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/88000001/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "88000001", "status"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"La solicitud no es válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Salud",
+      "item": [
+        {
+          "name": "Actuator health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Healthcheck."
+          },
+          "response": [
+            {
+              "name": "200 - UP",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/actuator/health",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["actuator", "health"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"status\": \"UP\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

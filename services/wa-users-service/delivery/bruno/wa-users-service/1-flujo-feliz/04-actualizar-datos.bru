@@ -1,0 +1,32 @@
+meta {
+  name: Actualizar datos permitidos
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "nuevo@example.test",
+    "telefono": "555999",
+    "nombreTratamiento": "Anita",
+    "preferencias": "canal:whatsapp"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Solo email, telefono, nombreTratamiento, preferencias. Propiedades desconocidas → 400.
+}

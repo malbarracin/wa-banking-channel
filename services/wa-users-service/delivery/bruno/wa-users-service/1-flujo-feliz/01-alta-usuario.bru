@@ -1,0 +1,42 @@
+meta {
+  name: Alta de usuario
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/users
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "documento": { "tipo": "{{docTipo}}", "numero": "{{docNumber}}" },
+    "nombre": "Ana",
+    "apellido": "Pérez",
+    "fechaNacimiento": "1990-05-15",
+    "email": "ana@example.test",
+    "telefono": "5551234"
+  }
+}
+
+script:pre-request {
+  bru.setVar("docNumber", String(Date.now()).slice(-8));
+}
+
+assert {
+  res.status: eq 201
+}
+
+script:post-response {
+  bru.setVar("docNumber", res.body.documento.numero);
+}
+
+docs {
+  Crea un usuario ACTIVE. Respuestas: 201 creado, 400 datos inválidos, 409 documento repetido.
+}

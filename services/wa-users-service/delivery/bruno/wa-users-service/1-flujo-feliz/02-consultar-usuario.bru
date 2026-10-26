@@ -1,0 +1,19 @@
+meta {
+  name: Consultar usuario
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  UserResponse completo (provisional hasta Compliance). 404 si no existe.
+}

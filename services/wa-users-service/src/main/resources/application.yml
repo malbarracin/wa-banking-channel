@@ -33,6 +33,14 @@ management:
       probes:
         enabled: true
 
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+  default-produces-media-type: application/json
+
 ---
 spring:
   config:
@@ -68,3 +76,6 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+springdoc:
+  swagger-ui:
+    enabled: false

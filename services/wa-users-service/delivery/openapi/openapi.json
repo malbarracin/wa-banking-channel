@@ -1,0 +1,849 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "wa-users-service",
+    "description" : "Servicio de usuarios bancarios (H1): alta, consulta por documento, actualización de datos permitidos y cambio de estado operativo. No gestiona WhatsApp, verificación de identidad ni credenciales de sesión.",
+    "version" : "0.1.0-SNAPSHOT"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:8080",
+    "description" : "Local"
+  } ],
+  "tags" : [ {
+    "name" : "Usuarios",
+    "description" : "Alta, consulta, actualización y estado de usuarios bancarios (H1)"
+  } ],
+  "paths" : {
+    "/api/v1/users" : {
+      "post" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Dar de alta un usuario",
+        "description" : "Crea un usuario ACTIVE con documento (tipo+número) como clave única. Obligatorios: documento, nombre, apellido, fecha de nacimiento y al menos email o teléfono. No exige formato cerrado de contacto ni catálogo de documentos.",
+        "operationId" : "alta",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateUserRequest"
+              },
+              "examples" : {
+                "DNI" : {
+                  "description" : "DNI",
+                  "value" : {
+                    "documento" : {
+                      "tipo" : "DNI",
+                      "numero" : "30111222"
+                    },
+                    "nombre" : "Ana",
+                    "apellido" : "Pérez",
+                    "fechaNacimiento" : "1990-05-15",
+                    "email" : "ana@example.test",
+                    "telefono" : "5551234"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Usuario creado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                },
+                "example" : {
+                  "id" : "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                  "documento" : {
+                    "tipo" : "DNI",
+                    "numero" : "30111222"
+                  },
+                  "nombre" : "Ana",
+                  "apellido" : "Pérez",
+                  "fechaNacimiento" : "1990-05-15",
+                  "email" : "ana@example.test",
+                  "telefono" : "5551234",
+                  "nombreTratamiento" : null,
+                  "preferencias" : null,
+                  "estado" : "ACTIVE"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Datos inválidos o incompletos",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "ValidationError" : {
+                    "$ref" : "#/components/examples/ValidationError"
+                  },
+                  "BadRequest" : {
+                    "$ref" : "#/components/examples/BadRequest"
+                  }
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Documento ya registrado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{tipo}/{numero}" : {
+      "get" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Consultar usuario por documento",
+        "description" : "Devuelve el UserResponse completo de este hito (provisional hasta que Compliance defina el filtrado por perfil). Incluye usuarios en cualquier estado.",
+        "operationId" : "consultar",
+        "parameters" : [ {
+          "name" : "tipo",
+          "in" : "path",
+          "description" : "Tipo de documento",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "DNI"
+        }, {
+          "name" : "numero",
+          "in" : "path",
+          "description" : "Número de documento",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : 30111222
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Usuario encontrado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                },
+                "example" : {
+                  "id" : "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                  "documento" : {
+                    "tipo" : "DNI",
+                    "numero" : "30111222"
+                  },
+                  "nombre" : "Ana",
+                  "apellido" : "Pérez",
+                  "fechaNacimiento" : "1990-05-15",
+                  "email" : "ana@example.test",
+                  "telefono" : "5551234",
+                  "nombreTratamiento" : null,
+                  "preferencias" : null,
+                  "estado" : "ACTIVE"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Usuario no encontrado (sin PII en el error)",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Actualizar datos permitidos",
+        "description" : "Solo email, telefono, nombreTratamiento y preferencias. Campos ausentes o null conservan el valor. Propiedades fuera del contrato (documento, fechaNacimiento, estado, etc.) → 400 BAD_REQUEST sin aplicar cambios.",
+        "operationId" : "actualizar",
+        "parameters" : [ {
+          "name" : "tipo",
+          "in" : "path",
+          "description" : "Tipo de documento",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "DNI"
+        }, {
+          "name" : "numero",
+          "in" : "path",
+          "description" : "Número de documento",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : 30111222
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateUserRequest"
+              },
+              "example" : {
+                "email" : "nuevo@example.test",
+                "telefono" : "555999",
+                "nombreTratamiento" : "Anita",
+                "preferencias" : "canal:whatsapp"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Usuario actualizado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserResponse"
+                },
+                "example" : {
+                  "id" : "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                  "documento" : {
+                    "tipo" : "DNI",
+                    "numero" : "30111222"
+                  },
+                  "nombre" : "Ana",
+                  "apellido" : "Pérez",
+                  "fechaNacimiento" : "1990-05-15",
+                  "email" : "nuevo@example.test",
+                  "telefono" : "555999",
+                  "nombreTratamiento" : "Anita",
+                  "preferencias" : "canal:whatsapp",
+                  "estado" : "ACTIVE"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Campo no editable o body inválido",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "NonEditableField" : {
+                    "$ref" : "#/components/examples/NonEditableField"
+                  },
+                  "BadRequest" : {
+                    "$ref" : "#/components/examples/BadRequest"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Usuario no encontrado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/{tipo}/{numero}/status" : {
+      "get" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Consultar estado del usuario",
+        "description" : "Expone documento y estado (ACTIVE, SUSPENDED, LOGICAL_DELETE) para que H3 evalúe habilitación de nuevos vínculos de canal. No aplica la restricción aquí.",
+        "operationId" : "consultarEstado",
+        "parameters" : [ {
+          "name" : "tipo",
+          "in" : "path",
+          "description" : "Tipo de documento",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "DNI"
+        }, {
+          "name" : "numero",
+          "in" : "path",
+          "description" : "Número de documento",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : 30111222
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Estado del usuario",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserStatusResponse"
+                },
+                "example" : {
+                  "documento" : {
+                    "tipo" : "DNI",
+                    "numero" : "30111222"
+                  },
+                  "estado" : "SUSPENDED"
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Usuario no encontrado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "Usuarios" ],
+        "summary" : "Cambiar estado del usuario",
+        "description" : "Transiciones soportadas en H1: ACTIVE→SUSPENDED|LOGICAL_DELETE, SUSPENDED→ACTIVE|LOGICAL_DELETE. Desde LOGICAL_DELETE no hay reactivación. Transición inválida → 400 BAD_REQUEST (no 409).",
+        "operationId" : "cambiarEstado",
+        "parameters" : [ {
+          "name" : "tipo",
+          "in" : "path",
+          "description" : "Tipo de documento",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "DNI"
+        }, {
+          "name" : "numero",
+          "in" : "path",
+          "description" : "Número de documento",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : 30111222
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UpdateStatusRequest"
+              },
+              "examples" : {
+                "Suspender" : {
+                  "description" : "Suspender",
+                  "value" : {
+                    "estado" : "SUSPENDED"
+                  }
+                },
+                "Reactivar" : {
+                  "description" : "Reactivar",
+                  "value" : {
+                    "estado" : "ACTIVE"
+                  }
+                },
+                "Baja lógica" : {
+                  "description" : "Baja lógica",
+                  "value" : {
+                    "estado" : "LOGICAL_DELETE"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Estado actualizado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserStatusResponse"
+                },
+                "example" : {
+                  "documento" : {
+                    "tipo" : "DNI",
+                    "numero" : "30111222"
+                  },
+                  "estado" : "SUSPENDED"
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Transición no soportada o body inválido",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "InvalidTransition" : {
+                    "$ref" : "#/components/examples/InvalidTransition"
+                  },
+                  "BadRequest" : {
+                    "$ref" : "#/components/examples/BadRequest"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Usuario no encontrado",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ErrorResponse" : {
+        "type" : "object",
+        "description" : "Error uniforme de la API (code, message, details, timestamp)",
+        "properties" : {
+          "code" : {
+            "type" : "string",
+            "description" : "Código estable",
+            "enum" : [ "VALIDATION_ERROR", "BAD_REQUEST", "NOT_FOUND", "CONFLICT", "INTERNAL_ERROR" ],
+            "example" : "VALIDATION_ERROR"
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Mensaje legible sin datos sensibles",
+            "example" : "La solicitud tiene datos inválidos"
+          },
+          "details" : {
+            "type" : "array",
+            "description" : "Detalles de validación; nunca null (lista vacía si no aplica)",
+            "items" : {
+              "$ref" : "#/components/schemas/FieldError"
+            }
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Instante UTC ISO-8601",
+            "example" : "2026-10-26T12:00:00Z"
+          }
+        }
+      },
+      "CreateUserRequest" : {
+        "type" : "object",
+        "description" : "Alta de usuario: documento, identidad, fecha de nacimiento y al menos un contacto",
+        "properties" : {
+          "documento" : {
+            "$ref" : "#/components/schemas/DocumentoDto"
+          },
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre de pila",
+            "example" : "Ana",
+            "minLength" : 1
+          },
+          "apellido" : {
+            "type" : "string",
+            "description" : "Apellido",
+            "example" : "Pérez",
+            "minLength" : 1
+          },
+          "fechaNacimiento" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Fecha de nacimiento ISO-8601",
+            "example" : "1990-05-15"
+          },
+          "email" : {
+            "type" : "string",
+            "description" : "Email de contacto; formato no cerrado en H1",
+            "example" : "ana@example.test"
+          },
+          "telefono" : {
+            "type" : "string",
+            "description" : "Teléfono de contacto; formato no cerrado en H1",
+            "example" : 5551234
+          }
+        },
+        "required" : [ "apellido", "documento", "fechaNacimiento", "nombre" ]
+      },
+      "DocumentoDto" : {
+        "type" : "object",
+        "description" : "Documento identificador; el catálogo de tipos queda abierto en H1",
+        "properties" : {
+          "tipo" : {
+            "type" : "string",
+            "description" : "Tipo libre (ej. DNI, PASAPORTE)",
+            "example" : "DNI",
+            "minLength" : 1
+          },
+          "numero" : {
+            "type" : "string",
+            "description" : "Número del documento",
+            "example" : 30111222,
+            "minLength" : 1
+          }
+        },
+        "required" : [ "numero", "tipo" ]
+      },
+      "DocumentoResponse" : {
+        "type" : "object",
+        "description" : "Documento del usuario en respuestas",
+        "properties" : {
+          "tipo" : {
+            "type" : "string",
+            "description" : "Tipo de documento",
+            "example" : "DNI"
+          },
+          "numero" : {
+            "type" : "string",
+            "description" : "Número de documento",
+            "example" : 30111222
+          }
+        }
+      },
+      "UserResponse" : {
+        "type" : "object",
+        "description" : "Usuario completo (provisional hasta filtrado por perfil de Compliance)",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Identificador asignado",
+            "example" : "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+          },
+          "documento" : {
+            "$ref" : "#/components/schemas/DocumentoResponse"
+          },
+          "nombre" : {
+            "type" : "string",
+            "description" : "Nombre",
+            "example" : "Ana"
+          },
+          "apellido" : {
+            "type" : "string",
+            "description" : "Apellido",
+            "example" : "Pérez"
+          },
+          "fechaNacimiento" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Fecha de nacimiento ISO-8601",
+            "example" : "1990-05-15"
+          },
+          "email" : {
+            "type" : "string",
+            "description" : "Email",
+            "example" : "ana@example.test"
+          },
+          "telefono" : {
+            "type" : "string",
+            "description" : "Teléfono",
+            "example" : 5551234
+          },
+          "nombreTratamiento" : {
+            "type" : "string",
+            "description" : "Nombre para tratamiento",
+            "example" : "Anita"
+          },
+          "preferencias" : {
+            "type" : "string",
+            "description" : "Preferencias generales no sensibles",
+            "example" : "canal:whatsapp"
+          },
+          "estado" : {
+            "type" : "string",
+            "description" : "Estado operativo actual",
+            "enum" : [ "ACTIVE", "SUSPENDED", "LOGICAL_DELETE" ],
+            "example" : "ACTIVE"
+          }
+        }
+      },
+      "FieldError" : {
+        "type" : "object",
+        "description" : "Detalle de un campo inválido (sin el valor rechazado)",
+        "properties" : {
+          "field" : {
+            "type" : "string",
+            "description" : "Nombre del campo",
+            "example" : "nombre"
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Motivo del rechazo",
+            "example" : "El nombre es obligatorio"
+          }
+        }
+      },
+      "UpdateUserRequest" : {
+        "type" : "object",
+        "description" : "Solo campos editables: email, telefono, nombreTratamiento, preferencias",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "description" : "Nuevo email; null omite el cambio",
+            "example" : "nuevo@example.test"
+          },
+          "telefono" : {
+            "type" : "string",
+            "description" : "Nuevo teléfono; null omite el cambio",
+            "example" : 555999
+          },
+          "nombreTratamiento" : {
+            "type" : "string",
+            "description" : "Nombre para tratamiento",
+            "example" : "Anita"
+          },
+          "preferencias" : {
+            "type" : "string",
+            "description" : "Preferencias generales no sensibles (texto completo)",
+            "example" : "canal:whatsapp"
+          }
+        }
+      },
+      "UpdateStatusRequest" : {
+        "type" : "object",
+        "description" : "Estado destino solicitado para el usuario",
+        "properties" : {
+          "estado" : {
+            "type" : "string",
+            "description" : "Nuevo estado operativo",
+            "enum" : [ "ACTIVE", "SUSPENDED", "LOGICAL_DELETE" ],
+            "example" : "SUSPENDED"
+          }
+        },
+        "required" : [ "estado" ]
+      },
+      "UserStatusResponse" : {
+        "type" : "object",
+        "description" : "Documento y estado para evaluación de vínculos de canal (H3)",
+        "properties" : {
+          "documento" : {
+            "$ref" : "#/components/schemas/DocumentoResponse"
+          },
+          "estado" : {
+            "type" : "string",
+            "description" : "Estado operativo",
+            "enum" : [ "ACTIVE", "SUSPENDED", "LOGICAL_DELETE" ],
+            "example" : "SUSPENDED"
+          }
+        }
+      }
+    },
+    "responses" : {
+      "ValidationError" : {
+        "description" : "Datos inválidos",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "ValidationError" : {
+                "$ref" : "#/components/examples/ValidationError"
+              }
+            }
+          }
+        }
+      },
+      "BadRequest" : {
+        "description" : "Solicitud no válida",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "BadRequest" : {
+                "$ref" : "#/components/examples/BadRequest"
+              }
+            }
+          }
+        }
+      },
+      "NonEditableField" : {
+        "description" : "Campo no editable",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "NonEditableField" : {
+                "$ref" : "#/components/examples/NonEditableField"
+              }
+            }
+          }
+        }
+      },
+      "InvalidTransition" : {
+        "description" : "Transición de estado no soportada",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "InvalidTransition" : {
+                "$ref" : "#/components/examples/InvalidTransition"
+              }
+            }
+          }
+        }
+      },
+      "NotFound" : {
+        "description" : "Usuario no encontrado",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "NotFound" : {
+                "$ref" : "#/components/examples/NotFound"
+              }
+            }
+          }
+        }
+      },
+      "Duplicate" : {
+        "description" : "Documento duplicado",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "Duplicate" : {
+                "$ref" : "#/components/examples/Duplicate"
+              }
+            }
+          }
+        }
+      },
+      "InternalError" : {
+        "description" : "Error interno",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "InternalError" : {
+                "$ref" : "#/components/examples/InternalError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "examples" : {
+      "ValidationError" : {
+        "value" : "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"La solicitud tiene datos inválidos\",\n  \"details\": [\n    { \"field\": \"nombre\", \"message\": \"El nombre es obligatorio\" }\n  ],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      },
+      "BadRequest" : {
+        "value" : "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"La solicitud no es válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      },
+      "NonEditableField" : {
+        "value" : "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"El campo no es editable por este servicio\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      },
+      "InvalidTransition" : {
+        "value" : "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"La solicitud no es válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      },
+      "NotFound" : {
+        "value" : "{\n  \"code\": \"NOT_FOUND\",\n  \"message\": \"Usuario no encontrado\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      },
+      "Duplicate" : {
+        "value" : "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"Ya existe un usuario con ese documento (duplicado)\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      },
+      "InternalError" : {
+        "value" : "{\n  \"code\": \"INTERNAL_ERROR\",\n  \"message\": \"Error interno\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      }
+    }
+  }
+}

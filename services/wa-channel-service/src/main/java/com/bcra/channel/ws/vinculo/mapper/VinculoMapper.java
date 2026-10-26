@@ -2,11 +2,15 @@ package com.bcra.channel.ws.vinculo.mapper;
 
 import java.util.List;
 
+import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ReportingPolicy;
 
 import com.bcra.channel.ws.vinculo.client.ClientePerfilResponse;
+import com.bcra.channel.ws.vinculo.dto.ActualizarPreferenciasRequest;
 import com.bcra.channel.ws.vinculo.dto.EventoHistorialResponse;
 import com.bcra.channel.ws.vinculo.dto.HistorialVinculoResponse;
 import com.bcra.channel.ws.vinculo.dto.PerfilCanalResponse;
@@ -30,6 +34,15 @@ public interface VinculoMapper {
 
     @Mapping(target = "preferencias", source = "preferencias")
     PerfilCanalResponse toPerfilCanalResponse(ClientePerfilResponse perfil, Preferencias preferencias);
+
+    /**
+     * Aplica solo los campos presentes del request; los null no pisan el valor embebido.
+     *
+     * @param request cambios solicitados
+     * @param preferencias destino embebido del vínculo
+     */
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    void actualizarPreferencias(ActualizarPreferenciasRequest request, @MappingTarget Preferencias preferencias);
 
     EventoHistorialResponse toEventoResponse(VinculoAuditLog evento);
 

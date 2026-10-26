@@ -1,8 +1,8 @@
 ---
 title: Canal WhatsApp — especificación
-status: borrador
+status: aprobada
 source: https://app.notion.com/p/H3-Servicio-Canal-WhatsApp-38275bb08ca781c0bc08d80366637aa5
-updated: 2026-10-26T15:00:54.850Z
+updated: 2026-10-26T15:04:05.194Z
 ---
 
 # Canal WhatsApp — especificación

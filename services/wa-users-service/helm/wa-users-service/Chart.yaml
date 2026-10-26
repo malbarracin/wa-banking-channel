@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wa-users-service
+description: Helm chart for wa-users-service (H1 Servicio de Usuarios)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

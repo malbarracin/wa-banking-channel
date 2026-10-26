@@ -1,0 +1,49 @@
+# Template de CD: no despliega a prod hasta tener cluster y credenciales.
+# Usar workflow_dispatch cuando exista el entorno.
+name: CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Entorno de destino (dev|prod)"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - prod
+      image_tag:
+        description: "Tag de imagen a desplegar"
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      # Gated: descomentar y configurar kubeconfig / secrets cuando haya cluster.
+      # - name: Configure kubeconfig
+      #   run: |
+      #     mkdir -p ~/.kube
+      #     echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+      #
+      # - name: Helm upgrade
+      #   run: |
+      #     helm upgrade --install wa-users \
+      #       services/wa-users-service/helm/wa-users-service \
+      #       -f services/wa-users-service/helm/wa-users-service/values-${{ inputs.environment }}.yaml \
+      #       --set image.tag=${{ inputs.image_tag }} \
+      #       -n ${{ inputs.environment }} --create-namespace
+
+      - name: Placeholder
+        run: |
+          echo "CD template listo. Configurar secrets KUBE_CONFIG y descomentar el deploy."
+          echo "environment=${{ inputs.environment }} image_tag=${{ inputs.image_tag }}"

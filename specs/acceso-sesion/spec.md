@@ -1,8 +1,8 @@
 ---
 title: Acceso y Sesión — especificación
-status: borrador
+status: aprobada
 source: https://app.notion.com/p/H2-Servicio-de-Acceso-y-Sesi-n-38275bb08ca781c8b7d5f5a2c29b8770
-updated: 2026-10-26T18:17:18.085Z
+updated: 2026-10-26T18:19:37.745Z
 ---
 
 # Acceso y Sesión — especificación

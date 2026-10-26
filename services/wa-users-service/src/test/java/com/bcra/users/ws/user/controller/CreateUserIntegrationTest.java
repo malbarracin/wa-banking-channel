@@ -29,6 +29,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -78,6 +79,38 @@ class CreateUserIntegrationTest {
             assertThat(registro.getAccion()).isEqualTo(AuditAction.ALTA);
             assertThat(registro.getResultado()).isEqualTo(AuditResult.EXITOSO);
         });
+    }
+
+    @Test
+    @DisplayName("El alta y la actualización conviven conservando identidad y auditoría de cada operación")
+    void actualizaUsuarioRecienCreado() throws Exception {
+        String respuesta = mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
+                        .content(solicitudValida().toString()))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String identificador = objectMapper.readTree(respuesta).get("id").asText();
+
+        mockMvc.perform(patch("/api/v1/users/DNI/123").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"nuevo contacto\",\"nombreTratamiento\":\"Anita\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(identificador))
+                .andExpect(jsonPath("$.email").value("nuevo contacto"))
+                .andExpect(jsonPath("$.nombreTratamiento").value("Anita"));
+        mockMvc.perform(get("/api/v1/users/DNI/123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(identificador))
+                .andExpect(jsonPath("$.documento.tipo").value("DNI"))
+                .andExpect(jsonPath("$.documento.numero").value("123"))
+                .andExpect(jsonPath("$.nombre").value("Ana"))
+                .andExpect(jsonPath("$.fechaNacimiento").value("1990-01-01"))
+                .andExpect(jsonPath("$.email").value("nuevo contacto"))
+                .andExpect(jsonPath("$.estado").value("ACTIVE"));
+
+        assertThat(userRepository.count()).isEqualTo(1);
+        assertThat(auditLogRepository.findAll()).hasSize(2).allSatisfy(registro ->
+                assertThat(registro.getResultado()).isEqualTo(AuditResult.EXITOSO))
+                .extracting(registro -> registro.getAccion())
+                .containsExactlyInAnyOrder(AuditAction.ALTA, AuditAction.ACTUALIZACION);
     }
 
     @ParameterizedTest

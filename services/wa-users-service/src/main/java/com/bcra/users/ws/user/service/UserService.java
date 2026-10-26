@@ -2,13 +2,16 @@ package com.bcra.users.ws.user.service;
 
 import java.util.Objects;
 
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bcra.users.ws.user.dto.CreateUserRequest;
+import com.bcra.users.ws.user.dto.UpdateUserRequest;
 import com.bcra.users.ws.user.dto.UserResponse;
 import com.bcra.users.ws.user.entity.AuditAction;
 import com.bcra.users.ws.user.entity.AuditResult;
@@ -20,7 +23,7 @@ import com.bcra.users.ws.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
-/** Casos de uso del usuario con unicidad por documento y auditoría del resultado. */
+/** Altas, consultas y actualizaciones con unicidad por documento y auditoría del resultado. */
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -58,6 +61,24 @@ public class UserService {
         }
         auditar(solicitud, AuditResult.EXITOSO, "");
         return userMapper.toResponse(Objects.requireNonNull(usuario));
+    }
+
+    /** Actualiza solo datos permitidos y audita el resultado después del commit o rollback. */
+    public User actualizar(String tipo, String numero, UpdateUserRequest request) {
+        User actualizado;
+        try {
+            actualizado = Objects.requireNonNull(new TransactionTemplate(transactionManager).execute(status -> {
+                User usuario = consultar(tipo, numero);
+                userMapper.actualizar(request, usuario);
+                return userRepository.saveAndFlush(usuario);
+            }));
+        } catch (UserNotFoundException | DataAccessException | TransactionException exception) {
+            auditService.registrar(AuditAction.ACTUALIZACION, AuditResult.RECHAZADO, tipo, numero,
+                    "No se pudo actualizar el usuario");
+            throw exception;
+        }
+        auditService.registrar(AuditAction.ACTUALIZACION, AuditResult.EXITOSO, tipo, numero, "");
+        return actualizado;
     }
 
     /**

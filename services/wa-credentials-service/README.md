@@ -32,3 +32,12 @@ solo se excluye la clase de arranque de Spring Boot.
 
 Fuente funcional: `../../specs/acceso-sesion/spec.md`.
 Arquitectura: `../../specs/acceso-sesion/arquitectura.md`.
+
+El adaptador `UsersServiceClient` consulta `GET /api/v1/users/{tipo}/{numero}/status` de H1.
+Configurar `WA_USERS_SERVICE_BASE_URL` (default `http://localhost:8080`),
+`WA_USERS_SERVICE_CONNECT_TIMEOUT` (default `1s`) y `WA_USERS_SERVICE_READ_TIMEOUT` (default `2s`).
+Los timeouts deben ser positivos. No hay reintentos automáticos.
+El 404 produce `ClienteNoEncontradoException`; errores HTTP, de transporte y respuestas inválidas
+producen `UsersServiceUnavailableException`. El consumidor decide la política de su caso de uso;
+una falla nunca se convierte en un cliente activo. Las excepciones omiten URL, documento y cuerpo remoto
+para evitar exponer datos sensibles en logs o respuestas.

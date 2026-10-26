@@ -16,6 +16,12 @@ server:
     include-stacktrace: never
     include-message: never
 
+clients:
+  wa-users-service:
+    base-url: ${WA_USERS_SERVICE_BASE_URL:http://localhost:8080}
+    connect-timeout: ${WA_USERS_SERVICE_CONNECT_TIMEOUT:1s}
+    read-timeout: ${WA_USERS_SERVICE_READ_TIMEOUT:2s}
+
 management:
   endpoints:
     web:

@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -167,6 +168,7 @@ class CreateUserIntegrationTest {
                         .content(solicitud.toString()))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNotEmpty())
+                .andExpect(header().string("Location", "http://localhost/api/v1/users/DNI/123"))
                 .andExpect(jsonPath("$.documento.tipo").value("DNI"))
                 .andExpect(jsonPath("$.documento.numero").value("123"))
                 .andExpect(jsonPath("$.nombre").value("Ana"))
@@ -228,6 +230,29 @@ class CreateUserIntegrationTest {
                 .andExpect(jsonPath("$.timestamp").isNotEmpty());
 
         assertThat(userRepository.count()).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"nombre", "apellido", "fechaNacimiento", "email"})
+    @DisplayName("Audita el rechazo de validación de alta cuando se identifica el documento")
+    void auditaAltaInvalidaConDocumento(String campo) throws Exception {
+        ObjectNode solicitud = solicitudValida();
+        solicitud.remove(campo);
+
+        mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
+                        .content(solicitud.toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        assertThat(userRepository.count()).isZero();
+        assertThat(auditLogRepository.findAll()).singleElement().satisfies(registro -> {
+            assertThat(registro.getAccion()).isEqualTo(AuditAction.ALTA);
+            assertThat(registro.getResultado()).isEqualTo(AuditResult.RECHAZADO);
+            assertThat(registro.getTipoDocumento()).isEqualTo("DNI");
+            assertThat(registro.getNumeroDocumento()).isEqualTo("123");
+            assertThat(registro.getMotivo()).isEqualTo("Datos mínimos de alta inválidos");
+            assertThat(registro.getFecha()).isNotNull();
+        });
     }
 
     @ParameterizedTest

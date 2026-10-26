@@ -2,7 +2,6 @@ package com.bcra.users.ws.user.controller;
 
 import jakarta.validation.Valid;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -11,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.bcra.users.ws.exception.ErrorResponse;
 import com.bcra.users.ws.user.dto.CreateUserRequest;
@@ -154,7 +154,11 @@ public class UserController {
                                     }
                                     """)))
             @Valid @RequestBody CreateUserRequest solicitud) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.alta(solicitud));
+        UserResponse usuario = userService.alta(solicitud);
+        return ResponseEntity.created(ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{tipo}/{numero}")
+                .buildAndExpand(usuario.documento().tipo(), usuario.documento().numero()).encode().toUri())
+                .body(usuario);
     }
 
     /**

@@ -51,8 +51,8 @@ cd services/wa-users-service
 ## Helm (sin cluster)
 
 ```powershell
-helm lint services/wa-users-service/helm/wa-users-service
-helm template wa-users services/wa-users-service/helm/wa-users-service -f services/wa-users-service/helm/wa-users-service/values-dev.yaml
+helm lint services/wa-users-service/helm/wa-users-service --set-string env.DB_PASSWORD=lint-only-placeholder
+helm template wa-users services/wa-users-service/helm/wa-users-service -f services/wa-users-service/helm/wa-users-service/values-dev.yaml --set-string env.DB_PASSWORD=render-only-placeholder
 ```
 
 Con cluster local (kind / minikube / Docker Desktop):
@@ -60,10 +60,15 @@ Con cluster local (kind / minikube / Docker Desktop):
 ```powershell
 helm upgrade --install wa-users services/wa-users-service/helm/wa-users-service `
   -f services/wa-users-service/helm/wa-users-service/values-dev.yaml `
+  --set-string "env.DB_PASSWORD=$env:DB_PASSWORD" `
   -n dev --create-namespace
 ```
 
 ## CI / CD
+
+El chart exige `env.DB_PASSWORD` explícito en todos los entornos; no tiene contraseña por defecto.
+Los valores `lint-only-placeholder` y `render-only-placeholder` son solo para validación sin despliegue.
+Para instalar, definir `DB_PASSWORD` con la credencial real en el entorno local sin versionarla.
 
 - CI: `.github/workflows/ci.yml` — `./mvnw -B clean verify` en push/PR; build de imagen en `main`; `helm lint`.
 - CD: `.github/workflows/cd.yml` — template con `workflow_dispatch` (deploy comentado hasta tener cluster/credenciales).

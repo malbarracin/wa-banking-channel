@@ -52,4 +52,4 @@ jobs:
         uses: azure/setup-helm@v4
 
       - name: Helm lint
-        run: helm lint services/wa-users-service/helm/wa-users-service
+        run: helm lint services/wa-users-service/helm/wa-users-service --set-string env.DB_PASSWORD=lint-only-placeholder

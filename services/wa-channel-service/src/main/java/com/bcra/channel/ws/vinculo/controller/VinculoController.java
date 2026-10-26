@@ -8,13 +8,17 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.bcra.channel.ws.vinculo.CredencialCanal;
 import com.bcra.channel.ws.vinculo.dto.AceptarTerminosRequest;
 import com.bcra.channel.ws.vinculo.dto.HistorialVinculoResponse;
+import com.bcra.channel.ws.vinculo.dto.PerfilCanalResponse;
 import com.bcra.channel.ws.vinculo.dto.VerificacionResultadoResponse;
 import com.bcra.channel.ws.vinculo.dto.VerificarIdentidadRequest;
+import com.bcra.channel.ws.vinculo.dto.VinculoEstadoResponse;
 import com.bcra.channel.ws.vinculo.dto.VinculoResponse;
 import com.bcra.channel.ws.vinculo.service.VerificacionService;
 import com.bcra.channel.ws.vinculo.service.VinculoService;
@@ -40,6 +44,29 @@ public class VinculoController {
     public VerificacionResultadoResponse verificar(@PathVariable String numero,
             @Valid @RequestBody VerificarIdentidadRequest request) {
         return verificacionService.verificar(numero, request);
+    }
+
+    /**
+     * Consulta anti-duplicados: si el número ya tiene vínculo, sin datos del cliente.
+     * @param numero número de WhatsApp consultado
+     * @return 200 con vinculado true/false; nunca 404
+     */
+    @GetMapping("/{numero}/estado")
+    public VinculoEstadoResponse consultarEstado(@PathVariable String numero) {
+        return vinculoService.consultarEstado(numero);
+    }
+
+    /**
+     * Perfil permitido del canal para el titular con credencial válida y vínculo activo.
+     * @param numero número de WhatsApp
+     * @param credencialValida header {@link CredencialCanal#HEADER_CREDENCIAL_VALIDA} propagado aguas arriba
+     * @return 200 con datos de H1 + preferencias locales; 401/409 según contrato
+     */
+    @GetMapping("/{numero}/perfil")
+    public PerfilCanalResponse consultarPerfil(@PathVariable String numero,
+            @RequestHeader(value = CredencialCanal.HEADER_CREDENCIAL_VALIDA, required = false)
+            String credencialValida) {
+        return vinculoService.consultarPerfil(numero, credencialValida);
     }
 
     /**

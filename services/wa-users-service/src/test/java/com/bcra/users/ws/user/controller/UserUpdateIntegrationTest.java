@@ -6,6 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -129,6 +130,54 @@ class UserUpdateIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
         verificarAuditoria(AuditResult.RECHAZADO);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "email, nuevo@example.test",
+        "telefono, 555999",
+        "nombreTratamiento, Anita",
+        "preferencias, idioma: español"
+    })
+    @DisplayName("Actualiza cada campo permitido por separado y conserva identidad y datos legales")
+    void actualizaUnCampoSinAlterarIdentidad(String campo, String valor) throws Exception {
+        User original = repository.findByDocumentoTipoAndDocumentoNumero("DNI", "12345678").orElseThrow();
+
+        mockMvc.perform(patch("/api/v1/users/DNI/12345678").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"" + campo + "\":\"" + valor + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$." + campo).value(valor));
+
+        User guardado = repository.findByDocumentoTipoAndDocumentoNumero("DNI", "12345678").orElseThrow();
+        assertThat(guardado).usingRecursiveComparison()
+                .ignoringFields(campo, "updatedAt")
+                .isEqualTo(original);
+        assertThat(repository.count()).isEqualTo(1);
+        verificarAuditoria(AuditResult.EXITOSO);
+    }
+
+    @Test
+    @DisplayName("Un fallo de persistencia revierte todos los cambios y conserva la auditoría de rechazo")
+    void revierteActualizacionCuandoFallaPersistencia() throws Exception {
+        User original = repository.findByDocumentoTipoAndDocumentoNumero("DNI", "12345678").orElseThrow();
+        int longitudSuperiorAColumna = 256;
+        String emailDemasiadoLargo = "a".repeat(longitudSuperiorAColumna);
+
+        mockMvc.perform(patch("/api/v1/users/DNI/12345678").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"" + emailDemasiadoLargo + "\",\"nombreTratamiento\":\"Anita\"}"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+                .andExpect(jsonPath("$.message").value("Error interno"))
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+
+        User guardado = repository.findByDocumentoTipoAndDocumentoNumero("DNI", "12345678").orElseThrow();
+        assertThat(guardado).usingRecursiveComparison().isEqualTo(original);
+        verificarAuditoria(AuditResult.RECHAZADO);
+        assertThat(auditoria.findAll()).singleElement().satisfies(registro -> {
+            assertThat(registro.getTipoDocumento()).isEqualTo("DNI");
+            assertThat(registro.getMotivo()).isNotBlank();
+        });
     }
 
     private void verificarAuditoria(AuditResult resultado) {

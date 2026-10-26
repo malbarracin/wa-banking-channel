@@ -9,11 +9,15 @@ import org.mapstruct.ReportingPolicy;
 
 import com.bcra.credentials.ws.credencial.dto.EmitirCredencialRequest;
 import com.bcra.credentials.ws.credencial.dto.EmitirCredencialResponse;
+import com.bcra.credentials.ws.credencial.dto.ValidarCredencialResponse;
 import com.bcra.credentials.ws.credencial.entity.CredencialSesion;
 
-/** Conversiones del contrato de emisión a persistencia y respuesta. */
+/** Conversiones de emisión y de datos persistidos de una credencial ya validada. */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface CredencialMapper {
+
+    @Mapping(target = "vigente", constant = "true")
+    ValidarCredencialResponse toValidarResponse(CredencialSesion credencial);
 
     @Mapping(target = "estado", constant = "ACTIVA")
     CredencialSesion toEntity(EmitirCredencialRequest request, String jti, UUID vinculoId,

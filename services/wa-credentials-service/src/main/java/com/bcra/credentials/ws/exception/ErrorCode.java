@@ -4,6 +4,7 @@ package com.bcra.credentials.ws.exception;
 public enum ErrorCode {
     VALIDATION_ERROR,
     BAD_REQUEST,
+    UNAUTHORIZED,
     NOT_FOUND,
     CONFLICT,
     INTERNAL_ERROR,

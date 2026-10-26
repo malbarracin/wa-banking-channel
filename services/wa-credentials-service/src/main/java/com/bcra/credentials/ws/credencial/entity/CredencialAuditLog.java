@@ -39,7 +39,7 @@ public class CredencialAuditLog {
     @Column(name = "resultado", nullable = false, updatable = false, length = 20)
     private AuditResultado resultado;
 
-    @Column(name = "numero_whatsapp", nullable = false, updatable = false, length = 20)
+    @Column(name = "numero_whatsapp", updatable = false, length = 20)
     private String numeroWhatsapp;
 
     @Column(name = "documento_tipo", updatable = false, length = 30)

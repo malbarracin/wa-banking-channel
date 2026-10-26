@@ -6,7 +6,9 @@ import org.mapstruct.ReportingPolicy;
 
 import com.bcra.users.ws.user.dto.CreateUserRequest;
 import com.bcra.users.ws.user.dto.DocumentoDto;
+import com.bcra.users.ws.user.dto.DocumentoResponse;
 import com.bcra.users.ws.user.dto.UserResponse;
+import com.bcra.users.ws.user.dto.UserStatusResponse;
 import com.bcra.users.ws.user.entity.Documento;
 import com.bcra.users.ws.user.entity.User;
 
@@ -23,5 +25,7 @@ public interface UserMapper {
 
     Documento toEntity(DocumentoDto documento);
 
-    DocumentoDto toResponse(Documento documento);
+    UserStatusResponse toStatusResponse(User usuario);
+
+    DocumentoResponse toDocumentoResponse(Documento documento);
 }

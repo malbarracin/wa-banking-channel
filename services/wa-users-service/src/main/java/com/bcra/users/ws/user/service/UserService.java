@@ -5,6 +5,7 @@ import java.util.Objects;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bcra.users.ws.user.dto.CreateUserRequest;
@@ -13,6 +14,7 @@ import com.bcra.users.ws.user.entity.AuditAction;
 import com.bcra.users.ws.user.entity.AuditResult;
 import com.bcra.users.ws.user.entity.User;
 import com.bcra.users.ws.user.exception.DuplicateUserException;
+import com.bcra.users.ws.user.exception.UserNotFoundException;
 import com.bcra.users.ws.user.mapper.UserMapper;
 import com.bcra.users.ws.user.repository.UserRepository;
 
@@ -56,6 +58,17 @@ public class UserService {
         }
         auditar(solicitud, AuditResult.EXITOSO, "");
         return userMapper.toResponse(Objects.requireNonNull(usuario));
+    }
+
+    /**
+     * Consulta por ambos componentes del documento, incluyendo usuarios no activos.
+     * @return usuario encontrado
+     * @throws UserNotFoundException cuando no existe el documento solicitado
+     */
+    @Transactional(readOnly = true)
+    public User consultar(String tipo, String numero) {
+        return userRepository.findByDocumentoTipoAndDocumentoNumero(tipo, numero)
+                .orElseThrow(UserNotFoundException::new);
     }
 
     private boolean tieneDocumento(CreateUserRequest solicitud) {

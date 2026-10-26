@@ -5,6 +5,7 @@ import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -26,6 +27,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -48,6 +50,33 @@ class CreateUserIntegrationTest {
     void limpiarRegistros() {
         auditLogRepository.deleteAll();
         userRepository.deleteAll();
+    }
+
+    @Test
+    @DisplayName("El usuario dado de alta puede consultarse por documento y por estado")
+    void consultaUsuarioRecienCreado() throws Exception {
+        String respuesta = mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
+                        .content(solicitudValida().toString()))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        mockMvc.perform(get("/api/v1/users/DNI/123"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(objectMapper.readTree(respuesta).get("id").asText()))
+                .andExpect(jsonPath("$.documento.tipo").value("DNI"))
+                .andExpect(jsonPath("$.documento.numero").value("123"))
+                .andExpect(jsonPath("$.nombre").value("Ana"))
+                .andExpect(jsonPath("$.estado").value("ACTIVE"));
+        mockMvc.perform(get("/api/v1/users/DNI/123/status"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documento.tipo").value("DNI"))
+                .andExpect(jsonPath("$.documento.numero").value("123"))
+                .andExpect(jsonPath("$.estado").value("ACTIVE"));
+
+        assertThat(auditLogRepository.findAll()).singleElement().satisfies(registro -> {
+            assertThat(registro.getAccion()).isEqualTo(AuditAction.ALTA);
+            assertThat(registro.getResultado()).isEqualTo(AuditResult.EXITOSO);
+        });
     }
 
     @ParameterizedTest

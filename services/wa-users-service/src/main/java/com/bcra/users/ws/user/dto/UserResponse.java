@@ -5,8 +5,12 @@ import java.util.UUID;
 
 import com.bcra.users.ws.user.entity.UserStatus;
 
-/** Datos del usuario; preferencias contiene texto general no sensible y puede estar ausente. */
-public record UserResponse(UUID id, DocumentoDto documento, String nombre, String apellido,
+/**
+ * Datos completos del usuario para este hito.
+ * El filtrado de campos por perfil queda pendiente de la definición de Compliance.
+ * @param preferencias preferencias generales no sensibles almacenadas como texto
+ */
+public record UserResponse(UUID id, DocumentoResponse documento, String nombre, String apellido,
         LocalDate fechaNacimiento, String email, String telefono, String nombreTratamiento,
         String preferencias, UserStatus estado) {
 }

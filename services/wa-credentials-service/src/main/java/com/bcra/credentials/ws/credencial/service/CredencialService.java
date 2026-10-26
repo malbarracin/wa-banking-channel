@@ -23,6 +23,7 @@ import com.bcra.credentials.ws.credencial.client.UsersServiceClient;
 import com.bcra.credentials.ws.credencial.client.UsersServiceUnavailableException;
 import com.bcra.credentials.ws.credencial.dto.EmitirCredencialRequest;
 import com.bcra.credentials.ws.credencial.dto.EmitirCredencialResponse;
+import com.bcra.credentials.ws.credencial.dto.RevocarCredencialRequest;
 import com.bcra.credentials.ws.credencial.entity.AuditAccion;
 import com.bcra.credentials.ws.credencial.entity.AuditResultado;
 import com.bcra.credentials.ws.credencial.entity.CredencialAuditLog;
@@ -31,13 +32,14 @@ import com.bcra.credentials.ws.credencial.entity.CredencialSesion;
 import com.bcra.credentials.ws.credencial.entity.MotivoRevocacion;
 import com.bcra.credentials.ws.credencial.entity.RevocadaPor;
 import com.bcra.credentials.ws.credencial.exception.EmisionNoAutorizadaException;
+import com.bcra.credentials.ws.credencial.exception.CredencialNoEncontradaException;
 import com.bcra.credentials.ws.credencial.mapper.CredencialMapper;
 import com.bcra.credentials.ws.credencial.repository.CredencialAuditLogRepository;
 import com.bcra.credentials.ws.credencial.repository.CredencialRepository;
 
 import lombok.RequiredArgsConstructor;
 
-/** Emite credenciales y reemplaza la anterior de forma atómica con su auditoría de éxito. */
+/** Emite y revoca credenciales de forma atómica con su auditoría de éxito. */
 @Service
 @RequiredArgsConstructor
 public class CredencialService {
@@ -52,6 +54,25 @@ public class CredencialService {
 
     @Value("${credencial.vigencia-minutos}")
     private long vigenciaMinutos;
+
+    /** Confirma revocación y auditoría juntas; el rechazo se conserva en transacción independiente. */
+    public void revocar(String numero, RevocarCredencialRequest request) {
+        try {
+            transactionTemplate.executeWithoutResult(status -> {
+                CredencialSesion sesion = repository.findActivaParaRevocar(numero)
+                        .orElseThrow(CredencialNoEncontradaException::new);
+                sesion.setEstado(CredencialEstado.REVOCADA);
+                sesion.setFechaRevocacion(Instant.now());
+                sesion.setMotivoRevocacion(request.motivo());
+                sesion.setRevocadaPor(request.solicitadoPor());
+                registrarExito(sesion, AuditAccion.REVOCACION, request.motivo().name());
+                repository.flush();
+            });
+        } catch (CredencialNoEncontradaException | DataAccessException exception) {
+            auditService.registrarRevocacionRechazada(numero, request.motivo());
+            throw exception;
+        }
+    }
 
     /**
      * Valida confirmaciones y H1 antes de modificar la credencial existente.

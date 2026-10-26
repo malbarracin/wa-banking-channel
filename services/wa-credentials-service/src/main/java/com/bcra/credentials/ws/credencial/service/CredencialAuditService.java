@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.bcra.credentials.ws.credencial.entity.AuditAccion;
 import com.bcra.credentials.ws.credencial.entity.AuditResultado;
 import com.bcra.credentials.ws.credencial.entity.CredencialAuditLog;
+import com.bcra.credentials.ws.credencial.entity.MotivoRevocacion;
 import com.bcra.credentials.ws.credencial.repository.CredencialAuditLogRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,15 @@ public class CredencialAuditService {
     private static final String MOTIVO_PROTEGIDO = "Detalle omitido por seguridad";
 
     private final CredencialAuditLogRepository auditLogRepository;
+
+    /** Registra el motivo cerrado del rechazo sin aceptar texto libre ni secretos. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarRevocacionRechazada(String numeroWhatsapp, MotivoRevocacion motivo) {
+        validarNumero(numeroWhatsapp);
+        auditLogRepository.save(CredencialAuditLog.builder().accion(AuditAccion.REVOCACION)
+                .resultado(AuditResultado.RECHAZADO).numeroWhatsapp(numeroWhatsapp)
+                .motivo(java.util.Objects.requireNonNull(motivo).name()).fecha(Instant.now()).build());
+    }
 
     /**
      * Persiste un evento aunque la operación llamadora se revierta; invocar mediante el bean Spring.

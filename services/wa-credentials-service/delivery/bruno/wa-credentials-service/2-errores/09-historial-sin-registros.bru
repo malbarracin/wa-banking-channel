@@ -1,0 +1,21 @@
+meta {
+  name: Historial sin registros
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/v1/credenciales/{{numeroSinHistorial}}/historial
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+  res.body.code: eq NOT_FOUND
+}
+
+docs {
+  Número válido sin credencial ni eventos (no debe usarse en la carpeta 0).
+  Respuestas: 404 NOT_FOUND.
+}

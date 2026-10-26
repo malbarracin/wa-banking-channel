@@ -1,0 +1,22 @@
+meta {
+  name: Consultar historial
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/credenciales/{{numeroWhatsapp}}/historial
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+  res.body.estadoActual: eq ACTIVA
+  res.body.eventos: isArray
+}
+
+docs {
+  Estado efectivo y eventos del número, del más reciente al más antiguo. No devuelve el JWT ni el jti.
+  Respuestas: 200 historial, 400 número inválido, 404 sin credencial o sin eventos.
+}

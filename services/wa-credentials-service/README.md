@@ -1,94 +1,271 @@
 # wa-credentials-service
 
-Base del Servicio de Acceso y Sesión (H2) del canal WhatsApp. Identidad: `com.bcra`,
-paquete `com.bcra.credentials.ws`, Java 21 y Spring Boot 3.5.16, como los servicios existentes.
+Servicio de Acceso y Sesión (H2) del canal WhatsApp: emite una credencial de sesión (JWT HS256) cuando H3
+confirma identidad verificada y vínculo activo, la valida para los servicios de productos, la renueva
+mientras no haya riesgo y la revoca ante bloqueo, desvinculación, fraude o decisión del banco.
 
-Desde esta carpeta, con JDK 21:
+Identidad Maven: `com.bcra:wa-credentials-service` · paquete base `com.bcra.credentials.ws` · base
+`wa_credentials` · puerto `8082`. No gestiona usuarios (H1) ni el flujo conversacional o el vínculo (H3).
 
-```sh
-./mvnw -q compile
-./mvnw clean verify
-./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+## Funcionalidades
+
+- **Emisión** (`POST /api/v1/credenciales/emitir`): exige `vinculoActivo` e `identidadVerificada` en
+  `true` y cliente `ACTIVE` en H1. Devuelve `credencial` y `fechaExpiracion`; invalida la credencial
+  `ACTIVA` anterior del número con motivo `REEMPLAZO`.
+- **Validación** (`POST /api/v1/credenciales/validar`): verifica firma HS256, `exp`, `iat`, `jti`, `sub`
+  y `doc`, el estado persistido (activa, sin riesgo, no revocada, no vencida) y el estado del cliente en
+  H1. Cualquier rechazo responde **401** con el mismo mensaje y audita `VALIDACION_FALLIDA`.
+- **Revocación individual** (`POST /api/v1/credenciales/{numero}/revocacion`): revoca de inmediato la
+  credencial activa. Motivos: `BLOQUEO`, `DESVINCULACION`, `FRAUDE`, `POLITICA_BANCO`,
+  `REVOCACION_MASIVA`, `REEMPLAZO`; `SOLICITUD_CLIENTE` e `INTENTOS_AGOTADOS` se interpretan como
+  `BLOQUEO`. `solicitadoPor` es opcional (default `CANAL`). Sin credencial activa: **404**.
+- **Revocación masiva** (`POST /api/v1/credenciales/revocacion-masiva`): `TODAS` revoca todas las
+  `ACTIVA`; `POR_CLIENTE` exige `segmento` (tipo y número de documento) y revoca las de ese cliente. Es
+  atómica (todo o nada), idempotente y devuelve `revocadas`.
+- **Historial resumido** (`GET /api/v1/credenciales/{numero}/historial`): identidad, estado efectivo de
+  la última emisión y eventos, del más reciente al más antiguo. Calcula `EXPIRADA` sin modificar la
+  credencial. No devuelve JWT ni `jti`.
+- **Renovación automática** (sin endpoint): job interno que rota credenciales próximas a expirar. Con
+  `riesgo = true` no renueva, audita `RENOVACION` / `RECHAZADO` / `REVERIFICACION_REQUERIDA` y la
+  validación responde **401**. Por decisión de arquitectura el job es solo interno: no entrega el JWT
+  renovado a H3 ni implementa outbox.
+- **Auditoría**: `EMISION`, `RENOVACION`, `REVOCACION` y `VALIDACION_FALLIDA`, con resultado `EXITOSO` o
+  `RECHAZADO`. Nunca guarda el JWT ni claims no confiables; el motivo libre se reemplaza por un texto
+  fijo.
+
+## Stack
+
+| Componente | Versión / uso |
+|------------|---------------|
+| Java | 21 |
+| Spring Boot | 3.5.16 (Web MVC, Validation, Data JPA, Actuator) |
+| PostgreSQL | 16 (base `wa_credentials`), Flyway para migraciones |
+| H2 | Solo tests (perfil `test`, en memoria) |
+| JWT | `spring-security-oauth2-jose` (HS256) |
+| Mapeo | MapStruct 1.6.3 |
+| Boilerplate | Lombok |
+| OpenAPI | springdoc 2.8.8 |
+| Build | Maven Wrapper 3.9.16 (`./mvnw`) |
+| Cobertura | JaCoCo 0.8.13, mínimo 80 % de líneas |
+
+## Requisitos
+
+- JDK 21.
+- PostgreSQL 16 accesible (local o Docker).
+- `CREDENTIAL_JWT_SECRET` de al menos 32 bytes UTF-8 (obligatorio, sin default).
+- Docker + Docker Compose solo si se usa el camino contenedor.
+- H1 `wa-users-service` disponible para emisión y validación (default `http://localhost:8080`).
+  Revocación, revocación masiva e historial no consultan H1.
+
+## Cómo correrlo
+
+Desde `services/wa-credentials-service`.
+
+### Local con PostgreSQL
+
+Crear la base `wa_credentials` y exportar las variables:
+
+```bash
+export DB_PASSWORD=tu-password
+export CREDENTIAL_JWT_SECRET=clave-de-al-menos-32-bytes-utf8
+./mvnw spring-boot:run
 ```
 
-En PowerShell usar `.\mvnw.cmd` con los mismos argumentos.
+```powershell
+$env:DB_PASSWORD="tu-password"
+$env:CREDENTIAL_JWT_SECRET="clave-de-al-menos-32-bytes-utf8"
+.\mvnw.cmd spring-boot:run
+```
+
+`DB_URL` por defecto: `jdbc:postgresql://localhost:5432/wa_credentials`; `DB_USERNAME` por defecto:
+`postgres`. Flyway aplica `src/main/resources/db/migration` al arrancar y Hibernate no modifica el
+esquema (`ddl-auto=none`). El perfil `dev` mantiene PostgreSQL y solo silencia el SQL.
+
+### Con Docker Compose
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+```powershell
+Copy-Item .env.example .env
+docker compose up -d --build
+```
+
+Editar `.env` antes de levantar: `DB_PASSWORD` y `CREDENTIAL_JWT_SECRET` son obligatorios. El compose
+publica H2 en `8082` y PostgreSQL en `5434` (para no chocar con H1 `5432` ni H3 `5433`), espera el
+healthcheck de PostgreSQL y usa el perfil `docker`. H1 se toma de
+`WA_USERS_SERVICE_BASE_URL` (default `http://host.docker.internal:8080`).
+
+Verificar:
+
+```bash
+curl http://localhost:8082/actuator/health
+# {"status":"UP"}
+```
+
+Runbook completo de puertos, variables y CI: [`../../delivery/devops-local.md`](../../delivery/devops-local.md).
+
+## Configuración
+
+Variables de entorno (perfil default y `docker`):
+
+| Variable | Default | Descripción |
+|----------|---------|-------------|
+| `PORT` | `8082` | Puerto HTTP |
+| `APP_PORT` | `8082` | Puerto publicado por Compose |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/wa_credentials` | JDBC de PostgreSQL (perfil `docker`: host `postgres`) |
+| `DB_USERNAME` | `postgres` | Usuario de la base |
+| `DB_PASSWORD` | — | Obligatorio; sin valor la aplicación no arranca |
+| `DB_NAME` | `wa_credentials` | Base usada por Compose |
+| `DB_HOST_PORT` | `5434` | Puerto host de PostgreSQL en Compose |
+| `CREDENTIAL_JWT_SECRET` | — | Obligatorio, ≥ 32 bytes UTF-8, sin default |
+| `CREDENTIAL_VIGENCIA_MINUTOS` | `1440` | Vigencia del JWT en minutos (positiva) |
+| `CREDENTIAL_RENOVACION_VENTANA_MINUTOS` | `30` | Ventana de renovación; positiva y menor que la vigencia |
+| `CREDENTIAL_RENOVACION_HABILITADA` | `true` | Habilita el job de renovación |
+| `CREDENTIAL_RENOVACION_INTERVALO_MS` | `60000` | Intervalo del job en milisegundos |
+| `WA_USERS_SERVICE_BASE_URL` | `http://localhost:8080` | Base de H1 |
+| `WA_USERS_SERVICE_CONNECT_TIMEOUT` | `1s` | Timeout de conexión a H1 (positivo) |
+| `WA_USERS_SERVICE_READ_TIMEOUT` | `2s` | Timeout de lectura de H1 (positivo) |
+| `SPRING_PROFILES_ACTIVE` | — | `dev`, `docker` o `prod` según el entorno (`test` en los tests) |
+
+Perfiles:
+
+| Perfil | Base | Notas |
+|--------|------|-------|
+| default | PostgreSQL | Flyway, `ddl-auto=none` |
+| `dev` | PostgreSQL | Igual que default, `show-sql=false` |
+| `docker` | PostgreSQL (`postgres`) | Pensado para Compose; puerto `APP_PORT` |
+| `test` | H2 en memoria | Flyway off, `create-drop`, renovación off, secreto de test |
+| `prod` | PostgreSQL | Helm; Swagger UI deshabilitada (`application-prod.yml`) |
+
+`V001__credencial.sql` impone un `jti` único y una sola credencial `ACTIVA` por número con un índice
+único parcial de PostgreSQL; por eso el esquema de `test` lo genera JPA y Flyway se desactiva (H2 no
+soporta el índice parcial). `V002__auditoria_validacion_sin_identidad.sql` permite auditar rechazos sin
+identidad. Actuator expone solo `health` e `info`.
+
+El JWT contiene `sub` (número E.164), `doc` (`tipo:numero`), `iat`, `exp` y `jti`, firmado HS256 con
+`CREDENTIAL_JWT_SECRET`. Como el contrato de H3 no envía el UUID del vínculo, `vinculoId` conserva una
+referencia interna estable derivada de número y documento; no es el ID externo de H3. El token es
+exclusivamente para H3: nunca debe aparecer en mensajes al cliente, logs ni auditoría.
+
+## API
+
+Base: `http://localhost:8082`. Swagger UI: `/swagger-ui.html` · OpenAPI: `/v3/api-docs` (también
+`/v3/api-docs.yaml`). En `prod` la UI está deshabilitada; el contrato sigue en `/v3/api-docs` y en
+`delivery/openapi/`.
+
+| Método | Ruta | Éxito | Errores principales |
+|--------|------|-------|---------------------|
+| POST | `/api/v1/credenciales/emitir` | 201 `credencial`, `fechaExpiracion` | 400, 403, 404, 409, 503 |
+| POST | `/api/v1/credenciales/validar` | 200 `vigente`, identidad y vencimiento | 400, 401 |
+| POST | `/api/v1/credenciales/{numero}/revocacion` | 204 sin cuerpo | 400, 404, 500 |
+| POST | `/api/v1/credenciales/revocacion-masiva` | 200 `revocadas` | 400, 500 |
+| GET | `/api/v1/credenciales/{numero}/historial` | 200 `estadoActual`, `eventos` | 400, 404 |
+| GET | `/actuator/health` | 200 `UP` | — |
+
+La validación recibe `{"credencial":"<JWT>"}`. El número se expresa en E.164 (`+[1-9][0-9]{1,14}`).
+Las respuestas de emisión/validación solo van a servicios internos; no se muestran al cliente final.
+
+## Errores
+
+Un solo contrato (`code`, `message`, `details`, `timestamp` UTC) generado por `GlobalExceptionHandler`
+(`@RestControllerAdvice`). `details` nunca es `null` y no se exponen valores rechazados, stacktraces ni
+detalles internos. `server.error.include-stacktrace: never`.
+
+```json
+{
+  "code": "UNAUTHORIZED",
+  "message": "La credencial no es válida; se requiere verificar la identidad nuevamente",
+  "details": [],
+  "timestamp": "2026-10-26T12:00:00Z"
+}
+```
+
+| HTTP | `code` | Cuándo |
+|------|--------|--------|
+| 400 | `VALIDATION_ERROR` / `BAD_REQUEST` | Bean Validation o número fuera de E.164 / JSON ilegible |
+| 401 | `UNAUTHORIZED` | Credencial inválida, expirada, revocada, con riesgo o cliente no `ACTIVE` en H1 |
+| 403 | `FORBIDDEN` | Emisión sin confirmaciones verdaderas o cliente inactivo en H1 |
+| 404 | `NOT_FOUND` | Cliente inexistente en H1, sin credencial activa o sin historial |
+| 409 | `CONFLICT` | Conflicto de persistencia al emitir (`jti` o credencial activa duplicada) |
+| 500 | `INTERNAL_ERROR` | Error inesperado, sin stacktrace |
+| 503 | `SERVICE_UNAVAILABLE` | H1 no disponible o respuesta inválida |
+
+Detalle y ejemplos completos: [`delivery/api.md`](delivery/api.md).
+
+## Probar la API
+
+1. Levantar H1 (`wa-users-service`) en `8080` y H2 en `8082`.
+2. Importar en Postman `delivery/postman/wa-credentials-service.postman_collection.json` y el entorno
+   `delivery/postman/wa-credentials-service.postman_environment.json`.
+3. Correr en orden **0. Preparación H1 → 1. Flujo feliz → 2. Errores → 3. Salud**. La carpeta 0 crea
+   un cliente `ACTIVE` con documento y número únicos por corrida.
+4. Alternativa nativa: abrir `delivery/bruno/wa-credentials-service/` con el entorno **local**.
+
+La guía con la tabla de resultados esperados y los casos manuales (H1 caído, cliente suspendido,
+renovación) está en [`delivery/qa-manual.md`](delivery/qa-manual.md).
+
+## Tests
+
+```bash
+./mvnw -q -B verify
+```
+
+En PowerShell: `.\mvnw.cmd -q -B verify`. Ejecuta unitarios e integración con el perfil `test` (H2 en
+memoria y H1 simulado; no requiere servicios externos), exige JaCoCo ≥ 80 % de líneas y regenera
+`delivery/openapi/openapi.json` y `delivery/openapi/openapi.yaml` con `OpenApiExportTest`.
+
+Si `~/.m2` está restringido:
+
+```powershell
+.\mvnw.cmd -q -B "-Dmaven.repo.local=../../.maven-cache" verify
+```
+
 El wrapper descarga Maven 3.9.16 desde Maven Central.
 
-El perfil default y el perfil dev usan PostgreSQL: crear una base propia `wa_credentials`
-y definir `DB_PASSWORD`; opcionalmente `DB_URL` y `DB_USERNAME`.
-Puerto HTTP: `PORT` (8082 por defecto). Flyway aplica las migraciones versionadas de
-`src/main/resources/db/migration` al arrancar; Hibernate no modifica el esquema.
-`V001__credencial.sql` crea las credenciales y su auditoría e impone un único `jti` y
-una única credencial `ACTIVA` por número mediante un índice parcial PostgreSQL.
-El perfil dev mantiene PostgreSQL y no habilita consola H2.
-Los tests activan el perfil test, que usa H2 en memoria con esquema temporal y sin servicios externos.
-En ese perfil Flyway está desactivado: H2 no soporta el índice parcial, cuya validación requiere PostgreSQL.
-H2 es dependencia exclusiva de test; para ejecutar la aplicación localmente usar dev con PostgreSQL.
+## Estructura
 
-Disponibles `/actuator/health`, `/actuator/info`, `POST /api/v1/credenciales/validar`
-y `POST /api/v1/credenciales/emitir`.
-La validación recibe `{"credencial":"<JWT>"}` y devuelve identidad y vencimiento cuando es válido.
-Configurar `CREDENTIAL_JWT_SECRET` con al menos 32 bytes UTF-8; no hay clave por defecto.
-Sin esa configuración, el servicio no arranca.
-Se verifica exclusivamente HS256, `exp`, `iat`, `jti`, `sub` (número E.164) y
-`doc` (string `documentoTipo:documentoNumero`, por ejemplo `DNI:12345678`).
-La identidad y el vencimiento deben coincidir con la credencial persistida activa.
-Cada validación consulta H1: solo un cliente `ACTIVE` puede operar; 404, estado inactivo
-o indisponibilidad rechazan con 401 `UNAUTHORIZED` y el mismo mensaje genérico.
-Los rechazos registran `VALIDACION_FALLIDA` mediante una transacción independiente;
-si no se reconoce una credencial firmada persistida, la identidad queda vacía.
-`V002__auditoria_validacion_sin_identidad.sql` permite estos eventos sin número,
-sin inventar identidad ni guardar claims no confiables o contenido del JWT.
+```text
+services/wa-credentials-service/
+├── pom.xml, mvnw, mvnw.cmd, Dockerfile, docker-compose.yml, .env.example
+├── helm/                                  # chart (perfil prod)
+├── src/main/java/com/bcra/credentials/ws/
+│   ├── CredentialsApplication.java
+│   ├── credencial/
+│   │   ├── controller/                    # CredencialController
+│   │   ├── service/                       # emisión, validación, renovación, revocación, historial
+│   │   ├── repository/                    # credencial y auditoría
+│   │   ├── mapper/                        # CredencialMapper (MapStruct)
+│   │   ├── entity/                        # CredencialSesion, CredencialAuditLog, enums
+│   │   ├── dto/                           # requests y responses
+│   │   ├── client/                        # UsersServiceClient (H1)
+│   │   └── exception/                     # excepciones de dominio
+│   ├── config/                            # OpenAPI, JWT, RestClient, renovación
+│   └── exception/                         # contrato de error global
+├── src/main/resources/
+│   ├── application.yml, application-docker.yml, application-prod.yml, application-test.yml
+│   └── db/migration/                      # V001, V002
+├── src/test/java/                         # unitarios e integración (perfil test)
+└── delivery/
+    ├── api.md, architecture-overview.md, qa-manual.md
+    ├── openapi/openapi.json, openapi.yaml
+    ├── postman/
+    └── bruno/wa-credentials-service/
+```
 
-La emisión recibe `numeroWhatsapp` (E.164), `documentoTipo`, `documentoNumero`,
-`vinculoActivo` e `identidadVerificada`; las confirmaciones deben ser verdaderas y H1 debe informar ACTIVE.
-Devuelve 201 con `credencial` y `fechaExpiracion`. El JWT es exclusivamente para H3:
-nunca incluirlo en mensajes al cliente, logs ni auditoría.
-Configurar `CREDENTIAL_JWT_SECRET` con al menos 32 bytes UTF-8 (obligatorio, sin default)
-y opcionalmente `CREDENTIAL_VIGENCIA_MINUTOS` (positivo, default 1440).
-El JWT firmado HS256 contiene `sub`, `doc` (`tipo:numero`), `iat`, `exp` y `jti`.
-Como el contrato no recibe el UUID del vínculo H3, `vinculoId` conserva una referencia interna
-estable derivada de número y documento; no representa el ID externo de H3.
-La nueva emisión revoca la anterior por REEMPLAZO; ambas modificaciones y la auditoría de éxito
-se confirman juntas. Los rechazos usan auditoría independiente. El índice parcial de PostgreSQL
-resuelve las carreras de emisión concurrente con 409 y rollback, sin dejar dos activas.
-Errores: 400 validación, 403 sin confirmaciones o cliente inactivo, 404 cliente inexistente,
-503 H1 no disponible y 409 conflicto de persistencia.
+## Documentación
 
-Los errores usan `code`, `message`, `details` (lista nunca nula) y `timestamp` UTC.
-El handler cubre validación, solicitudes inválidas, recurso inexistente, conflicto y error interno,
-sin exponer valores rechazados ni mensajes internos. JaCoCo exige al menos 80% de líneas;
-solo se excluye la clase de arranque de Spring Boot.
-
-Fuente funcional: `../../specs/acceso-sesion/spec.md`.
-Arquitectura: `../../specs/acceso-sesion/arquitectura.md`.
-
-La renovación interna se ejecuta cada `CREDENTIAL_RENOVACION_INTERVALO_MS` (default 60000 ms).
-`CREDENTIAL_RENOVACION_HABILITADA=false` deshabilita el planificador; el perfil test lo deshabilita.
-La ventana es `CREDENTIAL_RENOVACION_VENTANA_MINUTOS` (default 30) y debe ser positiva y menor
-que `CREDENTIAL_VIGENCIA_MINUTOS` para evitar rotaciones sucesivas en cada ejecución.
-Solo se consideran credenciales ACTIVA que aún no expiraron. ACTIVA representa vínculo activo:
-la baja del vínculo llega como revocación desde H3. Con riesgo se conserva el marcador `riesgo=true`,
-se audita RENOVACION RECHAZADO con `REVERIFICACION_REQUERIDA` y la validación devuelve 401.
-Sin riesgo, el reemplazo REVOCADA/REEMPLAZO, la nueva ACTIVA y las auditorías se confirman juntos.
-El JWT se firma con la clave configurada. Según la última decisión del arquitecto de TASK-34,
-el job es exclusivamente interno: no entrega el JWT a H3 ni implementa receptor u outbox.
-El token anterior deja de validar al confirmar la rotación.
-
-Swagger UI está disponible en `http://localhost:8082/swagger-ui.html` (ajustar si se define `PORT`).
-El contrato se consulta en `/v3/api-docs` y `/v3/api-docs.yaml` e incluye los cinco endpoints
-de emisión, validación, revocación individual, revocación masiva e historial.
-Los ejemplos JWT son ilustrativos: reemplazar `JWT_DEVUELTO_POR_EMITIR` por el valor real
-obtenido de la emisión y utilizarlo solo entre servicios.
-`./mvnw -q -B verify` ejecuta `OpenApiExportTest` con el perfil test y regenera
-`delivery/openapi/openapi.json` y `delivery/openapi/openapi.yaml` dentro de este servicio,
-sin PostgreSQL ni H1 externos. El test comprueba endpoints, respuestas, ejemplos y schemas.
-
-El adaptador `UsersServiceClient` consulta `GET /api/v1/users/{tipo}/{numero}/status` de H1.
-Configurar `WA_USERS_SERVICE_BASE_URL` (default `http://localhost:8080`),
-`WA_USERS_SERVICE_CONNECT_TIMEOUT` (default `1s`) y `WA_USERS_SERVICE_READ_TIMEOUT` (default `2s`).
-Los timeouts deben ser positivos. No hay reintentos automáticos.
-El 404 produce `ClienteNoEncontradoException`; errores HTTP, de transporte y respuestas inválidas
-producen `UsersServiceUnavailableException`. El consumidor decide la política de su caso de uso;
-una falla nunca se convierte en un cliente activo. Las excepciones omiten URL, documento y cuerpo remoto
-para evitar exponer datos sensibles en logs o respuestas.
+| Documento | Contenido |
+|-----------|-----------|
+| [`delivery/api.md`](delivery/api.md) | Uso de la API con `curl`, cuerpos y errores |
+| [`delivery/architecture-overview.md`](delivery/architecture-overview.md) | Capas, flujo, modelo, estados, integración y decisiones |
+| [`delivery/qa-manual.md`](delivery/qa-manual.md) | Importar y correr Postman/Bruno, casos esperados |
+| [`delivery/openapi/openapi.json`](delivery/openapi/openapi.json) | OpenAPI exportado (JSON) |
+| [`delivery/openapi/openapi.yaml`](delivery/openapi/openapi.yaml) | OpenAPI exportado (YAML) |
+| [`delivery/postman/`](delivery/postman/) | Colección y entorno de Postman |
+| [`delivery/bruno/wa-credentials-service/`](delivery/bruno/wa-credentials-service/) | Colección nativa de Bruno |
+| [`../../delivery/devops-local.md`](../../delivery/devops-local.md) | Puertos, Docker, CI y despliegue local |
+| [`../../specs/acceso-sesion/spec.md`](../../specs/acceso-sesion/spec.md) | Fuente funcional |
+| [`../../specs/acceso-sesion/arquitectura.md`](../../specs/acceso-sesion/arquitectura.md) | Decisiones de arquitectura |

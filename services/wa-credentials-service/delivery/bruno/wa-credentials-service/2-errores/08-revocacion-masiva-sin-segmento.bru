@@ -1,0 +1,31 @@
+meta {
+  name: Revocación masiva sin segmento
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/revocacion-masiva
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "criterio": "POR_CLIENTE"
+  }
+}
+
+assert {
+  res.status: eq 400
+  res.body.code: eq VALIDATION_ERROR
+}
+
+docs {
+  POR_CLIENTE exige segmento; TODAS no admite segmento.
+  Respuestas: 400 VALIDATION_ERROR.
+}

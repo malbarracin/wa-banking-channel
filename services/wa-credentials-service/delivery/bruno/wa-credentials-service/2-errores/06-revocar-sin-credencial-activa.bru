@@ -1,0 +1,32 @@
+meta {
+  name: Revocar sin credencial activa
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/{{numeroWhatsapp}}/revocacion
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "motivo": "DESVINCULACION",
+    "solicitadoPor": "CANAL"
+  }
+}
+
+assert {
+  res.status: eq 404
+  res.body.code: eq NOT_FOUND
+}
+
+docs {
+  Tras la revocación masiva no queda ninguna credencial activa para el número.
+  Respuestas: 404 NOT_FOUND.
+}

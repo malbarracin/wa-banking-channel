@@ -1,0 +1,35 @@
+meta {
+  name: Emitir con cliente inexistente en H1
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/emitir
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "numeroWhatsapp": "{{numeroWhatsapp}}",
+    "documentoTipo": "{{docTipo}}",
+    "documentoNumero": "{{docInexistente}}",
+    "vinculoActivo": true,
+    "identidadVerificada": true
+  }
+}
+
+assert {
+  res.status: eq 404
+  res.body.code: eq NOT_FOUND
+}
+
+docs {
+  Requiere H1 disponible: el documento 00000000 no existe. Si H1 está caído, responde 503.
+  Respuestas: 404 NOT_FOUND, 503 SERVICE_UNAVAILABLE.
+}

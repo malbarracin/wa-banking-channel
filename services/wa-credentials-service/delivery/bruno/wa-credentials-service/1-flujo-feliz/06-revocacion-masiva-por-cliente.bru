@@ -1,0 +1,35 @@
+meta {
+  name: Revocación masiva por cliente
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/revocacion-masiva
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "criterio": "POR_CLIENTE",
+    "segmento": {
+      "documentoTipo": "{{docTipo}}",
+      "documentoNumero": "{{docNumber}}"
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.revocadas: gte 1
+}
+
+docs {
+  Revoca todas las credenciales ACTIVA del cliente. Devuelve la cantidad revocada; la operación es idempotente.
+  Respuestas: 200 revocadas, 400 criterio o segmento inválido, 500 error inesperado del lote.
+}

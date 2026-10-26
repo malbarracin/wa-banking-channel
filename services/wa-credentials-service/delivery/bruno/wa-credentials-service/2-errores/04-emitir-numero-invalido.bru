@@ -1,0 +1,35 @@
+meta {
+  name: Emitir con número inválido
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/emitir
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "numeroWhatsapp": "5491111111111",
+    "documentoTipo": "{{docTipo}}",
+    "documentoNumero": "{{docNumber}}",
+    "vinculoActivo": true,
+    "identidadVerificada": true
+  }
+}
+
+assert {
+  res.status: eq 400
+  res.body.code: eq VALIDATION_ERROR
+}
+
+docs {
+  Número sin '+' inicial: no cumple E.164.
+  Respuestas: 400 VALIDATION_ERROR.
+}

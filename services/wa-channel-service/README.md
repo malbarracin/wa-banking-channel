@@ -25,3 +25,21 @@ solo se excluye la clase de arranque sin lógica. El contrato de errores contemp
 El módulo `vinculo` seguirá los subpaquetes `controller`, `service`, `repository`,
 `mapper`, `entity`, `dto`, `client` y `exception`; configuración transversal en `config`.
 Las clases de dominio y endpoints se incorporan en sus tareas de implementación.
+
+La verificación se realiza con `POST /api/v1/vinculos/{numero}/verificaciones`, después de
+aceptar términos. Recibe `documentoTipo`, `documentoNumero` y `datosVerificacion` (mapa).
+El número usa E.164 con prefijo `+`. Devuelve el resultado de identidad y vínculo
+para H0.2; no emite credenciales de H2.
+
+La estrategia `VerificadorIdentidad` es reemplazable mediante un bean Spring.
+Hasta instalar el método aprobado por Compliance, la implementación predeterminada
+rechaza todas las pruebas: ningún dato enviado por el solicitante habilita por sí solo el vínculo.
+Los datos de verificación no se conservan ni se incluyen en `toString()`.
+
+La política admite `vinculo.verificacion.max-intentos` (default 3) y
+`vinculo.verificacion.ventana-minutos` (default 15), también mediante
+`VERIFICACION_MAX_INTENTOS` y `VERIFICACION_VENTANA_MINUTOS`.
+El último fallo devuelve cero intentos restantes; la siguiente solicitud recibe 423 y
+derivación a soporte. Al vencer la ventana se puede reintentar.
+Una re-vinculación requiere aceptar términos de nuevo y completar la verificación;
+conserva el vínculo anterior cerrado y crea un intento asociado al nuevo proceso.

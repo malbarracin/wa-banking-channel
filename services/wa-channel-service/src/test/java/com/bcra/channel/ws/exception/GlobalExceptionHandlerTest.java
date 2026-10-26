@@ -103,6 +103,19 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("Una propiedad desconocida lanzada fuera de la deserialización también respeta el contrato")
+    void manejaPropiedadDesconocidaDirectamente() {
+        var exception = new com.bcra.channel.ws.vinculo.exception.PropiedadDesconocidaException();
+
+        var response = new GlobalExceptionHandler().handlePropiedadDesconocida(exception);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody().code()).isEqualTo(ErrorCode.VALIDATION_ERROR);
+        assertThat(response.getBody().message()).isEqualTo(exception.getMessage());
+        assertThat(response.getBody().details()).isEmpty();
+    }
+
+    @Test
     @DisplayName("La respuesta expone una lista de detalles inmutable")
     void protegeLaListaDeDetalles() {
         var response = new ErrorResponse(ErrorCode.BAD_REQUEST, "Inválido", List.of(), Instant.now());

@@ -79,6 +79,26 @@ class PreferenciasIntegrationTest {
     }
 
     @Test
+    @DisplayName("PATCH preferencias con solo horarioPreferido lo actualiza vía MapStruct")
+    void actualizaSoloHorarioPreferido() throws Exception {
+        guardarVinculo(VinculoEstado.ACTIVO, "es", true, "08:00-12:00");
+
+        mockMvc.perform(patch(RUTA, NUMERO)
+                        .header(CredencialHeaders.DOCUMENTO_TIPO, "DNI")
+                        .header(CredencialHeaders.DOCUMENTO_NUMERO, "30111222")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"horarioPreferido\":\"20:00-22:00\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.preferencias.idioma").value("es"))
+                .andExpect(jsonPath("$.preferencias.notificacionesHabilitadas").value(true))
+                .andExpect(jsonPath("$.preferencias.horarioPreferido").value("20:00-22:00"));
+
+        Vinculo guardado = vinculoRepository.findFirstByNumeroWhatsappOrderByFechaUltimoCambioEstadoDesc(NUMERO)
+                .orElseThrow();
+        assertThat(guardado.getPreferencias().getHorarioPreferido()).isEqualTo("20:00-22:00");
+    }
+
+    @Test
     @DisplayName("Campos null del body no pisan preferencias existentes vía MapStruct")
     void ignoraNullsAlActualizar() throws Exception {
         guardarVinculo(VinculoEstado.ACTIVO, "es", true, "09:00-18:00");

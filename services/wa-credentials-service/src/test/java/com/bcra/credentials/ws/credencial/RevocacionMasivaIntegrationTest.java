@@ -192,6 +192,47 @@ class RevocacionMasivaIntegrationTest {
         assertThat(auditRepository.count()).isZero();
     }
 
+    @Test
+    @DisplayName("La revocación masiva preserva la individual y su repetición devuelve 404 auditado")
+    void conservaRevocacionIndividualAlRevocarMasivamente() throws Exception {
+        String numero = "+5491111111111";
+        String solicitud = """
+                {"motivo":"DESVINCULACION","solicitadoPor":"CANAL"}
+                """;
+        mockMvc.perform(post("/api/v1/credenciales/{numero}/revocacion", numero)
+                .contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isNoContent());
+        CredencialSesion individual = repository.findByNumeroWhatsappAndEstado(numero, CredencialEstado.REVOCADA)
+                .orElseThrow();
+
+        revocar("{\"criterio\":\"TODAS\"}", 2);
+
+        CredencialSesion conservada = repository.findById(individual.getId()).orElseThrow();
+        assertThat(conservada.getFechaRevocacion()).isEqualTo(individual.getFechaRevocacion());
+        assertThat(conservada.getMotivoRevocacion()).isEqualTo(MotivoRevocacion.DESVINCULACION);
+        assertThat(conservada.getRevocadaPor()).isEqualTo(RevocadaPor.CANAL);
+        mockMvc.perform(post("/api/v1/credenciales/{numero}/revocacion", numero)
+                .contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.trace").doesNotExist());
+        assertThat(repository.findAll()).noneMatch(c -> c.getEstado() == CredencialEstado.ACTIVA);
+        assertThat(auditRepository.findAll()).hasSize(4)
+                .filteredOn(a -> a.getResultado() == AuditResultado.EXITOSO).hasSize(3)
+                .filteredOn(a -> a.getJti().equals(individual.getJti())).singleElement().satisfies(a -> {
+                    assertThat(a.getAccion()).isEqualTo(AuditAccion.REVOCACION);
+                    assertThat(a.getMotivo()).isEqualTo("DESVINCULACION");
+                });
+        assertThat(auditRepository.findAll()).filteredOn(a -> a.getResultado() == AuditResultado.RECHAZADO)
+                .singleElement().satisfies(a -> {
+                    assertThat(a.getAccion()).isEqualTo(AuditAccion.REVOCACION);
+                    assertThat(a.getNumeroWhatsapp()).isEqualTo(numero);
+                    assertThat(a.getMotivo()).contains("DESVINCULACION");
+                });
+    }
+
     private void revocar(String request, int cantidad) throws Exception {
         mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.revocadas").value(cantidad));

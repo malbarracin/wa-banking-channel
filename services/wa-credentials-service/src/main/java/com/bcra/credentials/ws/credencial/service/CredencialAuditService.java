@@ -2,6 +2,7 @@ package com.bcra.credentials.ws.credencial.service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.bcra.credentials.ws.credencial.entity.AuditAccion;
 import com.bcra.credentials.ws.credencial.entity.AuditResultado;
 import com.bcra.credentials.ws.credencial.entity.CredencialAuditLog;
+import com.bcra.credentials.ws.credencial.entity.CredencialSesion;
 import com.bcra.credentials.ws.credencial.repository.CredencialAuditLogRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,20 @@ public class CredencialAuditService {
     private static final String MOTIVO_PROTEGIDO = "Detalle omitido por seguridad";
 
     private final CredencialAuditLogRepository auditLogRepository;
+
+    /** Registra rechazos sin extraer identidad ni identificadores de tokens no verificados. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarValidacionFallida(Optional<CredencialSesion> credencial) {
+        var registro = CredencialAuditLog.builder()
+                .accion(AuditAccion.VALIDACION_FALLIDA)
+                .resultado(AuditResultado.RECHAZADO)
+                .motivo("Credencial no válida")
+                .fecha(Instant.now());
+        credencial.ifPresent(sesion -> registro.numeroWhatsapp(sesion.getNumeroWhatsapp())
+                .documentoTipo(sesion.getDocumentoTipo()).documentoNumero(sesion.getDocumentoNumero())
+                .jti(sesion.getJti()));
+        auditLogRepository.save(registro.build());
+    }
 
     /**
      * Persiste un evento aunque la operación llamadora se revierta; invocar mediante el bean Spring.

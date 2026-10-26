@@ -26,6 +26,11 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(UnauthorizedException.class)
+    public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException exception) {
+        return build(HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED, exception.getMessage(), List.of());
+    }
+
     @ExceptionHandler(EmisionNoAutorizadaException.class)
     public ResponseEntity<ErrorResponse> handleForbidden(EmisionNoAutorizadaException exception) {
         return build(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, exception.getMessage(), List.of());

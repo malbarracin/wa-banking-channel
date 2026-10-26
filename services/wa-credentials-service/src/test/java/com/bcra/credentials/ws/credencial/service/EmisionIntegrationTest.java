@@ -25,6 +25,7 @@ import com.bcra.credentials.ws.credencial.client.ClienteEstadoResponse.EstadoCli
 import com.bcra.credentials.ws.credencial.client.ClienteNoEncontradoException;
 import com.bcra.credentials.ws.credencial.client.UsersServiceClient;
 import com.bcra.credentials.ws.credencial.client.UsersServiceUnavailableException;
+import com.bcra.credentials.ws.credencial.dto.ValidarCredencialRequest;
 import com.bcra.credentials.ws.credencial.entity.AuditAccion;
 import com.bcra.credentials.ws.credencial.entity.AuditResultado;
 import com.bcra.credentials.ws.credencial.entity.CredencialEstado;
@@ -97,6 +98,41 @@ class EmisionIntegrationTest {
             assertThat(a.getJti()).isNotBlank();
             assertThat(a.getMotivo()).doesNotContain(segunda.get("credencial").asText());
         });
+    }
+
+    @Test
+    @DisplayName("Valida el JWT emitido y rechaza el anterior después de reemplazarlo")
+    void validaCredencialEmitidaYRechazaReemplazada() throws Exception {
+        var primera = emitir();
+        String primeraRequest = objectMapper.writeValueAsString(
+                new ValidarCredencialRequest(primera.get("credencial").asText()));
+
+        mockMvc.perform(post("/api/v1/credenciales/validar")
+                .contentType(MediaType.APPLICATION_JSON).content(primeraRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vigente").value(true))
+                .andExpect(jsonPath("$.numeroWhatsapp").value(NUMERO))
+                .andExpect(jsonPath("$.documentoTipo").value("DNI"))
+                .andExpect(jsonPath("$.documentoNumero").value("12345678"))
+                .andExpect(jsonPath("$.fechaExpiracion").value(primera.get("fechaExpiracion").asText()));
+
+        var segunda = emitir();
+
+        mockMvc.perform(post("/api/v1/credenciales/validar")
+                .contentType(MediaType.APPLICATION_JSON).content(primeraRequest))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists());
+        mockMvc.perform(post("/api/v1/credenciales/validar")
+                .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(
+                        new ValidarCredencialRequest(segunda.get("credencial").asText()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vigente").value(true));
+        assertThat(auditRepository.findAll().stream()
+                .filter(evento -> evento.getAccion() == AuditAccion.VALIDACION_FALLIDA))
+                .singleElement().satisfies(evento ->
+                        assertThat(evento.getResultado()).isEqualTo(AuditResultado.RECHAZADO));
     }
 
     @Test

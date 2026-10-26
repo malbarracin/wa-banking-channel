@@ -1,0 +1,20 @@
+meta {
+  name: Perfil sin credencial - 401
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/perfil
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+}
+
+docs {
+  H3 exige el contexto de credencial propagado por H2/H0.2; no valida el token.
+  Esperado: code UNAUTHORIZED.
+}

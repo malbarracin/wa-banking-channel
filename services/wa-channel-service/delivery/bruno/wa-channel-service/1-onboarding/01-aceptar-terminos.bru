@@ -1,0 +1,30 @@
+meta {
+  name: Aceptar términos
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/vinculos/terminos
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "numeroWhatsapp": "{{numeroWhatsapp}}"
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+docs {
+  Primer paso obligatorio. Crea un vínculo PENDIENTE_VERIFICACION nuevo; no es idempotente.
+  Respuestas: 201 creado, 400 número inválido, 500 error interno.
+}

@@ -1,0 +1,41 @@
+meta {
+  name: Crear cliente ACTIVE en H1
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{h1BaseUrl}}/api/v1/users
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "documento": { "tipo": "{{docTipo}}", "numero": "{{docNumber}}" },
+    "nombre": "Ana",
+    "apellido": "Pérez",
+    "fechaNacimiento": "1990-05-15",
+    "email": "ana.{{docNumber}}@example.test",
+    "telefono": "5551234"
+  }
+}
+
+script:pre-request {
+  const suffix = String(10000000 + (Date.now() % 90000000));
+  bru.setVar("docNumber", suffix);
+  bru.setVar("numeroWhatsapp", "+54911" + suffix);
+}
+
+assert {
+  res.status: eq 201
+}
+
+docs {
+  Crea un cliente ACTIVE en H1 con documento y número únicos por corrida.
+  Requiere wa-users-service en h1BaseUrl. Respuestas: 201 creado, 409 documento repetido.
+}

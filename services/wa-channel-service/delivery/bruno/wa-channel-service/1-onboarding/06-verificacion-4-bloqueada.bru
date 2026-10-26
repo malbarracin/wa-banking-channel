@@ -1,0 +1,32 @@
+meta {
+  name: Verificación 4 - 423 LOCKED
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/verificaciones
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "documentoTipo": "{{docTipo}}",
+    "documentoNumero": "{{docNumber}}",
+    "datosVerificacion": { "codigo": "123456" }
+  }
+}
+
+assert {
+  res.status: eq 423
+}
+
+docs {
+  Intentos agotados en la ventana: code LOCKED, verificación pausada y derivación a soporte.
+  El vínculo permanece PENDIENTE_VERIFICACION y se puede reintentar al vencer la ventana.
+}

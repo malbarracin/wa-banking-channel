@@ -1,0 +1,30 @@
+meta {
+  name: Aceptar términos con número inválido - 400
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/api/v1/vinculos/terminos
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "numeroWhatsapp": "12345"
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  El número debe cumplir E.164 con prefijo +.
+  Esperado: code VALIDATION_ERROR.
+}

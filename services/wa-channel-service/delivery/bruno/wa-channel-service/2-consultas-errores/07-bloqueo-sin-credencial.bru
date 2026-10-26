@@ -1,0 +1,31 @@
+meta {
+  name: Bloqueo solicitud cliente sin credencial - 401
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/bloqueo
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "motivo": "SOLICITUD_CLIENTE",
+    "confirmacion": true
+  }
+}
+
+assert {
+  res.status: eq 401
+}
+
+docs {
+  El motivo SOLICITUD_CLIENTE exige X-Canal-Credencial-Valida: true.
+  Esperado: code UNAUTHORIZED.
+}

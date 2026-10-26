@@ -1,0 +1,32 @@
+meta {
+  name: Preferencias con propiedad desconocida - 400
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/preferencias
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Credencial-Documento-Tipo: {{docTipo}}
+  X-Credencial-Documento-Numero: {{docNumber}}
+}
+
+body:json {
+  {
+    "color": "azul"
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  Solo idioma, notificacionesHabilitadas y horarioPreferido.
+  Esperado: code VALIDATION_ERROR, mensaje "La solicitud tiene propiedades no permitidas".
+}

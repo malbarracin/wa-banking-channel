@@ -1,0 +1,32 @@
+meta {
+  name: Verificación 1 - falla, quedan 2
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/verificaciones
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "documentoTipo": "{{docTipo}}",
+    "documentoNumero": "{{docNumber}}",
+    "datosVerificacion": { "codigo": "123456" }
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Con el verificador por defecto toda prueba se rechaza: exitosa=false, intentosRestantes=2,
+  estadoVinculo=PENDIENTE_VERIFICACION.
+}

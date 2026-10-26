@@ -1,0 +1,31 @@
+meta {
+  name: Preferencias sin headers - 401
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/preferencias
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "idioma": "es",
+    "notificacionesHabilitadas": true
+  }
+}
+
+assert {
+  res.status: eq 401
+}
+
+docs {
+  Sin X-Credencial-Documento-Tipo/Numero responde 401 antes de buscar el vínculo.
+  Esperado: code UNAUTHORIZED.
+}

@@ -1,0 +1,32 @@
+meta {
+  name: Verificación sin términos - 404
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroSinVinculo}}/verificaciones
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "documentoTipo": "{{docTipo}}",
+    "documentoNumero": "{{docNumber}}",
+    "datosVerificacion": { "codigo": "123456" }
+  }
+}
+
+assert {
+  res.status: eq 404
+}
+
+docs {
+  Número sin aceptación de términos; no se consulta H1.
+  Esperado: code NOT_FOUND, mensaje "Debe aceptar los términos antes de verificar su identidad".
+}

@@ -1,0 +1,30 @@
+meta {
+  name: Desvinculación sin credencial - 401
+  type: http
+  seq: 9
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/desvinculacion
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "confirmacion": true
+  }
+}
+
+assert {
+  res.status: eq 401
+}
+
+docs {
+  La desvinculación siempre exige X-Canal-Credencial-Valida: true.
+  Esperado: code UNAUTHORIZED.
+}

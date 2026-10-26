@@ -62,6 +62,45 @@ class AuditServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("Conserva el historial de operaciones exitosas y rechazadas del mismo usuario")
+    void conservaHistorialDelMismoUsuario() {
+        AuditLog alta = auditService.registrar(AuditAction.ALTA, AuditResult.EXITOSO,
+                "DNI", "12345678", "");
+        AuditLog actualizacion = auditService.registrar(AuditAction.ACTUALIZACION, AuditResult.RECHAZADO,
+                "DNI", "12345678", "Campo no editable");
+        AuditLog cambioEstado = auditService.registrar(AuditAction.CAMBIO_ESTADO, AuditResult.EXITOSO,
+                "DNI", "12345678", "");
+
+        assertThat(repository.findAll()).hasSize(3)
+                .extracting(AuditLog::getId)
+                .containsExactlyInAnyOrder(alta.getId(), actualizacion.getId(), cambioEstado.getId());
+        assertThat(repository.findById(actualizacion.getId()).orElseThrow())
+                .satisfies(registro -> {
+                    assertThat(registro.getAccion()).isEqualTo(AuditAction.ACTUALIZACION);
+                    assertThat(registro.getResultado()).isEqualTo(AuditResult.RECHAZADO);
+                    assertThat(registro.getMotivo()).isEqualTo("Campo no editable");
+                    assertThat(registro.getTipoDocumento()).isEqualTo("DNI");
+                    assertThat(registro.getNumeroDocumento()).isEqualTo("12345678");
+                });
+    }
+
+    @ParameterizedTest
+    @EnumSource(AuditAction.class)
+    @DisplayName("Persiste el rechazo de cada acción con su motivo y referencia al usuario")
+    void persisteCadaAccionRechazada(AuditAction accion) {
+        AuditLog registro = auditService.registrar(accion, AuditResult.RECHAZADO,
+                "DOCUMENTO_EXTRANJERO", "ABC123", "Operación no permitida");
+
+        AuditLog guardado = repository.findById(registro.getId()).orElseThrow();
+        assertThat(guardado.getAccion()).isEqualTo(accion);
+        assertThat(guardado.getResultado()).isEqualTo(AuditResult.RECHAZADO);
+        assertThat(guardado.getMotivo()).isEqualTo("Operación no permitida");
+        assertThat(guardado.getTipoDocumento()).isEqualTo("DOCUMENTO_EXTRANJERO");
+        assertThat(guardado.getNumeroDocumento()).isEqualTo("ABC123");
+        assertThat(guardado.getFecha()).isNotNull();
+    }
+
+    @Test
     @DisplayName("Conserva un rechazo y su motivo cuando se revierte la transacción principal")
     void conservaRechazoTrasRollback() {
         TransactionTemplate transaccion = new TransactionTemplate(transactionManager);

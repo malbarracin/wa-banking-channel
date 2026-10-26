@@ -1,3 +1,5 @@
+.maven-cache/
+
 # >>> opensoma: agentes y configuración de soma (no van al repositorio) >>>
 .opensoma/
 .opencode/
@@ -28,4 +30,3 @@ project.yaml
 backlog/
 packs/
 # <<< opensoma <<<
-.maven-cache/

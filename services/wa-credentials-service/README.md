@@ -16,9 +16,13 @@ El wrapper descarga Maven 3.9.16 desde Maven Central.
 
 El perfil default y el perfil dev usan PostgreSQL: crear una base propia `wa_credentials`
 y definir `DB_PASSWORD`; opcionalmente `DB_URL` y `DB_USERNAME`.
-Puerto HTTP: `PORT` (8082 por defecto). El esquema no se modifica automáticamente.
+Puerto HTTP: `PORT` (8082 por defecto). Flyway aplica las migraciones versionadas de
+`src/main/resources/db/migration` al arrancar; Hibernate no modifica el esquema.
+`V001__credencial.sql` crea las credenciales y su auditoría e impone un único `jti` y
+una única credencial `ACTIVA` por número mediante un índice parcial PostgreSQL.
 El perfil dev mantiene PostgreSQL y no habilita consola H2.
 Los tests activan el perfil test, que usa H2 en memoria con esquema temporal y sin servicios externos.
+En ese perfil Flyway está desactivado: H2 no soporta el índice parcial, cuya validación requiere PostgreSQL.
 H2 es dependencia exclusiva de test; para ejecutar la aplicación localmente usar dev con PostgreSQL.
 
 Disponibles `/actuator/health` y `/actuator/info`. No se implementan aún endpoints de negocio.

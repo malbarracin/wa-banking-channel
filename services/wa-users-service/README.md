@@ -31,6 +31,16 @@ Actuator expone `/actuator/health` y `/actuator/info`.
 El contrato común de errores contiene `code`, `message`, `details` y `timestamp` UTC;
 no incluye stacktraces. JaCoCo exige un mínimo de 80% de líneas en `verify`, sin exclusiones.
 
-Las capas del módulo `user` se documentan con `package-info.java`; todavía no contienen
-entidades, repositorios ni endpoints de negocio. Lombok y MapStruct quedan preparados para esas tareas.
+La auditoría interna usa `user.entity.AuditLog`, `user.repository.AuditLogRepository` y
+`user.service.AuditService`, manteniendo las capas del módulo `user`. No expone endpoint HTTP.
+La referencia es el documento (tipo y número), sin clave foránea a User, para registrar también
+altas rechazadas antes de que exista un usuario. No se registra el contenido de datos modificados.
+`registrar(accion, resultado, tipoDocumento, numeroDocumento, motivo)` admite `ALTA`,
+`ACTUALIZACION` y `CAMBIO_ESTADO`, con resultado `EXITOSO` o `RECHAZADO`.
+El motivo es obligatorio para rechazos (hasta 255 caracteres, sin datos sensibles); para éxitos puede ser vacío.
+El servicio asigna fecha UTC y persiste en `REQUIRES_NEW`, conservando la auditoría ante rollback del llamador.
+Las futuras operaciones deben invocarlo a través del bean Spring al determinar su resultado;
+la integración con esas operaciones corresponde a sus tareas. Producción necesita crear la tabla
+`user_audit_log` antes de activar la validación del esquema.
+MapStruct queda preparado para los contratos HTTP de las siguientes tareas; auditoría no utiliza DTOs.
 Docker, migraciones y documentación completa se entregan en sus tareas correspondientes.

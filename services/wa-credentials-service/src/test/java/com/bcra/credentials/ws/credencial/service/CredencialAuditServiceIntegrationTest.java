@@ -176,6 +176,53 @@ class CredencialAuditServiceIntegrationTest {
                 assertThat(registro.getMotivo()).isEqualTo("Detalle omitido por seguridad").doesNotContain(secreto));
     }
 
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {" ", "\t\n"})
+    @DisplayName("Permite omitir el motivo sin inventar un detalle de auditoría")
+    void registraEventoSinMotivo(String motivo) {
+        CredencialAuditLog registro = service.registrar(AuditAccion.REVOCACION, AuditResultado.EXITOSO,
+                NUMERO, null, null, motivo);
+
+        assertThat(repository.findById(registro.getId())).hasValueSatisfying(guardado -> {
+            assertThat(guardado.getMotivo()).isNull();
+            assertThat(guardado.getDocumentoTipo()).isNull();
+            assertThat(guardado.getDocumentoNumero()).isNull();
+        });
+    }
+
+    @Test
+    @DisplayName("Acepta las referencias documentales en su longitud máxima sin truncarlas")
+    void conservaReferenciasEnLongitudMaxima() {
+        String documentoTipo = "T".repeat(30);
+        String documentoNumero = "1".repeat(50);
+
+        CredencialAuditLog registro = service.registrar(AuditAccion.EMISION, AuditResultado.EXITOSO,
+                NUMERO, documentoTipo, documentoNumero, null);
+
+        assertThat(repository.findById(registro.getId())).hasValueSatisfying(guardado -> {
+            assertThat(guardado.getDocumentoTipo()).isEqualTo(documentoTipo);
+            assertThat(guardado.getDocumentoNumero()).isEqualTo(documentoNumero);
+        });
+    }
+
+    @Test
+    @DisplayName("Un rechazo de auditoría no revierte las escrituras de la transacción llamadora")
+    void permiteCommitExternoTrasRechazoDeAuditoria() {
+        TransactionTemplate transaccion = new TransactionTemplate(transactionManager);
+
+        UUID id = transaccion.execute(estado -> {
+            CredencialAuditLog externo = guardarEvento(Instant.parse("2026-01-01T00:00:00Z"));
+            repository.flush();
+
+            assertThatIllegalArgumentException().isThrownBy(() -> service.registrar(
+                    AuditAccion.REVOCACION, null, NUMERO, null, null, null));
+            return externo.getId();
+        });
+
+        assertThat(repository.findAll()).extracting(CredencialAuditLog::getId).containsExactly(id);
+    }
+
     private CredencialAuditLog guardarEvento(Instant fecha) {
         return repository.save(CredencialAuditLog.builder()
                 .accion(AuditAccion.EMISION)

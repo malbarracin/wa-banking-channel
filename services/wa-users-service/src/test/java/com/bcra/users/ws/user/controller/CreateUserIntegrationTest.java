@@ -1,6 +1,7 @@
 package com.bcra.users.ws.user.controller;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -113,7 +114,8 @@ class CreateUserIntegrationTest {
         assertThat(auditLogRepository.findAll()).singleElement().satisfies(registro -> {
             assertThat(registro.getAccion()).isEqualTo(AuditAction.ALTA);
             assertThat(registro.getResultado()).isEqualTo(AuditResult.EXITOSO);
-            assertThat(registro.getFecha()).isBetween(inicio, Instant.now());
+            assertThat(registro.getFecha()).isBetween(
+                    inicio.minus(1, ChronoUnit.MICROS), Instant.now().plus(1, ChronoUnit.MICROS));
             assertThat(registro.getTipoDocumento()).isEqualTo("DNI");
             assertThat(registro.getNumeroDocumento()).isEqualTo("123");
         });
@@ -121,7 +123,8 @@ class CreateUserIntegrationTest {
 
     static Stream<String> camposIncompletos() {
         return Stream.of("documento", "tipo", "numero", "nombre", "apellido", "fechaNacimiento",
-                "contactoNulo", "contactoVacio", "contactoBlanco", "nombreBlanco", "tipoBlanco", "numeroBlanco");
+                "contactoNulo", "contactoVacio", "contactoBlanco", "nombreBlanco", "apellidoBlanco",
+                "tipoBlanco", "numeroBlanco");
     }
 
     @ParameterizedTest
@@ -144,6 +147,7 @@ class CreateUserIntegrationTest {
                 solicitud.put("telefono", "  ");
             }
             case "nombreBlanco" -> solicitud.put("nombre", "  ");
+            case "apellidoBlanco" -> solicitud.put("apellido", "  ");
             case "tipoBlanco" -> ((ObjectNode) solicitud.get("documento")).put("tipo", "  ");
             case "numeroBlanco" -> ((ObjectNode) solicitud.get("documento")).put("numero", "  ");
             default -> solicitud.remove(campo);

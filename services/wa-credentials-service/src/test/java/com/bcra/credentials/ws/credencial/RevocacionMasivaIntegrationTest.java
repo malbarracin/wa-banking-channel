@@ -28,6 +28,7 @@ import com.bcra.credentials.ws.credencial.repository.CredencialRepository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -123,6 +124,69 @@ class RevocacionMasivaIntegrationTest {
         mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content("{\"criterio\":\"TODAS\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("CONFLICT"));
+
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.ACTIVA).hasSize(3);
+        assertThat(auditRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Un fallo posterior a una auditoría persistida revierte todo el lote")
+    void revierteLoteConAuditoriaYaPersistida() throws Exception {
+        int[] intentos = {0};
+        doAnswer(invocacion -> {
+            if (++intentos[0] == 2) {
+                throw new org.springframework.dao.DataIntegrityViolationException("fallo de prueba");
+            }
+            CredencialAuditLog auditoria = invocacion.getArgument(0);
+            return auditRepository.saveAndFlush(auditoria);
+        }).when(auditRepository).save(any(CredencialAuditLog.class));
+
+        mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content("{\"criterio\":\"TODAS\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        assertThat(intentos[0]).isEqualTo(2);
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.ACTIVA)
+                .hasSize(3).allSatisfy(c -> {
+                    assertThat(c.getFechaRevocacion()).isNull();
+                    assertThat(c.getMotivoRevocacion()).isNull();
+                    assertThat(c.getRevocadaPor()).isNull();
+                });
+        assertThat(auditRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Cada auditoría conserva la identidad y la fecha de la credencial revocada")
+    void conservaTrazabilidadPorCredencial() throws Exception {
+        revocar("{\"criterio\":\"TODAS\"}", 3);
+
+        assertThat(auditRepository.findAll()).hasSize(3).allSatisfy(auditoria -> {
+            CredencialSesion credencial = repository.findByJti(auditoria.getJti()).orElseThrow();
+            assertThat(auditoria.getNumeroWhatsapp()).isEqualTo(credencial.getNumeroWhatsapp());
+            assertThat(auditoria.getDocumentoTipo()).isEqualTo(credencial.getDocumentoTipo());
+            assertThat(auditoria.getDocumentoNumero()).isEqualTo(credencial.getDocumentoNumero());
+            assertThat(auditoria.getFecha()).isEqualTo(credencial.getFechaRevocacion());
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"documentoTipo", "documentoNumero"})
+    @DisplayName("Rechaza documentos que exceden el límite sin revocar ni auditar")
+    void rechazaDocumentoDemasiadoLargo(String campo) throws Exception {
+        String tipo = "documentoTipo".equals(campo) ? "D".repeat(31) : "DNI";
+        String numero = "documentoNumero".equals(campo) ? "1".repeat(51) : "12345678";
+        String request = """
+                {"criterio":"POR_CLIENTE","segmento":{"documentoTipo":"%s","documentoNumero":"%s"}}
+                """.formatted(tipo, numero);
+
+        mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details[*].field").value(
+                        org.hamcrest.Matchers.hasItem("segmento." + campo)))
+                .andExpect(jsonPath("$.timestamp").exists());
 
         assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.ACTIVA).hasSize(3);
         assertThat(auditRepository.count()).isZero();

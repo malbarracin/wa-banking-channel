@@ -27,6 +27,7 @@ import com.bcra.users.ws.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -66,6 +67,9 @@ class UserStatusIntegrationTest {
         User guardado = repository.findById(original.getId()).orElseThrow();
         assertThat(guardado.getEstado()).isEqualTo(solicitado);
         assertThat(guardado).usingRecursiveComparison().ignoringFields("estado", "updatedAt").isEqualTo(original);
+        mockMvc.perform(get(RUTA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value(solicitado.name()));
         verificarAuditoria(AuditResult.EXITOSO);
         assertThat(auditoria.findAll()).singleElement().satisfies(registro -> {
             assertThat(registro.getFecha()).isBetween(inicio.minusNanos(1000), Instant.now().plusNanos(1000));
@@ -90,6 +94,8 @@ class UserStatusIntegrationTest {
         assertThat(repository.findById(original.getId()).orElseThrow())
                 .usingRecursiveComparison().isEqualTo(original);
         verificarAuditoria(AuditResult.RECHAZADO);
+        assertThat(auditoria.findAll()).singleElement().satisfies(registro ->
+                assertThat(registro.getMotivo()).isNotBlank());
     }
 
     @Test
@@ -103,6 +109,8 @@ class UserStatusIntegrationTest {
 
         assertThat(repository.count()).isZero();
         verificarAuditoria(AuditResult.RECHAZADO);
+        assertThat(auditoria.findAll()).singleElement().satisfies(registro ->
+                assertThat(registro.getMotivo()).isNotBlank());
     }
 
     @ParameterizedTest
@@ -120,6 +128,8 @@ class UserStatusIntegrationTest {
         assertThat(repository.findById(original.getId()).orElseThrow())
                 .usingRecursiveComparison().isEqualTo(original);
         verificarAuditoria(AuditResult.RECHAZADO);
+        assertThat(auditoria.findAll()).singleElement().satisfies(registro ->
+                assertThat(registro.getMotivo()).isNotBlank());
     }
 
     private User guardarUsuario(UserStatus estado) {

@@ -15,9 +15,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.bcra.credentials.ws.credencial.dto.EmitirCredencialRequest;
 import com.bcra.credentials.ws.credencial.dto.EmitirCredencialResponse;
 import com.bcra.credentials.ws.credencial.dto.RevocarCredencialRequest;
+import com.bcra.credentials.ws.credencial.dto.RevocacionMasivaRequest;
+import com.bcra.credentials.ws.credencial.dto.RevocacionMasivaResponse;
 import com.bcra.credentials.ws.credencial.dto.ValidarCredencialRequest;
 import com.bcra.credentials.ws.credencial.dto.ValidarCredencialResponse;
 import com.bcra.credentials.ws.credencial.service.CredencialService;
+import com.bcra.credentials.ws.credencial.service.RevocacionMasivaService;
 import com.bcra.credentials.ws.credencial.service.ValidacionService;
 
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,13 @@ public class CredencialController {
 
     private final ValidacionService validacionService;
     private final CredencialService credencialService;
+    private final RevocacionMasivaService revocacionMasivaService;
+
+    /** @return cantidad revocada por decisión del banco, con auditoría por credencial. */
+    @PostMapping("/revocacion-masiva")
+    public RevocacionMasivaResponse revocarMasivamente(@Valid @RequestBody RevocacionMasivaRequest request) {
+        return revocacionMasivaService.revocar(request);
+    }
 
     /** Revoca antes de responder; devuelve 404 si no existe credencial activa y 204 al confirmar. */
     @PostMapping("/{numero}/revocacion")

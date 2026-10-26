@@ -22,6 +22,16 @@ public interface CredencialRepository extends JpaRepository<CredencialSesion, UU
             + "and c.estado = com.bcra.credentials.ws.credencial.entity.CredencialEstado.ACTIVA")
     Optional<CredencialSesion> findActivaParaRevocar(@Param("numero") String numero);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from CredencialSesion c where c.estado = :estado order by c.id")
+    List<CredencialSesion> buscarPorEstadoParaRevocar(@Param("estado") CredencialEstado estado);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from CredencialSesion c where c.estado = :estado "
+            + "and c.documentoTipo = :tipo and c.documentoNumero = :numero order by c.id")
+    List<CredencialSesion> buscarPorClienteParaRevocar(@Param("estado") CredencialEstado estado,
+            @Param("tipo") String tipo, @Param("numero") String numero);
+
     Optional<CredencialSesion> findByNumeroWhatsappAndEstado(String numeroWhatsapp, CredencialEstado estado);
 
     Optional<CredencialSesion> findByJti(String jti);

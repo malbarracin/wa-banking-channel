@@ -44,7 +44,10 @@ public class UserUpdateExceptionHandler {
         Object atributos = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
         if (atributos instanceof Map<?, ?> variables && variables.get("tipo") instanceof String tipo
                 && variables.get("numero") instanceof String numero) {
-            auditService.registrar(AuditAction.ACTUALIZACION, AuditResult.RECHAZADO, tipo, numero, mensaje);
+            Object patron = request.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE);
+            AuditAction accion = patron instanceof String ruta && ruta.endsWith("/status")
+                    ? AuditAction.CAMBIO_ESTADO : AuditAction.ACTUALIZACION;
+            auditService.registrar(accion, AuditResult.RECHAZADO, tipo, numero, mensaje);
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(ErrorCode.BAD_REQUEST, mensaje, List.of(), Instant.now()));

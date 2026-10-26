@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bcra.users.ws.user.dto.CreateUserRequest;
+import com.bcra.users.ws.user.dto.UpdateStatusRequest;
 import com.bcra.users.ws.user.dto.UpdateUserRequest;
 import com.bcra.users.ws.user.dto.UserResponse;
 import com.bcra.users.ws.user.dto.UserStatusResponse;
@@ -29,6 +30,16 @@ public class UserController {
 
     private final UserService userService;
     private final UserMapper mapper;
+
+    /**
+     * Cambia el estado según las transiciones soportadas: 400 si es inválida y 404 si no existe el usuario.
+     * @return documento y estado confirmado en persistencia
+     */
+    @PatchMapping("/{tipo}/{numero}/status")
+    public UserStatusResponse cambiarEstado(@PathVariable String tipo, @PathVariable String numero,
+            @RequestBody UpdateStatusRequest request) {
+        return mapper.toStatusResponse(userService.cambiarEstado(tipo, numero, request));
+    }
 
     /**
      * @param solicitud datos mínimos de alta

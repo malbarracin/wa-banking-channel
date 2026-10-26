@@ -18,7 +18,8 @@ server:
 
 credencial:
   jwt:
-    secret: ${CREDENTIAL_JWT_SECRET:}
+    secret: ${CREDENTIAL_JWT_SECRET}
+  vigencia-minutos: ${CREDENTIAL_VIGENCIA_MINUTOS:1440}
 
 clients:
   wa-users-service:

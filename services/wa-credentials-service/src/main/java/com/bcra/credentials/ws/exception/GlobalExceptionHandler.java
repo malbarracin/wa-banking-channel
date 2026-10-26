@@ -5,6 +5,7 @@ import java.util.List;
 
 import jakarta.validation.ConstraintViolationException;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -14,6 +15,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import com.bcra.credentials.ws.credencial.client.UsersServiceUnavailableException;
+import com.bcra.credentials.ws.credencial.exception.EmisionNoAutorizadaException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -25,6 +29,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedException exception) {
         return build(HttpStatus.UNAUTHORIZED, ErrorCode.UNAUTHORIZED, exception.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(EmisionNoAutorizadaException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(EmisionNoAutorizadaException exception) {
+        return build(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, exception.getMessage(), List.of());
+    }
+
+    @ExceptionHandler(UsersServiceUnavailableException.class)
+    public ResponseEntity<ErrorResponse> handleUnavailable(UsersServiceUnavailableException exception) {
+        return build(HttpStatus.SERVICE_UNAVAILABLE, ErrorCode.SERVICE_UNAVAILABLE,
+                "No se pudo validar el cliente", List.of());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataConflict(DataIntegrityViolationException exception) {
+        return build(HttpStatus.CONFLICT, ErrorCode.CONFLICT, "Conflicto al emitir la credencial", List.of());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

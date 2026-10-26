@@ -1,3 +1,7 @@
+credencial:
+  jwt:
+    secret: clave-exclusiva-de-tests-de-al-menos-32-bytes
+
 spring:
   # H2 no soporta el índice único parcial de PostgreSQL; el esquema de test lo genera JPA.
   flyway:

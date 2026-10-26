@@ -92,6 +92,39 @@ class AceptarTerminosIntegrationTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"+14155552671", "+123456789012345"})
+    @DisplayName("Acepta números internacionales y el límite de quince dígitos sin identificación")
+    void aceptaNumerosInternacionalesValidos(String numeroWhatsapp) throws Exception {
+        String solicitud = objectMapper.createObjectNode().put("numeroWhatsapp", numeroWhatsapp).toString();
+
+        mockMvc.perform(post(RUTA).contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.numeroWhatsapp").value(numeroWhatsapp))
+                .andExpect(jsonPath("$.estado").value("PENDIENTE_VERIFICACION"));
+
+        assertThat(vinculoRepository.count()).isEqualTo(1);
+        assertThat(auditRepository.findByNumeroWhatsappOrderByFechaDesc(numeroWhatsapp)).hasSize(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "null", "{", "{\"numeroWhatsapp\":{}}"})
+    @DisplayName("Rechaza cuerpos ausentes o ilegibles con BAD_REQUEST y sin escrituras")
+    void rechazaCuerpoIlegibleSinPersistir(String solicitud) throws Exception {
+        String respuesta = mockMvc.perform(post(RUTA).contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(Instant.parse(objectMapper.readTree(respuesta).get("timestamp").asText())).isNotNull();
+        assertThat(vinculoRepository.count()).isZero();
+        assertThat(auditRepository.count()).isZero();
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"{}", "{\"numeroWhatsapp\":null}", "{\"numeroWhatsapp\":\"\"}",
             "{\"numeroWhatsapp\":\" \"}", "{\"numeroWhatsapp\":\"5491112345678\"}",
             "{\"numeroWhatsapp\":\"+0123456789\"}", "{\"numeroWhatsapp\":\"+1234567890123456\"}",

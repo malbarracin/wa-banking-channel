@@ -25,9 +25,21 @@ Los tests activan el perfil test, que usa H2 en memoria con esquema temporal y s
 En ese perfil Flyway está desactivado: H2 no soporta el índice parcial, cuya validación requiere PostgreSQL.
 H2 es dependencia exclusiva de test; para ejecutar la aplicación localmente usar dev con PostgreSQL.
 
-Disponibles `/actuator/health` y `/actuator/info`. No se implementan aún endpoints de negocio.
-Las futuras rutas del módulo credencial estarán bajo `/api/v1/credenciales`.
-Los paquetes por capa están declarados con `package-info.java`, sin clases de negocio vacías.
+Disponibles `/actuator/health`, `/actuator/info` y `POST /api/v1/credenciales/emitir`.
+La emisión recibe `numeroWhatsapp` (E.164), `documentoTipo`, `documentoNumero`,
+`vinculoActivo` e `identidadVerificada`; las confirmaciones deben ser verdaderas y H1 debe informar ACTIVE.
+Devuelve 201 con `credencial` y `fechaExpiracion`. El JWT es exclusivamente para H3:
+nunca incluirlo en mensajes al cliente, logs ni auditoría.
+Configurar `CREDENTIAL_JWT_SECRET` con al menos 32 bytes UTF-8 (obligatorio, sin default)
+y opcionalmente `CREDENTIAL_VIGENCIA_MINUTOS` (positivo, default 1440).
+El JWT firmado HS256 contiene `sub`, `doc` (`tipo:numero`), `iat`, `exp` y `jti`.
+Como el contrato no recibe el UUID del vínculo H3, `vinculoId` conserva una referencia interna
+estable derivada de número y documento; no representa el ID externo de H3.
+La nueva emisión revoca la anterior por REEMPLAZO; ambas modificaciones y la auditoría de éxito
+se confirman juntas. Los rechazos usan auditoría independiente. El índice parcial de PostgreSQL
+resuelve las carreras de emisión concurrente con 409 y rollback, sin dejar dos activas.
+Errores: 400 validación, 403 sin confirmaciones o cliente inactivo, 404 cliente inexistente,
+503 H1 no disponible y 409 conflicto de persistencia.
 
 Los errores usan `code`, `message`, `details` (lista nunca nula) y `timestamp` UTC.
 El handler cubre validación, solicitudes inválidas, recurso inexistente, conflicto y error interno,

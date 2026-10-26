@@ -25,9 +25,19 @@ Los tests activan el perfil test, que usa H2 en memoria con esquema temporal y s
 En ese perfil Flyway está desactivado: H2 no soporta el índice parcial, cuya validación requiere PostgreSQL.
 H2 es dependencia exclusiva de test; para ejecutar la aplicación localmente usar dev con PostgreSQL.
 
-Disponibles `/actuator/health` y `/actuator/info`. No se implementan aún endpoints de negocio.
-Las futuras rutas del módulo credencial estarán bajo `/api/v1/credenciales`.
-Los paquetes por capa están declarados con `package-info.java`, sin clases de negocio vacías.
+Disponibles `/actuator/health`, `/actuator/info` y `POST /api/v1/credenciales/validar`.
+Este último recibe `{"credencial":"<JWT>"}` y devuelve identidad y vencimiento cuando es válido.
+Configurar `CREDENTIAL_JWT_SECRET` con al menos 32 bytes UTF-8; no hay clave por defecto.
+Sin esa configuración, la validación falla de forma segura con error interno.
+Se verifica exclusivamente HS256, `exp`, `iat`, `jti`, `sub` (número E.164) y
+`doc` (string `documentoTipo:documentoNumero`, por ejemplo `DNI:12345678`).
+La identidad y el vencimiento deben coincidir con la credencial persistida activa.
+Cada validación consulta H1: solo un cliente `ACTIVE` puede operar; 404, estado inactivo
+o indisponibilidad rechazan con 401 `UNAUTHORIZED` y el mismo mensaje genérico.
+Los rechazos registran `VALIDACION_FALLIDA` mediante una transacción independiente;
+si no se reconoce una credencial firmada persistida, la identidad queda vacía.
+`V002__auditoria_validacion_sin_identidad.sql` permite estos eventos sin número,
+sin inventar identidad ni guardar claims no confiables o contenido del JWT.
 
 Los errores usan `code`, `message`, `details` (lista nunca nula) y `timestamp` UTC.
 El handler cubre validación, solicitudes inválidas, recurso inexistente, conflicto y error interno,

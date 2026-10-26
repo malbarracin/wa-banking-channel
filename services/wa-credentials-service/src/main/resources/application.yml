@@ -16,6 +16,10 @@ server:
     include-stacktrace: never
     include-message: never
 
+credencial:
+  jwt:
+    secret: ${CREDENTIAL_JWT_SECRET:}
+
 clients:
   wa-users-service:
     base-url: ${WA_USERS_SERVICE_BASE_URL:http://localhost:8080}

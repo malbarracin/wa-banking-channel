@@ -5,6 +5,14 @@ name: CD
 on:
   workflow_dispatch:
     inputs:
+      service:
+        description: "Servicio a desplegar"
+        required: true
+        default: "wa-channel-service"
+        type: choice
+        options:
+          - wa-users-service
+          - wa-channel-service
       environment:
         description: "Entorno de destino (dev|prod)"
         required: true
@@ -37,13 +45,14 @@ jobs:
       #
       # - name: Helm upgrade
       #   run: |
-      #     helm upgrade --install wa-users \
-      #       services/wa-users-service/helm/wa-users-service \
-      #       -f services/wa-users-service/helm/wa-users-service/values-${{ inputs.environment }}.yaml \
+      #     helm upgrade --install ${{ inputs.service }} \
+      #       services/${{ inputs.service }}/helm/${{ inputs.service }} \
+      #       -f services/${{ inputs.service }}/helm/${{ inputs.service }}/values-${{ inputs.environment }}.yaml \
       #       --set image.tag=${{ inputs.image_tag }} \
+      #       --set-string env.DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
       #       -n ${{ inputs.environment }} --create-namespace
 
       - name: Placeholder
         run: |
-          echo "CD template listo. Configurar secrets KUBE_CONFIG y descomentar el deploy."
-          echo "environment=${{ inputs.environment }} image_tag=${{ inputs.image_tag }}"
+          echo "CD template listo. Configurar secrets KUBE_CONFIG / DB_PASSWORD y descomentar el deploy."
+          echo "service=${{ inputs.service }} environment=${{ inputs.environment }} image_tag=${{ inputs.image_tag }}"

@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpClientErrorException;
 
 import com.bcra.channel.ws.vinculo.client.ClienteEstadoResponse;
@@ -208,6 +209,27 @@ class VerificacionServiceTest {
 
         assertThatThrownBy(() -> service.verificar(NUMERO, REQUEST)).isInstanceOf(NumeroYaVinculadoException.class);
         verificarAuditoria(AuditAccion.VINCULACION, AuditResultado.RECHAZADO);
+    }
+
+    @Test
+    @DisplayName("Aplica el máximo y la ventana configurados al contar los fallos")
+    void aplicaPoliticaConfigurada() {
+        habilitar();
+        ReflectionTestUtils.setField(service, "maxIntentos", 5);
+        ReflectionTestUtils.setField(service, "ventanaMinutos", 30);
+        when(intentos.countByVinculoIdAndResultadoAndFechaAfter(eq(pendiente.getId()),
+                eq(ResultadoIntento.FALLIDO), any(Instant.class))).thenReturn(3L);
+        Instant antes = Instant.now().minusSeconds(1800);
+
+        var respuesta = service.verificar(NUMERO, REQUEST);
+
+        Instant despues = Instant.now().minusSeconds(1800);
+        assertThat(respuesta.exitosa()).isFalse();
+        assertThat(respuesta.intentosRestantes()).isEqualTo(1);
+        ArgumentCaptor<Instant> limite = ArgumentCaptor.forClass(Instant.class);
+        verify(intentos).countByVinculoIdAndResultadoAndFechaAfter(eq(pendiente.getId()),
+                eq(ResultadoIntento.FALLIDO), limite.capture());
+        assertThat(limite.getValue()).isBetween(antes, despues);
     }
 
     private void verificarAuditoria(AuditAccion accion, AuditResultado resultado) {

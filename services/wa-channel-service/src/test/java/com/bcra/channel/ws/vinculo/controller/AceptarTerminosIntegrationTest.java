@@ -1,6 +1,7 @@
 package com.bcra.channel.ws.vinculo.controller;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -60,7 +61,8 @@ class AceptarTerminosIntegrationTest {
     @Test
     @DisplayName("Acepta términos sin identificación y persiste el vínculo pendiente con su auditoría")
     void creaVinculoPendienteSinSolicitarIdentificacion() throws Exception {
-        Instant inicio = Instant.now();
+        // La columna temporal conserva microsegundos; el reloj puede entregar nanosegundos.
+        Instant inicio = Instant.now().truncatedTo(ChronoUnit.MICROS);
 
         String respuesta = mockMvc.perform(post(RUTA)
                         .contentType(MediaType.APPLICATION_JSON)

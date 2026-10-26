@@ -238,6 +238,39 @@ class VerificacionIntegrationTest {
                 .andExpect(jsonPath("$.timestamp").isNotEmpty());
     }
 
+    @ParameterizedTest
+    @EnumSource(value = VinculoEstado.class, names = {"BLOQUEADO", "DESVINCULADO"})
+    @DisplayName("Una revinculación fallida empieza sin los fallos anteriores y no activa el canal")
+    void revinculacionFallidaNoReutilizaIntentos(VinculoEstado estado) throws Exception {
+        aceptarTerminos();
+        Vinculo anterior = vinculos.findAll().getFirst();
+        anterior.setEstado(estado);
+        anterior.setDocumentoTipo("DNI");
+        anterior.setDocumentoNumero("12345678");
+        vinculos.saveAndFlush(anterior);
+        for (int indice = 0; indice < 3; indice++) {
+            IntentoVerificacion intento = new IntentoVerificacion();
+            intento.setVinculoId(anterior.getId());
+            intento.setFecha(Instant.now());
+            intento.setResultado(ResultadoIntento.FALLIDO);
+            intentos.saveAndFlush(intento);
+        }
+        aceptarTerminos();
+
+        verificar().andExpect(status().isOk())
+                .andExpect(jsonPath("$.exitosa").value(false))
+                .andExpect(jsonPath("$.intentosRestantes").value(2))
+                .andExpect(jsonPath("$.estadoVinculo").value("PENDIENTE_VERIFICACION"));
+
+        assertThat(vinculos.findById(anterior.getId()).orElseThrow().getEstado()).isEqualTo(estado);
+        assertThat(vinculos.findByNumeroWhatsappAndEstado(NUMERO, VinculoEstado.ACTIVO)).isEmpty();
+        assertThat(intentos.findAll()).hasSize(4).filteredOn(intento ->
+                !intento.getVinculoId().equals(anterior.getId())).singleElement()
+                .satisfies(intento -> assertThat(intento.getResultado()).isEqualTo(ResultadoIntento.FALLIDO));
+        assertThat(auditoria.findAll()).extracting(evento -> evento.getAccion())
+                .contains(AuditAccion.VERIFICACION_FALLIDA).doesNotContain(AuditAccion.REVINCULACION);
+    }
+
     private void aceptarTerminos() throws Exception {
         mvc.perform(post("/api/v1/vinculos/terminos").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"numeroWhatsapp\":\"" + NUMERO + "\"}")).andExpect(status().isCreated());

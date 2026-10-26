@@ -248,9 +248,11 @@ public class CredencialController {
                                   "fechaExpiracion": "2026-10-27T12:00:00Z"
                                 }
                                 """))),
-        @ApiResponse(responseCode = "400", description = "JSON inválido o body ausente",
+        @ApiResponse(responseCode = "400", description = "JSON inválido, body ausente o credencial vacía",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                        examples = {@ExampleObject(name = "BadRequest", ref = "#/components/examples/BadRequest")})),
+                        examples = {@ExampleObject(name = "ValidationError",
+                                ref = "#/components/examples/ValidationError"),
+                            @ExampleObject(name = "BadRequest", ref = "#/components/examples/BadRequest")})),
         @ApiResponse(responseCode = "401", description = "Credencial no válida para operar",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                         examples = {@ExampleObject(name = "Unauthorized",
@@ -261,7 +263,7 @@ public class CredencialController {
                                 ref = "#/components/examples/InternalError")}))
     })
     @PostMapping("/validar")
-    public ValidarCredencialResponse validar(@RequestBody ValidarCredencialRequest request) {
+    public ValidarCredencialResponse validar(@Valid @RequestBody ValidarCredencialRequest request) {
         return validacionService.validar(request.credencial());
     }
 

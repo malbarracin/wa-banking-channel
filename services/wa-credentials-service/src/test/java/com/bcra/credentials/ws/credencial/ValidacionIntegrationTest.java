@@ -100,7 +100,7 @@ class ValidacionIntegrationTest {
     @ParameterizedTest
     @ValueSource(strings = {"firma", "algoritmo", "malformado", "expirado", "sinExp", "sinJti",
         "sinSub", "documento", "numero", "vencimiento", "inexistente", "revocada", "expiradaBd",
-        "vencidaBd", "suspendido", "borrado", "h1Ausente", "h1Caido", "vacio", "nulo", "sinIat", "iatFuturo"})
+        "vencidaBd", "suspendido", "borrado", "h1Ausente", "h1Caido", "sinIat", "iatFuturo"})
     @DisplayName("Rechaza y audita credenciales inválidas sin revelar el motivo al consumidor")
     void rechazaCredencial(String caso) throws Exception {
         CredencialEstado estado = switch (caso) {
@@ -121,10 +121,9 @@ class ValidacionIntegrationTest {
             default -> { }
         }
         String jwt = token(caso);
-        String body = "nulo".equals(caso) ? "{}"
-                : objectMapper.writeValueAsString(new ValidarCredencialRequest(jwt));
 
-        mockMvc.perform(post("/api/v1/credenciales/validar").contentType(MediaType.APPLICATION_JSON).content(body))
+        mockMvc.perform(post("/api/v1/credenciales/validar").contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new ValidarCredencialRequest(jwt))))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
                 .andExpect(jsonPath("$.details", hasSize(0)))
@@ -138,6 +137,20 @@ class ValidacionIntegrationTest {
             assertThat(auditRepository.findAll().getFirst().getNumeroWhatsapp()).isNull();
             verifyNoInteractions(usersClient);
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{}", "{\"credencial\":null}", "{\"credencial\":\"\"}", "{\"credencial\":\"   \"}"})
+    @DisplayName("Exige presencia de credencial con contrato 400 VALIDATION_ERROR")
+    void rechazaBodySinCredencial(String body) throws Exception {
+        mockMvc.perform(post("/api/v1/credenciales/validar").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details[0].field").value("credencial"))
+                .andExpect(jsonPath("$.timestamp").exists());
+        assertThat(auditRepository.count()).isZero();
+        verifyNoInteractions(usersClient);
     }
 
     @Test
@@ -214,9 +227,6 @@ class ValidacionIntegrationTest {
     private String token(String caso) throws Exception {
         if ("malformado".equals(caso)) {
             return "no-es-un-jwt";
-        }
-        if ("vacio".equals(caso)) {
-            return "";
         }
         var claims = new JWTClaimsSet.Builder().issueTime(Date.from("iatFuturo".equals(caso)
                 ? Instant.now().plusSeconds(60) : Instant.now().minusSeconds(60)))

@@ -1,13 +1,15 @@
 package com.bcra.credentials.ws.credencial.dto;
 
+import jakarta.validation.constraints.NotBlank;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /** JWT presentado por un servicio de productos; nunca debe incluirse en logs. */
 @Schema(description = "JWT presentado por un servicio de productos; nunca debe incluirse en logs.")
 public record ValidarCredencialRequest(
         @Schema(description = "JWT de sesión interno; usar el valor devuelto por emitir, nunca mostrarlo al cliente",
-                example = "JWT_DEVUELTO_POR_EMITIR")
-        String credencial) {
+                example = "JWT_DEVUELTO_POR_EMITIR", requiredMode = Schema.RequiredMode.REQUIRED)
+        @NotBlank String credencial) {
 
     @Override
     public String toString() {

@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [wa-users-service, wa-channel-service]
+        service: [wa-users-service, wa-channel-service, wa-credentials-service]
     defaults:
       run:
         working-directory: services/${{ matrix.service }}
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [wa-users-service, wa-channel-service]
+        service: [wa-users-service, wa-channel-service, wa-credentials-service]
     defaults:
       run:
         working-directory: services/${{ matrix.service }}
@@ -55,8 +55,13 @@ jobs:
         include:
           - service: wa-users-service
             chart: services/wa-users-service/helm/wa-users-service
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"
           - service: wa-channel-service
             chart: services/wa-channel-service/helm/wa-channel-service
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"
+          - service: wa-credentials-service
+            chart: services/wa-credentials-service/helm/wa-credentials-service
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder --set-string env.CREDENTIAL_JWT_SECRET=lint-only-jwt-secret-at-least-32b"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -65,4 +70,4 @@ jobs:
         uses: azure/setup-helm@v4
 
       - name: Helm lint
-        run: helm lint ${{ matrix.chart }} --set-string env.DB_PASSWORD=lint-only-placeholder
+        run: helm lint ${{ matrix.chart }} ${{ matrix.extra_set }}

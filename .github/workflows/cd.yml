@@ -8,11 +8,12 @@ on:
       service:
         description: "Servicio a desplegar"
         required: true
-        default: "wa-channel-service"
+        default: "wa-credentials-service"
         type: choice
         options:
           - wa-users-service
           - wa-channel-service
+          - wa-credentials-service
       environment:
         description: "Entorno de destino (dev|prod)"
         required: true
@@ -50,9 +51,10 @@ jobs:
       #       -f services/${{ inputs.service }}/helm/${{ inputs.service }}/values-${{ inputs.environment }}.yaml \
       #       --set image.tag=${{ inputs.image_tag }} \
       #       --set-string env.DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+      #       --set-string env.CREDENTIAL_JWT_SECRET=${{ secrets.CREDENTIAL_JWT_SECRET }} \
       #       -n ${{ inputs.environment }} --create-namespace
 
       - name: Placeholder
         run: |
-          echo "CD template listo. Configurar secrets KUBE_CONFIG / DB_PASSWORD y descomentar el deploy."
+          echo "CD template listo. Configurar secrets KUBE_CONFIG / DB_PASSWORD / CREDENTIAL_JWT_SECRET y descomentar el deploy."
           echo "service=${{ inputs.service }} environment=${{ inputs.environment }} image_tag=${{ inputs.image_tag }}"

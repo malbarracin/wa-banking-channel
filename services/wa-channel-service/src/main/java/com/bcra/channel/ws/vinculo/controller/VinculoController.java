@@ -5,6 +5,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,7 +14,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bcra.channel.ws.vinculo.CredencialCanal;
+import com.bcra.channel.ws.vinculo.CredencialHeaders;
 import com.bcra.channel.ws.vinculo.dto.AceptarTerminosRequest;
+import com.bcra.channel.ws.vinculo.dto.ActualizarPreferenciasRequest;
 import com.bcra.channel.ws.vinculo.dto.HistorialVinculoResponse;
 import com.bcra.channel.ws.vinculo.dto.PerfilCanalResponse;
 import com.bcra.channel.ws.vinculo.dto.VerificacionResultadoResponse;
@@ -36,6 +39,7 @@ public class VinculoController {
 
     /**
      * Verifica identidad después de aceptar términos.
+     *
      * @param numero número E.164
      * @param request pruebas de identidad
      * @return resultado de la verificación, sin credencial de sesión
@@ -71,6 +75,7 @@ public class VinculoController {
 
     /**
      * Devuelve el historial resumido para uso interno de soporte del banco.
+     *
      * @param numero número de WhatsApp consultado
      * @return 200 con estado actual y eventos descendentes; 404 si no hay vínculo registrado
      */
@@ -80,7 +85,26 @@ public class VinculoController {
     }
 
     /**
+     * Actualiza preferencias del canal; requiere vínculo ACTIVO y contexto de credencial.
+     *
+     * @param numero número E.164 del vínculo
+     * @param documentoTipo tipo de documento del contexto de credencial
+     * @param documentoNumero número de documento del contexto de credencial
+     * @param request cambios de preferencias; propiedades desconocidas se rechazan
+     * @return 200 con el vínculo y las preferencias actualizadas
+     */
+    @PatchMapping("/{numero}/preferencias")
+    public VinculoResponse actualizarPreferencias(
+            @PathVariable String numero,
+            @RequestHeader(value = CredencialHeaders.DOCUMENTO_TIPO, required = false) String documentoTipo,
+            @RequestHeader(value = CredencialHeaders.DOCUMENTO_NUMERO, required = false) String documentoNumero,
+            @Valid @RequestBody ActualizarPreferenciasRequest request) {
+        return vinculoService.actualizarPreferencias(numero, documentoTipo, documentoNumero, request);
+    }
+
+    /**
      * Confirma la aceptación explícita de los términos del canal.
+     *
      * @param request número de WhatsApp, sin datos de identificación
      * @return 201 con el vínculo pendiente de verificación
      */

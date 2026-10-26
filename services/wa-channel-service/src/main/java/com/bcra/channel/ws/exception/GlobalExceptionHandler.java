@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import com.bcra.channel.ws.vinculo.exception.PropiedadDesconocidaException;
+
 import lombok.extern.slf4j.Slf4j;
 
 /** Traduce excepciones al contrato de error único sin exponer valores sensibles ni detalles internos. */
@@ -40,9 +42,25 @@ public class GlobalExceptionHandler {
                 "La solicitud tiene datos inválidos", details);
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException exception) {
+        Throwable causa = exception;
+        while (causa.getCause() != null && !(causa instanceof PropiedadDesconocidaException)) {
+            causa = causa.getCause();
+        }
+        if (causa instanceof PropiedadDesconocidaException desconocida) {
+            return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, desconocida.getMessage(), List.of());
+        }
+        return build(HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST, "La solicitud no es válida", List.of());
+    }
+
+    @ExceptionHandler(PropiedadDesconocidaException.class)
+    public ResponseEntity<ErrorResponse> handlePropiedadDesconocida(PropiedadDesconocidaException exception) {
+        return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, exception.getMessage(), List.of());
+    }
+
     @ExceptionHandler({
         IllegalArgumentException.class,
-        HttpMessageNotReadableException.class,
         MethodArgumentTypeMismatchException.class,
         MissingServletRequestParameterException.class
     })

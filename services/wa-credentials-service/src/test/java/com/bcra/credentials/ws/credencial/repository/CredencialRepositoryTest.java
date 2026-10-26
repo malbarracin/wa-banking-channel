@@ -102,6 +102,55 @@ class CredencialRepositoryTest {
         assertThat(auditoria.findByNumeroWhatsappOrderByFechaDesc("+5491199999999")).isEmpty();
     }
 
+    @Test
+    @DisplayName("Las consultas discriminan número, estado y ambos componentes del documento")
+    void filtraCredencialesPorIdentidadYEstado() {
+        var activa = credenciales.saveAndFlush(crearCredencial("activa"));
+        var expirada = crearCredencial("expirada");
+        expirada.setEstado(CredencialEstado.EXPIRADA);
+        credenciales.saveAndFlush(expirada);
+        entityManager.clear();
+
+        assertThat(credenciales.findByNumeroWhatsappAndEstado("+5491100000000", CredencialEstado.ACTIVA))
+                .hasValueSatisfying(encontrada -> assertThat(encontrada.getId()).isEqualTo(activa.getId()));
+        assertThat(credenciales.findByNumeroWhatsappAndEstado("+5491100000000", CredencialEstado.EXPIRADA))
+                .hasValueSatisfying(encontrada -> assertThat(encontrada.getId()).isEqualTo(expirada.getId()));
+        assertThat(credenciales.findByNumeroWhatsappAndEstado("+5491199999999", CredencialEstado.ACTIVA))
+                .isEmpty();
+        assertThat(credenciales.findByNumeroWhatsappAndEstado("+5491100000000", CredencialEstado.REVOCADA))
+                .isEmpty();
+        assertThat(credenciales.findByDocumentoTipoAndDocumentoNumero("DNI", "12345678"))
+                .extracting(CredencialSesion::getId).containsExactlyInAnyOrder(activa.getId(), expirada.getId());
+        assertThat(credenciales.findByDocumentoTipoAndDocumentoNumero("PASAPORTE", "12345678")).isEmpty();
+        assertThat(credenciales.findByDocumentoTipoAndDocumentoNumero("DNI", "87654321")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("La base rechaza una credencial sin estado obligatorio")
+    void rechazaCredencialSinEstado() {
+        var credencial = crearCredencial("sin-estado");
+        credencial.setEstado(null);
+
+        assertThatThrownBy(() -> credenciales.saveAndFlush(credencial))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("El historial excluye eventos de otros números aunque sean más recientes")
+    void aislaHistorialPorNumero() {
+        Instant fecha = Instant.parse("2026-10-26T10:00:00Z");
+        var propio = auditoria.saveAndFlush(CredencialAuditLog.builder()
+                .accion(AuditAccion.EMISION).resultado(AuditResultado.EXITOSO)
+                .numeroWhatsapp("+5491100000000").fecha(fecha).build());
+        auditoria.saveAndFlush(CredencialAuditLog.builder()
+                .accion(AuditAccion.RENOVACION).resultado(AuditResultado.EXITOSO)
+                .numeroWhatsapp("+5491199999999").fecha(fecha.plusSeconds(60)).build());
+        entityManager.clear();
+
+        assertThat(auditoria.findByNumeroWhatsappOrderByFechaDesc("+5491100000000"))
+                .extracting(CredencialAuditLog::getId).containsExactly(propio.getId());
+    }
+
     private CredencialSesion crearCredencial(String jti) {
         return CredencialSesion.builder().jti(jti).numeroWhatsapp("+5491100000000")
                 .documentoTipo("DNI").documentoNumero("12345678").vinculoId(UUID.randomUUID())

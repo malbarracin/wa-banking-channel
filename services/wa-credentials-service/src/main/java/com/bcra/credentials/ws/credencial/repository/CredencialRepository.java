@@ -17,6 +17,8 @@ import com.bcra.credentials.ws.credencial.entity.CredencialSesion;
 /** Acceso a credenciales por identidad externa y estado. */
 public interface CredencialRepository extends JpaRepository<CredencialSesion, UUID> {
 
+    Optional<CredencialSesion> findFirstByNumeroWhatsappOrderByFechaEmisionDesc(String numeroWhatsapp);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from CredencialSesion c where c.numeroWhatsapp = :numero "
             + "and c.estado = com.bcra.credentials.ws.credencial.entity.CredencialEstado.ACTIVA")

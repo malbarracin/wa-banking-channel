@@ -63,6 +63,15 @@ solo se excluye la clase de arranque de Spring Boot.
 Fuente funcional: `../../specs/acceso-sesion/spec.md`.
 Arquitectura: `../../specs/acceso-sesion/arquitectura.md`.
 
+Swagger UI está disponible en `http://localhost:8082/swagger-ui.html` (ajustar si se define `PORT`).
+El contrato se consulta en `/v3/api-docs` y `/v3/api-docs.yaml` e incluye los cinco endpoints
+de emisión, validación, revocación individual, revocación masiva e historial.
+Los ejemplos JWT son ilustrativos: reemplazar `JWT_DEVUELTO_POR_EMITIR` por el valor real
+obtenido de la emisión y utilizarlo solo entre servicios.
+`./mvnw -q -B verify` ejecuta `OpenApiExportTest` con el perfil test y regenera
+`delivery/openapi/openapi.json` y `delivery/openapi/openapi.yaml` dentro de este servicio,
+sin PostgreSQL ni H1 externos. El test comprueba endpoints, respuestas, ejemplos y schemas.
+
 El adaptador `UsersServiceClient` consulta `GET /api/v1/users/{tipo}/{numero}/status` de H1.
 Configurar `WA_USERS_SERVICE_BASE_URL` (default `http://localhost:8080`),
 `WA_USERS_SERVICE_CONNECT_TIMEOUT` (default `1s`) y `WA_USERS_SERVICE_READ_TIMEOUT` (default `2s`).

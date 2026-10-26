@@ -1,0 +1,1016 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "wa-credentials-service",
+    "description" : "Servicio de Acceso y Sesión H2: emisión, validación, revocación individual y masiva e historial. API interna para H3 y servicios de productos. Los JWT nunca se muestran al cliente de WhatsApp.",
+    "version" : "0.1.0-SNAPSHOT"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:8082",
+    "description" : "Local"
+  } ],
+  "tags" : [ {
+    "name" : "Credenciales",
+    "description" : "API interna H2 de acceso y sesión del canal WhatsApp"
+  } ],
+  "paths" : {
+    "/api/v1/credenciales/{numero}/revocacion" : {
+      "post" : {
+        "tags" : [ "Credenciales" ],
+        "summary" : "Revocar una credencial",
+        "description" : "Revoca inmediatamente la credencial activa del número. Sin activa devuelve 404. Omitir solicitadoPor equivale a CANAL. SOLICITUD_CLIENTE e INTENTOS_AGOTADOS se interpretan como BLOQUEO.",
+        "operationId" : "revocar",
+        "parameters" : [ {
+          "name" : "numero",
+          "in" : "path",
+          "description" : "Número de WhatsApp E.164",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "pattern" : "\\+[1-9][0-9]{1,14}"
+          },
+          "example" : "+5491111111111"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RevocarCredencialRequest"
+              },
+              "examples" : {
+                "BLOQUEO" : {
+                  "description" : "BLOQUEO",
+                  "value" : {
+                    "motivo" : "BLOQUEO",
+                    "solicitadoPor" : "CANAL"
+                  }
+                },
+                "DESVINCULACION" : {
+                  "description" : "DESVINCULACION",
+                  "value" : {
+                    "motivo" : "DESVINCULACION",
+                    "solicitadoPor" : "CANAL"
+                  }
+                },
+                "FRAUDE" : {
+                  "description" : "FRAUDE",
+                  "value" : {
+                    "motivo" : "FRAUDE",
+                    "solicitadoPor" : "CANAL"
+                  }
+                },
+                "POLITICA_BANCO" : {
+                  "description" : "POLITICA_BANCO",
+                  "value" : {
+                    "motivo" : "POLITICA_BANCO",
+                    "solicitadoPor" : "BANCO"
+                  }
+                },
+                "REVOCACION_MASIVA" : {
+                  "description" : "REVOCACION_MASIVA",
+                  "value" : {
+                    "motivo" : "REVOCACION_MASIVA",
+                    "solicitadoPor" : "CANAL"
+                  }
+                },
+                "REEMPLAZO" : {
+                  "description" : "REEMPLAZO",
+                  "value" : {
+                    "motivo" : "REEMPLAZO",
+                    "solicitadoPor" : "CANAL"
+                  }
+                },
+                "H3SolicitudCliente" : {
+                  "description" : "H3SolicitudCliente",
+                  "value" : {
+                    "motivo" : "SOLICITUD_CLIENTE"
+                  }
+                },
+                "H3IntentosAgotados" : {
+                  "description" : "H3IntentosAgotados",
+                  "value" : {
+                    "motivo" : "INTENTOS_AGOTADOS"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Revocación confirmada; sin cuerpo"
+          },
+          "400" : {
+            "description" : "Número, JSON o motivo inválidos",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "ValidationMotivo" : {
+                    "$ref" : "#/components/examples/ValidationMotivo"
+                  },
+                  "ValidationNumeroRevocacion" : {
+                    "$ref" : "#/components/examples/ValidationNumeroRevocacion"
+                  },
+                  "BadRequest" : {
+                    "$ref" : "#/components/examples/BadRequest"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe credencial activa",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "NotFoundCredencial" : {
+                    "$ref" : "#/components/examples/NotFoundCredencial"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno sin detalles sensibles",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "InternalError" : {
+                    "$ref" : "#/components/examples/InternalError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/credenciales/validar" : {
+      "post" : {
+        "tags" : [ "Credenciales" ],
+        "summary" : "Validar una credencial",
+        "description" : "Verifica firma, vencimiento, identidad, estado persistido y cliente activo en H1. Responde 401 uniforme ante JWT inválido, expirado, revocado o H1 no disponible; requiere re-verificación. Sustituir el JWT ilustrativo por la credencial obtenida de emitir.",
+        "operationId" : "validar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ValidarCredencialRequest"
+              },
+              "examples" : {
+                "JwtEmitido" : {
+                  "description" : "JwtEmitido",
+                  "value" : {
+                    "credencial" : "JWT_DEVUELTO_POR_EMITIR"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Operación confirmada",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ValidarCredencialResponse"
+                },
+                "examples" : {
+                  "Exito" : {
+                    "description" : "Exito",
+                    "value" : {
+                      "vigente" : true,
+                      "numeroWhatsapp" : "+5491111111111",
+                      "documentoTipo" : "DNI",
+                      "documentoNumero" : "12345678",
+                      "fechaExpiracion" : "2026-10-27T12:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "JSON inválido o body ausente",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "BadRequest" : {
+                    "$ref" : "#/components/examples/BadRequest"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Credencial no válida para operar",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "Unauthorized" : {
+                    "$ref" : "#/components/examples/Unauthorized"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno sin detalles sensibles",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "InternalError" : {
+                    "$ref" : "#/components/examples/InternalError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/credenciales/revocacion-masiva" : {
+      "post" : {
+        "tags" : [ "Credenciales" ],
+        "summary" : "Revocar credenciales masivamente",
+        "description" : "Decisión del banco: revoca todas las activas o las de un cliente en todos sus números. Cambios y auditorías se confirman atómicamente. Sin coincidencias devuelve revocadas = 0.",
+        "operationId" : "revocarMasivamente",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RevocacionMasivaRequest"
+              },
+              "examples" : {
+                "Todas" : {
+                  "description" : "Todas",
+                  "value" : {
+                    "criterio" : "TODAS"
+                  }
+                },
+                "PorCliente" : {
+                  "description" : "PorCliente",
+                  "value" : {
+                    "criterio" : "POR_CLIENTE",
+                    "segmento" : {
+                      "documentoTipo" : "DNI",
+                      "documentoNumero" : "12345678"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Operación confirmada",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RevocacionMasivaResponse"
+                },
+                "examples" : {
+                  "Exito" : {
+                    "description" : "Exito",
+                    "value" : {
+                      "revocadas" : 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "JSON, criterio o segmento inválidos",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "ValidationAlcance" : {
+                    "$ref" : "#/components/examples/ValidationAlcance"
+                  },
+                  "BadRequest" : {
+                    "$ref" : "#/components/examples/BadRequest"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno sin detalles sensibles",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "InternalError" : {
+                    "$ref" : "#/components/examples/InternalError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/credenciales/emitir" : {
+      "post" : {
+        "tags" : [ "Credenciales" ],
+        "summary" : "Emitir una credencial",
+        "description" : "H3 confirma identidad verificada y vínculo activo; H1 debe confirmar cliente activo. La emisión reemplaza cualquier activa anterior. Vigencia configurable. JWT exclusivo del canal: nunca incluir en mensajes al cliente. El JWT del ejemplo es ilustrativo.",
+        "operationId" : "emitir",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EmitirCredencialRequest"
+              },
+              "examples" : {
+                "Dni" : {
+                  "description" : "Dni",
+                  "value" : {
+                    "numeroWhatsapp" : "+5491111111111",
+                    "documentoTipo" : "DNI",
+                    "documentoNumero" : "12345678",
+                    "vinculoActivo" : true,
+                    "identidadVerificada" : true
+                  }
+                },
+                "Pasaporte" : {
+                  "description" : "Pasaporte",
+                  "value" : {
+                    "numeroWhatsapp" : "+5491111111111",
+                    "documentoTipo" : "PASAPORTE",
+                    "documentoNumero" : "AAP123456",
+                    "vinculoActivo" : true,
+                    "identidadVerificada" : true
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Operación confirmada",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EmitirCredencialResponse"
+                },
+                "examples" : {
+                  "Exito" : {
+                    "description" : "Exito",
+                    "value" : {
+                      "credencial" : "JWT_DEVUELTO_POR_EMITIR",
+                      "fechaExpiracion" : "2026-10-27T12:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Datos o JSON inválidos",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "ValidationError" : {
+                    "$ref" : "#/components/examples/ValidationError"
+                  },
+                  "BadRequest" : {
+                    "$ref" : "#/components/examples/BadRequest"
+                  }
+                }
+              }
+            }
+          },
+          "403" : {
+            "description" : "Confirmación o estado del cliente insuficiente",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "Forbidden" : {
+                    "$ref" : "#/components/examples/Forbidden"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Cliente inexistente en H1",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "NotFoundCliente" : {
+                    "$ref" : "#/components/examples/NotFoundCliente"
+                  }
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto de persistencia",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "Conflict" : {
+                    "$ref" : "#/components/examples/Conflict"
+                  }
+                }
+              }
+            }
+          },
+          "503" : {
+            "description" : "H1 no disponible",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "ServiceUnavailable" : {
+                    "$ref" : "#/components/examples/ServiceUnavailable"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno sin detalles sensibles",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "InternalError" : {
+                    "$ref" : "#/components/examples/InternalError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/credenciales/{numero}/historial" : {
+      "get" : {
+        "tags" : [ "Credenciales" ],
+        "summary" : "Consultar historial",
+        "description" : "Devuelve identidad y estado efectivo de la última credencial y eventos descendentes. Calcula EXPIRADA sin modificar la persistencia; no incluye JWT ni jti.",
+        "operationId" : "consultarHistorial",
+        "parameters" : [ {
+          "name" : "numero",
+          "in" : "path",
+          "description" : "Número de WhatsApp E.164",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "pattern" : "\\+[1-9][0-9]{1,14}"
+          },
+          "example" : "+5491111111111"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Operación confirmada",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HistorialCredencialResponse"
+                },
+                "examples" : {
+                  "Exito" : {
+                    "description" : "Exito",
+                    "value" : {
+                      "numeroWhatsapp" : "+5491111111111",
+                      "documentoTipo" : "DNI",
+                      "documentoNumero" : "12345678",
+                      "estadoActual" : "ACTIVA",
+                      "eventos" : [ {
+                        "accion" : "EMISION",
+                        "resultado" : "EXITOSO",
+                        "fecha" : "2026-10-26T12:00:00Z",
+                        "motivo" : "EMISION"
+                      } ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Número inválido",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "ValidationNumeroHistorial" : {
+                    "$ref" : "#/components/examples/ValidationNumeroHistorial"
+                  },
+                  "BadRequest" : {
+                    "$ref" : "#/components/examples/BadRequest"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "No existe credencial o historial",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "NotFoundHistorial" : {
+                    "$ref" : "#/components/examples/NotFoundHistorial"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "Error interno sin detalles sensibles",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "InternalError" : {
+                    "$ref" : "#/components/examples/InternalError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "RevocarCredencialRequest" : {
+        "type" : "object",
+        "description" : "Solicitud interna; H3 anterior omite el origen, que se interpreta como CANAL.",
+        "properties" : {
+          "motivo" : {
+            "type" : "string",
+            "description" : "Causa de revocación o motivo de auditoría sin secretos",
+            "enum" : [ "BLOQUEO", "DESVINCULACION", "FRAUDE", "POLITICA_BANCO", "REVOCACION_MASIVA", "REEMPLAZO" ],
+            "example" : "BLOQUEO"
+          },
+          "solicitadoPor" : {
+            "type" : "string",
+            "default" : "CANAL",
+            "description" : "Origen de la revocación: CANAL, BANCO o SISTEMA; omitido equivale a CANAL",
+            "enum" : [ "CANAL", "BANCO", "SISTEMA" ],
+            "example" : "CANAL"
+          }
+        },
+        "required" : [ "motivo" ]
+      },
+      "ErrorResponse" : {
+        "type" : "object",
+        "description" : "Error uniforme de la API (code, message, details, timestamp)",
+        "properties" : {
+          "code" : {
+            "type" : "string",
+            "description" : "Código estable",
+            "enum" : [ "VALIDATION_ERROR", "BAD_REQUEST", "UNAUTHORIZED", "NOT_FOUND", "CONFLICT", "INTERNAL_ERROR", "FORBIDDEN", "SERVICE_UNAVAILABLE" ],
+            "example" : "VALIDATION_ERROR"
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Mensaje legible sin datos sensibles",
+            "example" : "La solicitud tiene datos inválidos"
+          },
+          "details" : {
+            "type" : "array",
+            "description" : "Detalles de validación; nunca null (lista vacía si no aplica)",
+            "example" : [ ],
+            "items" : {
+              "$ref" : "#/components/schemas/FieldError"
+            }
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Instante UTC ISO-8601",
+            "example" : "2026-10-26T12:00:00Z"
+          }
+        }
+      },
+      "FieldError" : {
+        "type" : "object",
+        "description" : "Detalle de un campo inválido (sin el valor rechazado)",
+        "properties" : {
+          "field" : {
+            "type" : "string",
+            "description" : "Nombre del campo",
+            "example" : "documentoTipo"
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Motivo del rechazo",
+            "example" : "no debe estar vacío"
+          }
+        }
+      },
+      "ValidarCredencialRequest" : {
+        "type" : "object",
+        "description" : "JWT presentado por un servicio de productos; nunca debe incluirse en logs.",
+        "properties" : {
+          "credencial" : {
+            "type" : "string",
+            "description" : "JWT de sesión interno; usar el valor devuelto por emitir, nunca mostrarlo al cliente",
+            "example" : "JWT_DEVUELTO_POR_EMITIR"
+          }
+        }
+      },
+      "ValidarCredencialResponse" : {
+        "type" : "object",
+        "description" : "Identidad de la credencial vigente y vencimiento UTC.",
+        "properties" : {
+          "vigente" : {
+            "type" : "boolean",
+            "description" : "Indica que la credencial permite operar; true en una respuesta exitosa",
+            "example" : true
+          },
+          "numeroWhatsapp" : {
+            "type" : "string",
+            "description" : "Número de WhatsApp en formato E.164",
+            "example" : "+5491111111111"
+          },
+          "documentoTipo" : {
+            "type" : "string",
+            "description" : "Tipo documental del cliente en H1",
+            "example" : "DNI"
+          },
+          "documentoNumero" : {
+            "type" : "string",
+            "description" : "Número documental del cliente en H1",
+            "example" : 12345678
+          },
+          "fechaExpiracion" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Vencimiento UTC en formato ISO-8601",
+            "example" : "2026-10-27T12:00:00Z"
+          }
+        }
+      },
+      "RevocacionMasivaRequest" : {
+        "type" : "object",
+        "description" : "Alcance de la revocación: TODAS sin segmento o POR_CLIENTE con identidad documental completa.",
+        "properties" : {
+          "criterio" : {
+            "type" : "string",
+            "description" : "TODAS revoca todas las activas sin segmento; POR_CLIENTE requiere segmento",
+            "enum" : [ "TODAS", "POR_CLIENTE" ],
+            "example" : "POR_CLIENTE",
+            "minLength" : 1,
+            "pattern" : "TODAS|POR_CLIENTE"
+          },
+          "segmento" : {
+            "$ref" : "#/components/schemas/Segmento",
+            "description" : "Identidad documental obligatoria para POR_CLIENTE; omitir para TODAS",
+            "example" : {
+              "documentoTipo" : "DNI",
+              "documentoNumero" : "12345678"
+            }
+          }
+        },
+        "required" : [ "criterio" ]
+      },
+      "Segmento" : {
+        "type" : "object",
+        "description" : "Identidad documental del cliente; alcanza todos sus números",
+        "properties" : {
+          "documentoTipo" : {
+            "type" : "string",
+            "description" : "Tipo documental del cliente en H1",
+            "example" : "DNI",
+            "maxLength" : 30,
+            "minLength" : 0
+          },
+          "documentoNumero" : {
+            "type" : "string",
+            "description" : "Número documental del cliente en H1",
+            "example" : 12345678,
+            "maxLength" : 50,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "documentoNumero", "documentoTipo" ]
+      },
+      "RevocacionMasivaResponse" : {
+        "type" : "object",
+        "description" : "Cantidad de credenciales que cambiaron de ACTIVA a REVOCADA en esta operación.",
+        "properties" : {
+          "revocadas" : {
+            "type" : "integer",
+            "format" : "int32",
+            "description" : "Cantidad que cambió de ACTIVA a REVOCADA; cero si no hay coincidencias",
+            "example" : 1
+          }
+        }
+      },
+      "EmitirCredencialRequest" : {
+        "type" : "object",
+        "description" : "Confirmación del canal H3; ambos indicadores deben ser verdaderos para autorizar la emisión.",
+        "properties" : {
+          "numeroWhatsapp" : {
+            "type" : "string",
+            "description" : "Número de WhatsApp en formato E.164",
+            "example" : "+5491111111111",
+            "minLength" : 1,
+            "pattern" : "\\+[1-9][0-9]{1,14}"
+          },
+          "documentoTipo" : {
+            "type" : "string",
+            "description" : "Tipo documental del cliente en H1",
+            "example" : "DNI",
+            "maxLength" : 30,
+            "minLength" : 0
+          },
+          "documentoNumero" : {
+            "type" : "string",
+            "description" : "Número documental del cliente en H1",
+            "example" : 12345678,
+            "maxLength" : 50,
+            "minLength" : 0
+          },
+          "vinculoActivo" : {
+            "type" : "boolean",
+            "description" : "Confirmación de H3 de vínculo activo; debe ser true para emitir",
+            "example" : true
+          },
+          "identidadVerificada" : {
+            "type" : "boolean",
+            "description" : "Confirmación de identidad verificada por H3; debe ser true para emitir",
+            "example" : true
+          }
+        },
+        "required" : [ "documentoNumero", "documentoTipo", "identidadVerificada", "numeroWhatsapp", "vinculoActivo" ]
+      },
+      "EmitirCredencialResponse" : {
+        "type" : "object",
+        "description" : "Credencial destinada exclusivamente al canal H3, nunca a mensajes visibles por el cliente final.",
+        "properties" : {
+          "credencial" : {
+            "type" : "string",
+            "description" : "JWT de sesión interno; usar el valor devuelto por emitir, nunca mostrarlo al cliente",
+            "example" : "JWT_DEVUELTO_POR_EMITIR"
+          },
+          "fechaExpiracion" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Vencimiento UTC en formato ISO-8601",
+            "example" : "2026-10-27T12:00:00Z"
+          }
+        }
+      },
+      "EventoCredencialResponse" : {
+        "type" : "object",
+        "description" : "Evento resumido: motivo protegido en origen, sin token ni identificador de credencial.",
+        "properties" : {
+          "accion" : {
+            "type" : "string",
+            "description" : "Acción auditada: EMISION, RENOVACION, REVOCACION o VALIDACION_FALLIDA",
+            "enum" : [ "EMISION", "RENOVACION", "REVOCACION", "VALIDACION_FALLIDA" ],
+            "example" : "EMISION"
+          },
+          "resultado" : {
+            "type" : "string",
+            "description" : "Resultado auditado: EXITOSO o RECHAZADO",
+            "enum" : [ "EXITOSO", "RECHAZADO" ],
+            "example" : "EXITOSO"
+          },
+          "fecha" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Instante del evento UTC en formato ISO-8601",
+            "example" : "2026-10-26T12:00:00Z"
+          },
+          "motivo" : {
+            "type" : "string",
+            "description" : "Motivo protegido en origen, sin secretos; puede ser null",
+            "example" : "EMISION"
+          }
+        }
+      },
+      "HistorialCredencialResponse" : {
+        "type" : "object",
+        "description" : "Estado efectivo de la última credencial y eventos del número, del más reciente al más antiguo.",
+        "properties" : {
+          "numeroWhatsapp" : {
+            "type" : "string",
+            "description" : "Número de WhatsApp en formato E.164",
+            "example" : "+5491111111111"
+          },
+          "documentoTipo" : {
+            "type" : "string",
+            "description" : "Tipo documental del cliente en H1",
+            "example" : "DNI"
+          },
+          "documentoNumero" : {
+            "type" : "string",
+            "description" : "Número documental del cliente en H1",
+            "example" : 12345678
+          },
+          "estadoActual" : {
+            "type" : "string",
+            "description" : "Estado efectivo de la última credencial; ACTIVA vencida se informa EXPIRADA",
+            "enum" : [ "ACTIVA", "REVOCADA", "EXPIRADA" ],
+            "example" : "ACTIVA"
+          },
+          "eventos" : {
+            "type" : "array",
+            "description" : "Eventos del número del más reciente al más antiguo",
+            "example" : [ {
+              "accion" : "EMISION",
+              "resultado" : "EXITOSO",
+              "fecha" : "2026-10-26T12:00:00Z",
+              "motivo" : "EMISION"
+            } ],
+            "items" : {
+              "$ref" : "#/components/schemas/EventoCredencialResponse"
+            }
+          }
+        }
+      }
+    },
+    "examples" : {
+      "ValidationError" : {
+        "value" : {
+          "details" : [ {
+            "field" : "documentoTipo",
+            "message" : "no debe estar vacío"
+          } ],
+          "code" : "VALIDATION_ERROR",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "La solicitud tiene datos inválidos"
+        }
+      },
+      "ValidationMotivo" : {
+        "value" : {
+          "details" : [ {
+            "field" : "motivo",
+            "message" : "no debe ser nulo"
+          } ],
+          "code" : "VALIDATION_ERROR",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "La solicitud tiene datos inválidos"
+        }
+      },
+      "ValidationAlcance" : {
+        "value" : {
+          "details" : [ {
+            "field" : "alcanceValido",
+            "message" : "POR_CLIENTE requiere segmento; TODAS no admite segmento"
+          } ],
+          "code" : "VALIDATION_ERROR",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "La solicitud tiene datos inválidos"
+        }
+      },
+      "ValidationNumeroHistorial" : {
+        "value" : {
+          "details" : [ {
+            "field" : "consultarHistorial.numero",
+            "message" : "debe coincidir con \"\\+[1-9][0-9]{1,14}\""
+          } ],
+          "code" : "VALIDATION_ERROR",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "La solicitud tiene datos inválidos"
+        }
+      },
+      "ValidationNumeroRevocacion" : {
+        "value" : {
+          "details" : [ {
+            "field" : "revocar.numero",
+            "message" : "debe coincidir con \"\\+[1-9][0-9]{1,14}\""
+          } ],
+          "code" : "VALIDATION_ERROR",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "La solicitud tiene datos inválidos"
+        }
+      },
+      "BadRequest" : {
+        "value" : {
+          "details" : [ ],
+          "code" : "BAD_REQUEST",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "La solicitud no es válida"
+        }
+      },
+      "Unauthorized" : {
+        "value" : {
+          "details" : [ ],
+          "code" : "UNAUTHORIZED",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "La credencial no es válida; se requiere verificar la identidad nuevamente"
+        }
+      },
+      "Forbidden" : {
+        "value" : {
+          "details" : [ ],
+          "code" : "FORBIDDEN",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "La emisión requiere identidad verificada, vínculo activo y cliente activo"
+        }
+      },
+      "NotFoundCliente" : {
+        "value" : {
+          "details" : [ ],
+          "code" : "NOT_FOUND",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "El cliente no existe"
+        }
+      },
+      "NotFoundCredencial" : {
+        "value" : {
+          "details" : [ ],
+          "code" : "NOT_FOUND",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "No existe una credencial activa"
+        }
+      },
+      "NotFoundHistorial" : {
+        "value" : {
+          "details" : [ ],
+          "code" : "NOT_FOUND",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "No existe historial de credenciales para el número"
+        }
+      },
+      "Conflict" : {
+        "value" : {
+          "details" : [ ],
+          "code" : "CONFLICT",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "Conflicto al emitir la credencial"
+        }
+      },
+      "ServiceUnavailable" : {
+        "value" : {
+          "details" : [ ],
+          "code" : "SERVICE_UNAVAILABLE",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "No se pudo validar el cliente"
+        }
+      },
+      "InternalError" : {
+        "value" : {
+          "details" : [ ],
+          "code" : "INTERNAL_ERROR",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "message" : "Error interno"
+        }
+      }
+    }
+  }
+}

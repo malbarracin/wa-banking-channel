@@ -27,6 +27,18 @@ clients:
     connect-timeout: ${WA_USERS_SERVICE_CONNECT_TIMEOUT:1s}
     read-timeout: ${WA_USERS_SERVICE_READ_TIMEOUT:2s}
 
+info:
+  version: '@project.version@'
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+  default-produces-media-type: application/json
+  override-with-generic-response: false
+
 management:
   endpoints:
     web:

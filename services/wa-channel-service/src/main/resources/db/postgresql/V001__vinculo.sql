@@ -21,6 +21,8 @@ CREATE TABLE vinculo (
 );
 
 CREATE UNIQUE INDEX uq_vinculo_numero_activo ON vinculo (numero_whatsapp) WHERE estado = 'ACTIVO';
+CREATE UNIQUE INDEX uq_vinculo_numero_pendiente ON vinculo (numero_whatsapp)
+    WHERE estado = 'PENDIENTE_VERIFICACION';
 CREATE INDEX ix_vinculo_documento_fecha ON vinculo
     (documento_tipo, documento_numero, fecha_ultimo_cambio_estado DESC);
 

@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +26,7 @@ import com.bcra.channel.ws.vinculo.entity.Preferencias;
 import com.bcra.channel.ws.vinculo.entity.Vinculo;
 import com.bcra.channel.ws.vinculo.entity.VinculoEstado;
 import com.bcra.channel.ws.vinculo.exception.CredencialInvalidaException;
+import com.bcra.channel.ws.vinculo.exception.NumeroYaVinculadoException;
 import com.bcra.channel.ws.vinculo.exception.VinculoEstadoConflictoException;
 import com.bcra.channel.ws.vinculo.exception.VinculoNoActivoException;
 import com.bcra.channel.ws.vinculo.exception.VinculoNotFoundException;
@@ -100,21 +102,48 @@ public class VinculoService {
 
     /**
      * Registra la aceptación previa a cualquier solicitud de identificación.
+     * Si ya hay un pendiente para el número, reutiliza ese registro (idempotente).
+     * Si el número ya tiene vínculo activo, rechaza con conflicto.
      *
      * @param numeroWhatsapp número del canal en formato E.164
-     * @return vínculo creado, pendiente de verificación
+     * @return vínculo pendiente de verificación (creado o reutilizado)
+     * @throws NumeroYaVinculadoException si el número ya tiene un vínculo {@code ACTIVO}
      */
     @Transactional
     public VinculoResponse aceptarTerminos(String numeroWhatsapp) {
+        List<Vinculo> existentes = vinculoRepository.bloquearPorNumero(numeroWhatsapp);
+        if (existentes.stream().anyMatch(v -> v.getEstado() == VinculoEstado.ACTIVO)) {
+            vinculoAuditService.registrar(AuditAccion.ACEPTACION_TERMINOS, AuditResultado.RECHAZADO,
+                    numeroWhatsapp, null, null, null);
+            throw new NumeroYaVinculadoException();
+        }
+        Optional<Vinculo> pendiente = existentes.stream()
+                .filter(v -> v.getEstado() == VinculoEstado.PENDIENTE_VERIFICACION)
+                .findFirst();
+        if (pendiente.isPresent()) {
+            Vinculo existente = pendiente.get();
+            existente.setTerminosAceptados(true);
+            existente.setFechaAceptacionTerminos(Instant.now());
+            Vinculo reutilizado = vinculoRepository.saveAndFlush(existente);
+            vinculoAuditService.registrar(AuditAccion.ACEPTACION_TERMINOS, AuditResultado.EXITOSO,
+                    numeroWhatsapp, null, null, null);
+            return vinculoMapper.toResponse(reutilizado);
+        }
         Vinculo vinculo = new Vinculo();
         vinculo.setNumeroWhatsapp(numeroWhatsapp);
         vinculo.setEstado(VinculoEstado.PENDIENTE_VERIFICACION);
         vinculo.setTerminosAceptados(true);
         vinculo.setFechaAceptacionTerminos(Instant.now());
-        Vinculo guardado = vinculoRepository.saveAndFlush(vinculo);
-        vinculoAuditService.registrar(AuditAccion.ACEPTACION_TERMINOS, AuditResultado.EXITOSO,
-                numeroWhatsapp, null, null, null);
-        return vinculoMapper.toResponse(guardado);
+        try {
+            Vinculo guardado = vinculoRepository.saveAndFlush(vinculo);
+            vinculoAuditService.registrar(AuditAccion.ACEPTACION_TERMINOS, AuditResultado.EXITOSO,
+                    numeroWhatsapp, null, null, null);
+            return vinculoMapper.toResponse(guardado);
+        } catch (DataIntegrityViolationException exception) {
+            vinculoAuditService.registrar(AuditAccion.ACEPTACION_TERMINOS, AuditResultado.RECHAZADO,
+                    numeroWhatsapp, null, null, null);
+            throw new NumeroYaVinculadoException();
+        }
     }
 
     /**

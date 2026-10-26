@@ -192,13 +192,23 @@ class VerificacionIntegrationTest {
     @Test
     @DisplayName("Número activo para otro cliente devuelve conflicto auditado")
     void rechazaNumeroActivo() throws Exception {
-        aceptarTerminos();
-        Vinculo activo = vinculos.findAll().getFirst();
+        // ACTIVO de otro cliente + PENDIENTE del solicitante (vía repo: la API ya no crea pendiente si hay ACTIVO)
+        Vinculo activo = new Vinculo();
+        activo.setNumeroWhatsapp(NUMERO);
         activo.setEstado(VinculoEstado.ACTIVO);
         activo.setDocumentoTipo("DNI");
         activo.setDocumentoNumero("87654321");
+        activo.setTerminosAceptados(true);
+        activo.setFechaAceptacionTerminos(Instant.now());
+        activo.setFechaActivacion(Instant.now());
         vinculos.saveAndFlush(activo);
-        aceptarTerminos();
+
+        Vinculo pendiente = new Vinculo();
+        pendiente.setNumeroWhatsapp(NUMERO);
+        pendiente.setEstado(VinculoEstado.PENDIENTE_VERIFICACION);
+        pendiente.setTerminosAceptados(true);
+        pendiente.setFechaAceptacionTerminos(Instant.now());
+        vinculos.saveAndFlush(pendiente);
 
         verificar().andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CONFLICT"));
         assertThat(intentos.count()).isZero();

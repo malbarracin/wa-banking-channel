@@ -108,6 +108,83 @@ class AceptarTerminosIntegrationTest {
         assertThat(auditRepository.findByNumeroWhatsappOrderByFechaDesc(numeroWhatsapp)).hasSize(1);
     }
 
+    @Test
+    @DisplayName("Reutiliza el vínculo pendiente si el número vuelve a aceptar términos")
+    void reutilizaVinculoPendienteExistente() throws Exception {
+        String primera = mockMvc.perform(post(RUTA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"numeroWhatsapp\":\"" + NUMERO + "\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String idOriginal = objectMapper.readTree(primera).get("id").asText();
+
+        String segunda = mockMvc.perform(post(RUTA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"numeroWhatsapp\":\"" + NUMERO + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(idOriginal))
+                .andExpect(jsonPath("$.estado").value("PENDIENTE_VERIFICACION"))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(objectMapper.readTree(segunda).get("id").asText()).isEqualTo(idOriginal);
+        assertThat(vinculoRepository.count()).isEqualTo(1);
+        assertThat(auditRepository.findByNumeroWhatsappOrderByFechaDesc(NUMERO)).hasSize(2)
+                .allSatisfy(evento -> {
+                    assertThat(evento.getAccion()).isEqualTo(AuditAccion.ACEPTACION_TERMINOS);
+                    assertThat(evento.getResultado()).isEqualTo(AuditResultado.EXITOSO);
+                });
+    }
+
+    @Test
+    @DisplayName("Rechaza aceptar términos si el número ya tiene vínculo activo")
+    void rechazaCuandoNumeroYaEstaActivo() throws Exception {
+        Vinculo activo = new Vinculo();
+        activo.setNumeroWhatsapp(NUMERO);
+        activo.setEstado(VinculoEstado.ACTIVO);
+        activo.setTerminosAceptados(true);
+        activo.setFechaAceptacionTerminos(Instant.now());
+        activo.setFechaActivacion(Instant.now());
+        vinculoRepository.saveAndFlush(activo);
+
+        mockMvc.perform(post(RUTA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"numeroWhatsapp\":\"" + NUMERO + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.trace").doesNotExist());
+
+        assertThat(vinculoRepository.count()).isEqualTo(1);
+        assertThat(auditRepository.findByNumeroWhatsappOrderByFechaDesc(NUMERO)).singleElement().satisfies(evento -> {
+            assertThat(evento.getAccion()).isEqualTo(AuditAccion.ACEPTACION_TERMINOS);
+            assertThat(evento.getResultado()).isEqualTo(AuditResultado.RECHAZADO);
+        });
+    }
+
+    @Test
+    @DisplayName("Permite nuevo pendiente tras desvinculación para re-vinculación")
+    void permiteNuevoPendienteTrasDesvinculacion() throws Exception {
+        Vinculo desvinculado = new Vinculo();
+        desvinculado.setNumeroWhatsapp(NUMERO);
+        desvinculado.setEstado(VinculoEstado.DESVINCULADO);
+        desvinculado.setTerminosAceptados(true);
+        desvinculado.setFechaAceptacionTerminos(Instant.now());
+        vinculoRepository.saveAndFlush(desvinculado);
+
+        mockMvc.perform(post(RUTA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"numeroWhatsapp\":\"" + NUMERO + "\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.estado").value("PENDIENTE_VERIFICACION"))
+                .andExpect(jsonPath("$.numeroWhatsapp").value(NUMERO));
+
+        assertThat(vinculoRepository.count()).isEqualTo(2);
+        assertThat(vinculoRepository.findByNumeroWhatsappAndEstado(NUMERO, VinculoEstado.PENDIENTE_VERIFICACION))
+                .hasSize(1);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"", "null", "{", "{\"numeroWhatsapp\":{}}"})
     @DisplayName("Rechaza cuerpos ausentes o ilegibles con BAD_REQUEST y sin escrituras")

@@ -182,6 +182,39 @@ class VinculoBloqueoServiceTest {
                 eq(NUMERO), eq("DNI"), eq("12345678"), eq("Fallo solicitud revocacion H2"));
     }
 
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"false", "FALSE", "1"})
+    @DisplayName("Desvinculación sin credencial válida → CredencialInvalidaException")
+    void desvinculacionSinCredencial(String header) {
+        assertThatThrownBy(() -> service.desvincular(NUMERO, new DesvincularRequest(true), header))
+                .isInstanceOf(CredencialInvalidaException.class);
+        verify(vinculoRepository, never()).saveAndFlush(any());
+        verify(credencialesServiceClient, never()).solicitarRevocacion(any(), any());
+    }
+
+    @Test
+    @DisplayName("Desvinculación de vínculo inexistente → VinculoNotFoundException")
+    void desvinculacionSinVinculo() {
+        when(vinculoRepository.findFirstByNumeroWhatsappOrderByFechaUltimoCambioEstadoDesc(NUMERO))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.desvincular(NUMERO, new DesvincularRequest(true), "true"))
+                .isInstanceOf(VinculoNotFoundException.class);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = VinculoEstado.class, names = {"ACTIVO", "BLOQUEADO"}, mode = EnumSource.Mode.EXCLUDE)
+    @DisplayName("Desvinculación con estado PENDIENTE_VERIFICACION o DESVINCULADO → conflicto")
+    void desvinculacionEstadoInvalido(VinculoEstado estado) {
+        when(vinculoRepository.findFirstByNumeroWhatsappOrderByFechaUltimoCambioEstadoDesc(NUMERO))
+                .thenReturn(Optional.of(vinculo(estado)));
+
+        assertThatThrownBy(() -> service.desvincular(NUMERO, new DesvincularRequest(true), "true"))
+                .isInstanceOf(VinculoEstadoConflictoException.class);
+        verify(credencialesServiceClient, never()).solicitarRevocacion(any(), any());
+    }
+
     @Test
     @DisplayName("Si H2 falla la desvinculación local queda y se audita el rechazo")
     void desvinculacionConFalloDeH2() {

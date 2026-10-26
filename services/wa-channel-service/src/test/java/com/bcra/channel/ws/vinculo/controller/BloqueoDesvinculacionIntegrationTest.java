@@ -239,6 +239,82 @@ class BloqueoDesvinculacionIntegrationTest {
     }
 
     @Test
+    @DisplayName("PATCH /desvinculacion sin confirmación → 400 VALIDATION_ERROR")
+    void desvinculacionSinConfirmacion() throws Exception {
+        guardarVinculo(VinculoEstado.ACTIVO);
+
+        mockMvc.perform(patch(RUTA_DESVINCULACION, NUMERO)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true")
+                        .content("""
+                                {"confirmacion":false}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details").isNotEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+        assertThat(H2.findAll(postRequestedFor(urlMatching(PATH_REVOCACION_REGEX)))).isEmpty();
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"false", "1"})
+    @DisplayName("PATCH /desvinculacion sin credencial válida → 401 UNAUTHORIZED")
+    void desvinculacionSinCredencial(String header) throws Exception {
+        guardarVinculo(VinculoEstado.ACTIVO);
+
+        MockHttpServletRequestBuilder solicitud = patch(RUTA_DESVINCULACION, NUMERO)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"confirmacion":true}
+                        """);
+        if (header != null) {
+            solicitud.header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, header);
+        }
+
+        mockMvc.perform(solicitud)
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+        assertThat(H2.findAll(postRequestedFor(urlMatching(PATH_REVOCACION_REGEX)))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("PATCH /desvinculacion de número inexistente → 404 NOT_FOUND")
+    void desvinculacionSinVinculo() throws Exception {
+        mockMvc.perform(patch(RUTA_DESVINCULACION, NUMERO)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true")
+                        .content("""
+                                {"confirmacion":true}
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = VinculoEstado.class, names = {"PENDIENTE_VERIFICACION", "DESVINCULADO"})
+    @DisplayName("PATCH /desvinculacion con estado no admitido → 409 CONFLICT")
+    void desvinculacionEstadoInvalido(VinculoEstado estado) throws Exception {
+        guardarVinculo(estado);
+
+        mockMvc.perform(patch(RUTA_DESVINCULACION, NUMERO)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true")
+                        .content("""
+                                {"confirmacion":true}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+    }
+
+    @Test
     @DisplayName("Si H2 falla el bloqueo local se aplica y se audita el fallo de revocación")
     void bloqueoConFalloH2() throws Exception {
         guardarVinculo(VinculoEstado.ACTIVO);

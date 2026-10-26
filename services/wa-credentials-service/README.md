@@ -63,6 +63,18 @@ solo se excluye la clase de arranque de Spring Boot.
 Fuente funcional: `../../specs/acceso-sesion/spec.md`.
 Arquitectura: `../../specs/acceso-sesion/arquitectura.md`.
 
+La renovación interna se ejecuta cada `CREDENTIAL_RENOVACION_INTERVALO_MS` (default 60000 ms).
+`CREDENTIAL_RENOVACION_HABILITADA=false` deshabilita el planificador; el perfil test lo deshabilita.
+La ventana es `CREDENTIAL_RENOVACION_VENTANA_MINUTOS` (default 30) y debe ser positiva y menor
+que `CREDENTIAL_VIGENCIA_MINUTOS` para evitar rotaciones sucesivas en cada ejecución.
+Solo se consideran credenciales ACTIVA que aún no expiraron. ACTIVA representa vínculo activo:
+la baja del vínculo llega como revocación desde H3. Con riesgo se conserva el marcador `riesgo=true`,
+se audita RENOVACION RECHAZADO con `REVERIFICACION_REQUERIDA` y la validación devuelve 401.
+Sin riesgo, el reemplazo REVOCADA/REEMPLAZO, la nueva ACTIVA y las auditorías se confirman juntos.
+El JWT se firma con la clave configurada. Según la última decisión del arquitecto de TASK-34,
+el job es exclusivamente interno: no entrega el JWT a H3 ni implementa receptor u outbox.
+El token anterior deja de validar al confirmar la rotación.
+
 Swagger UI está disponible en `http://localhost:8082/swagger-ui.html` (ajustar si se define `PORT`).
 El contrato se consulta en `/v3/api-docs` y `/v3/api-docs.yaml` e incluye los cinco endpoints
 de emisión, validación, revocación individual, revocación masiva e historial.

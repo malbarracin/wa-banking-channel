@@ -886,128 +886,128 @@
     "examples" : {
       "ValidationError" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "La solicitud tiene datos inválidos",
           "details" : [ {
             "message" : "no debe estar vacío",
             "field" : "documentoTipo"
           } ],
+          "message" : "La solicitud tiene datos inválidos",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "VALIDATION_ERROR"
         }
       },
       "ValidationMotivo" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "La solicitud tiene datos inválidos",
           "details" : [ {
             "message" : "no debe ser nulo",
             "field" : "motivo"
           } ],
+          "message" : "La solicitud tiene datos inválidos",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "VALIDATION_ERROR"
         }
       },
       "ValidationAlcance" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "La solicitud tiene datos inválidos",
           "details" : [ {
             "message" : "POR_CLIENTE requiere segmento; TODAS no admite segmento",
             "field" : "alcanceValido"
           } ],
+          "message" : "La solicitud tiene datos inválidos",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "VALIDATION_ERROR"
         }
       },
       "ValidationNumeroHistorial" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "La solicitud tiene datos inválidos",
           "details" : [ {
             "message" : "debe coincidir con \"\\+[1-9][0-9]{1,14}\"",
             "field" : "consultarHistorial.numero"
           } ],
+          "message" : "La solicitud tiene datos inválidos",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "VALIDATION_ERROR"
         }
       },
       "ValidationNumeroRevocacion" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "La solicitud tiene datos inválidos",
           "details" : [ {
             "message" : "debe coincidir con \"\\+[1-9][0-9]{1,14}\"",
             "field" : "revocar.numero"
           } ],
+          "message" : "La solicitud tiene datos inválidos",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "VALIDATION_ERROR"
         }
       },
       "BadRequest" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "La solicitud no es válida",
           "details" : [ ],
+          "message" : "La solicitud no es válida",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "BAD_REQUEST"
         }
       },
       "Unauthorized" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "La credencial no es válida; se requiere verificar la identidad nuevamente",
           "details" : [ ],
+          "message" : "La credencial no es válida; se requiere verificar la identidad nuevamente",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "UNAUTHORIZED"
         }
       },
       "Forbidden" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "La emisión requiere identidad verificada, vínculo activo y cliente activo",
           "details" : [ ],
+          "message" : "La emisión requiere identidad verificada, vínculo activo y cliente activo",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "FORBIDDEN"
         }
       },
       "NotFoundCliente" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "El cliente no existe",
           "details" : [ ],
+          "message" : "El cliente no existe",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "NOT_FOUND"
         }
       },
       "NotFoundCredencial" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "No existe una credencial activa",
           "details" : [ ],
+          "message" : "No existe una credencial activa",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "NOT_FOUND"
         }
       },
       "NotFoundHistorial" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "No existe historial de credenciales para el número",
           "details" : [ ],
+          "message" : "No existe historial de credenciales para el número",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "NOT_FOUND"
         }
       },
       "Conflict" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "Conflicto al emitir la credencial",
           "details" : [ ],
+          "message" : "Conflicto al emitir la credencial",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "CONFLICT"
         }
       },
       "ServiceUnavailable" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "No se pudo validar el cliente",
           "details" : [ ],
+          "message" : "No se pudo validar el cliente",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "SERVICE_UNAVAILABLE"
         }
       },
       "InternalError" : {
         "value" : {
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "message" : "Error interno",
           "details" : [ ],
+          "message" : "Error interno",
+          "timestamp" : "2026-10-26T12:00:00Z",
           "code" : "INTERNAL_ERROR"
         }
       }

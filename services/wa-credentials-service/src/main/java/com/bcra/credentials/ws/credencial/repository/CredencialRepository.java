@@ -1,5 +1,6 @@
 package com.bcra.credentials.ws.credencial.repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,6 +17,13 @@ import com.bcra.credentials.ws.credencial.entity.CredencialSesion;
 
 /** Acceso a credenciales por identidad externa y estado. */
 public interface CredencialRepository extends JpaRepository<CredencialSesion, UUID> {
+
+    List<CredencialSesion> findByEstadoAndFechaExpiracionGreaterThanAndFechaExpiracionLessThanEqual(
+            CredencialEstado estado, Instant ahora, Instant limite);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from CredencialSesion c where c.id = :id")
+    Optional<CredencialSesion> buscarParaRenovar(@Param("id") UUID id);
 
     Optional<CredencialSesion> findFirstByNumeroWhatsappOrderByFechaEmisionDesc(String numeroWhatsapp);
 

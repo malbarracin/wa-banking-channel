@@ -42,7 +42,8 @@ public class ValidacionService {
             encontrada = repository.findByJti(jwt.getId());
             CredencialSesion credencial = encontrada.orElseThrow(UnauthorizedException::new);
             Instant ahora = Instant.now();
-            if (credencial.getEstado() != CredencialEstado.ACTIVA || credencial.getFechaRevocacion() != null
+            if (credencial.getEstado() != CredencialEstado.ACTIVA || credencial.isRiesgo()
+                    || credencial.getFechaRevocacion() != null
                     || !credencial.getFechaExpiracion().isAfter(ahora) || !jwt.getExpiresAt().isAfter(ahora)
                     || credencial.getFechaEmision().isAfter(ahora)
                     || !credencial.getNumeroWhatsapp().equals(jwt.getSubject())

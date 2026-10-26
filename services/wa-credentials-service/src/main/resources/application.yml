@@ -20,6 +20,10 @@ credencial:
   jwt:
     secret: ${CREDENTIAL_JWT_SECRET}
   vigencia-minutos: ${CREDENTIAL_VIGENCIA_MINUTOS:1440}
+  renovacion-ventana-minutos: ${CREDENTIAL_RENOVACION_VENTANA_MINUTOS:30}
+  renovacion:
+    habilitada: ${CREDENTIAL_RENOVACION_HABILITADA:true}
+    intervalo-ms: ${CREDENTIAL_RENOVACION_INTERVALO_MS:60000}
 
 clients:
   wa-users-service:

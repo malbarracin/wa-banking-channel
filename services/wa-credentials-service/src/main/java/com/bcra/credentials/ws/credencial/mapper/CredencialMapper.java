@@ -34,4 +34,17 @@ public interface CredencialMapper {
             Instant fechaEmision, Instant fechaExpiracion);
 
     EmitirCredencialResponse toResponse(CredencialSesion sesion, String credencial);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "jti", source = "jti")
+    @Mapping(target = "estado", constant = "ACTIVA")
+    @Mapping(target = "fechaEmision", source = "fechaEmision")
+    @Mapping(target = "fechaExpiracion", source = "fechaExpiracion")
+    @Mapping(target = "fechaRevocacion", ignore = true)
+    @Mapping(target = "motivoRevocacion", ignore = true)
+    @Mapping(target = "revocadaPor", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    CredencialSesion toRenovada(CredencialSesion anterior, String jti, Instant fechaEmision,
+            Instant fechaExpiracion);
 }

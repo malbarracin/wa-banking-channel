@@ -6,6 +6,6 @@ import com.bcra.channel.ws.exception.UnauthorizedException;
 public class CredencialInvalidaException extends UnauthorizedException {
 
     public CredencialInvalidaException() {
-        super("Se requiere una credencial válida para consultar el perfil");
+        super("Se requiere una credencial válida");
     }
 }

@@ -23,7 +23,6 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -138,8 +137,7 @@ class ExternalClientsTest {
                 .andExpect(content().json("{\"motivo\":\"SOLICITUD_CLIENTE\"}"))
                 .andRespond(withStatus(HttpStatus.NO_CONTENT));
 
-        assertThatCode(() -> credenciales.solicitarRevocacion("5491112345678", "SOLICITUD_CLIENTE"))
-                .doesNotThrowAnyException();
+        assertThat(credenciales.solicitarRevocacion("5491112345678", "SOLICITUD_CLIENTE")).isTrue();
         server.verify();
     }
 
@@ -150,8 +148,7 @@ class ExternalClientsTest {
         server.expect(requestTo(REVOCACION)).andRespond(withStatus(HttpStatus.valueOf(status))
                 .body("secreto-del-servidor"));
 
-        assertThatCode(() -> credenciales.solicitarRevocacion("5491112345678", "motivo-privado"))
-                .doesNotThrowAnyException();
+        assertThat(credenciales.solicitarRevocacion("5491112345678", "motivo-privado")).isFalse();
         assertThat(output.getOut()).contains("No se confirmó la solicitud de revocación a H2")
                 .doesNotContain("5491112345678", "motivo-privado", "secreto-del-servidor");
         server.verify();
@@ -162,8 +159,7 @@ class ExternalClientsTest {
     void toleraTimeoutDeCredenciales(CapturedOutput output) {
         server.expect(requestTo(REVOCACION)).andRespond(withException(new SocketTimeoutException()));
 
-        assertThatCode(() -> credenciales.solicitarRevocacion("5491112345678", "SOLICITUD_CLIENTE"))
-                .doesNotThrowAnyException();
+        assertThat(credenciales.solicitarRevocacion("5491112345678", "SOLICITUD_CLIENTE")).isFalse();
         assertThat(output.getOut()).contains("ResourceAccessException");
         server.verify();
     }

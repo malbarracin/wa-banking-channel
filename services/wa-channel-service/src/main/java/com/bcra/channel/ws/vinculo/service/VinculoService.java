@@ -9,16 +9,21 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.bcra.channel.ws.vinculo.CredencialCanal;
 import com.bcra.channel.ws.vinculo.client.ClientePerfilResponse;
+import com.bcra.channel.ws.vinculo.client.CredencialesServiceClient;
 import com.bcra.channel.ws.vinculo.client.UsersServiceClient;
+import com.bcra.channel.ws.vinculo.dto.BloquearVinculoRequest;
+import com.bcra.channel.ws.vinculo.dto.DesvincularRequest;
 import com.bcra.channel.ws.vinculo.dto.HistorialVinculoResponse;
 import com.bcra.channel.ws.vinculo.dto.PerfilCanalResponse;
 import com.bcra.channel.ws.vinculo.dto.VinculoEstadoResponse;
 import com.bcra.channel.ws.vinculo.dto.VinculoResponse;
 import com.bcra.channel.ws.vinculo.entity.AuditAccion;
 import com.bcra.channel.ws.vinculo.entity.AuditResultado;
+import com.bcra.channel.ws.vinculo.entity.MotivoBloqueo;
 import com.bcra.channel.ws.vinculo.entity.Vinculo;
 import com.bcra.channel.ws.vinculo.entity.VinculoEstado;
 import com.bcra.channel.ws.vinculo.exception.CredencialInvalidaException;
+import com.bcra.channel.ws.vinculo.exception.VinculoEstadoConflictoException;
 import com.bcra.channel.ws.vinculo.exception.VinculoNoActivoException;
 import com.bcra.channel.ws.vinculo.exception.VinculoNotFoundException;
 import com.bcra.channel.ws.vinculo.mapper.VinculoMapper;
@@ -35,6 +40,7 @@ public class VinculoService {
     private final VinculoMapper vinculoMapper;
     private final VinculoAuditService vinculoAuditService;
     private final UsersServiceClient usersServiceClient;
+    private final CredencialesServiceClient credencialesServiceClient;
 
     /**
      * Informa si el número ya tiene vínculo (anti-duplicados), sin exponer datos del cliente.
@@ -105,5 +111,80 @@ public class VinculoService {
         vinculoAuditService.registrar(AuditAccion.ACEPTACION_TERMINOS, AuditResultado.EXITOSO,
                 numeroWhatsapp, null, null, null);
         return vinculoMapper.toResponse(guardado);
+    }
+
+    /**
+     * Bloquea el vínculo a pedido del cliente o por política del banco y solicita revocación a H2.
+     * @param numeroWhatsapp número del canal
+     * @param request motivo y confirmación explícita
+     * @param valorHeaderCredencial header de credencial; obligatorio si el motivo es {@link MotivoBloqueo#SOLICITUD_CLIENTE}
+     * @return vínculo en estado {@link VinculoEstado#BLOQUEADO}
+     */
+    @Transactional
+    public VinculoResponse bloquear(String numeroWhatsapp, BloquearVinculoRequest request,
+            String valorHeaderCredencial) {
+        if (request.motivo() == MotivoBloqueo.SOLICITUD_CLIENTE
+                && !CredencialCanal.esContextoValido(valorHeaderCredencial)) {
+            throw new CredencialInvalidaException();
+        }
+        Vinculo vinculo = buscarVinculo(numeroWhatsapp);
+        if (vinculo.getEstado() != VinculoEstado.ACTIVO) {
+            throw new VinculoEstadoConflictoException();
+        }
+        Instant ahora = Instant.now();
+        vinculo.setEstado(VinculoEstado.BLOQUEADO);
+        vinculo.setMotivoBloqueo(request.motivo());
+        vinculo.setFechaUltimoCambioEstado(ahora);
+        Vinculo guardado = vinculoRepository.saveAndFlush(vinculo);
+        vinculoAuditService.registrar(AuditAccion.BLOQUEO, AuditResultado.EXITOSO, numeroWhatsapp,
+                guardado.getDocumentoTipo(), guardado.getDocumentoNumero(), request.motivo().name());
+        solicitarRevocacionBestEffort(numeroWhatsapp, request.motivo().name(), AuditAccion.BLOQUEO,
+                guardado.getDocumentoTipo(), guardado.getDocumentoNumero());
+        return vinculoMapper.toResponse(guardado);
+    }
+
+    /**
+     * Desvincula el canal a pedido del cliente y solicita revocación a H2.
+     * @param numeroWhatsapp número del canal
+     * @param request confirmación explícita
+     * @param valorHeaderCredencial header de credencial válida obligatorio
+     * @return vínculo en estado {@link VinculoEstado#DESVINCULADO}
+     */
+    @Transactional
+    public VinculoResponse desvincular(String numeroWhatsapp, DesvincularRequest request,
+            String valorHeaderCredencial) {
+        if (!CredencialCanal.esContextoValido(valorHeaderCredencial)) {
+            throw new CredencialInvalidaException();
+        }
+        Vinculo vinculo = buscarVinculo(numeroWhatsapp);
+        if (vinculo.getEstado() != VinculoEstado.ACTIVO && vinculo.getEstado() != VinculoEstado.BLOQUEADO) {
+            throw new VinculoEstadoConflictoException();
+        }
+        Instant ahora = Instant.now();
+        vinculo.setEstado(VinculoEstado.DESVINCULADO);
+        vinculo.setFechaUltimoCambioEstado(ahora);
+        Vinculo guardado = vinculoRepository.saveAndFlush(vinculo);
+        vinculoAuditService.registrar(AuditAccion.DESVINCULACION, AuditResultado.EXITOSO, numeroWhatsapp,
+                guardado.getDocumentoTipo(), guardado.getDocumentoNumero(), null);
+        solicitarRevocacionBestEffort(numeroWhatsapp, MotivoBloqueo.SOLICITUD_CLIENTE.name(),
+                AuditAccion.DESVINCULACION, guardado.getDocumentoTipo(), guardado.getDocumentoNumero());
+        return vinculoMapper.toResponse(guardado);
+    }
+
+    private Vinculo buscarVinculo(String numeroWhatsapp) {
+        return vinculoRepository.findFirstByNumeroWhatsappOrderByFechaUltimoCambioEstadoDesc(numeroWhatsapp)
+                .orElseThrow(VinculoNotFoundException::new);
+    }
+
+    /**
+     * Invoca H2 sin revertir el cambio local; si falla, audita el fallo de la solicitud de revocación.
+     */
+    private void solicitarRevocacionBestEffort(String numeroWhatsapp, String motivo, AuditAccion accion,
+            String documentoTipo, String documentoNumero) {
+        boolean confirmada = credencialesServiceClient.solicitarRevocacion(numeroWhatsapp, motivo);
+        if (!confirmada) {
+            vinculoAuditService.registrar(accion, AuditResultado.RECHAZADO, numeroWhatsapp,
+                    documentoTipo, documentoNumero, "Fallo solicitud revocacion H2");
+        }
     }
 }

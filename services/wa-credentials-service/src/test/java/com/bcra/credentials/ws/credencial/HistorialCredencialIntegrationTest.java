@@ -102,6 +102,39 @@ class HistorialCredencialIntegrationTest {
     }
 
     @Test
+    @DisplayName("Usa la identidad y el estado de la última emisión aunque esté revocada")
+    void consultaUltimaEmisionSinPreferirCredencialActiva() throws Exception {
+        guardarCredencial(CredencialEstado.ACTIVA, FECHA, Instant.now().plusSeconds(3600));
+        repository.saveAndFlush(CredencialSesion.builder().jti(UUID.randomUUID().toString())
+                .numeroWhatsapp(NUMERO).documentoTipo("PASAPORTE").documentoNumero("AB123456")
+                .vinculoId(UUID.randomUUID()).estado(CredencialEstado.REVOCADA)
+                .fechaEmision(FECHA.plusSeconds(120)).fechaExpiracion(FECHA.plusSeconds(180)).build());
+        guardarEvento(NUMERO, AuditAccion.EMISION, FECHA);
+        guardarEvento(NUMERO, AuditAccion.REVOCACION, FECHA.plusSeconds(150));
+
+        mockMvc.perform(get(ENDPOINT, NUMERO))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documentoTipo").value("PASAPORTE"))
+                .andExpect(jsonPath("$.documentoNumero").value("AB123456"))
+                .andExpect(jsonPath("$.estadoActual").value("REVOCADA"))
+                .andExpect(jsonPath("$.eventos.length()").value(2));
+
+        assertThat(repository.count()).isEqualTo(2);
+        assertThat(auditRepository.count()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Conserva el estado EXPIRADA persistido al consultar el historial")
+    void conservaEstadoExpirado() throws Exception {
+        guardarCredencial(CredencialEstado.EXPIRADA, FECHA, FECHA.plusSeconds(60));
+        guardarEvento(NUMERO, AuditAccion.EMISION, FECHA);
+
+        mockMvc.perform(get(ENDPOINT, NUMERO))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estadoActual").value("EXPIRADA"));
+    }
+
+    @Test
     @DisplayName("Un número desconocido devuelve el contrato 404 sin detalles internos")
     void rechazaNumeroSinRegistros() throws Exception {
         verificarNoEncontrado();

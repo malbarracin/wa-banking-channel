@@ -224,6 +224,32 @@ class RenovacionIntegrationTest {
         verificarRollback(anterior);
     }
 
+    @Test
+    @DisplayName("La revocación individual tras renovar afecta la nueva credencial y evita otra renovación")
+    void conservaRevocacionIndividualTrasRenovar() throws Exception {
+        CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
+        service.renovarProximasAExpirar();
+        CredencialSesion nueva = repository.findFirstByNumeroWhatsappOrderByFechaEmisionDesc(NUMERO)
+                .orElseThrow();
+        assertThat(nueva.getJti()).isNotEqualTo(anterior.getJti());
+
+        mockMvc.perform(post("/api/v1/credenciales/{numero}/revocacion", NUMERO)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"motivo\":\"BLOQUEO\",\"solicitadoPor\":\"CANAL\"}"))
+                .andExpect(status().isNoContent());
+        service.renovarProximasAExpirar();
+
+        assertThat(repository.findByNumeroWhatsappAndEstado(NUMERO, CredencialEstado.ACTIVA)).isEmpty();
+        assertThat(repository.count()).isEqualTo(2);
+        assertThat(repository.findById(nueva.getId())).hasValueSatisfying(credencial -> {
+            assertThat(credencial.getEstado()).isEqualTo(CredencialEstado.REVOCADA);
+            assertThat(credencial.getMotivoRevocacion()).isEqualTo(MotivoRevocacion.BLOQUEO);
+        });
+        assertThat(repository.findById(anterior.getId())).hasValueSatisfying(credencial ->
+                assertThat(credencial.getMotivoRevocacion()).isEqualTo(MotivoRevocacion.REEMPLAZO));
+        verifyNoInteractions(usersServiceClient);
+    }
+
     private void verificarRechazoHttp(String token) throws Exception {
         mockMvc.perform(post("/api/v1/credenciales/validar")
                         .contentType(MediaType.APPLICATION_JSON)

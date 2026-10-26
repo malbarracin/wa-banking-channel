@@ -7,6 +7,8 @@ import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 import org.mapstruct.ReportingPolicy;
 
+import com.bcra.users.ws.user.dto.CreateUserRequest;
+import com.bcra.users.ws.user.dto.DocumentoDto;
 import com.bcra.users.ws.user.dto.DocumentoResponse;
 import com.bcra.users.ws.user.dto.UpdateUserRequest;
 import com.bcra.users.ws.user.dto.UserResponse;
@@ -14,9 +16,14 @@ import com.bcra.users.ws.user.dto.UserStatusResponse;
 import com.bcra.users.ws.user.entity.Documento;
 import com.bcra.users.ws.user.entity.User;
 
-/** Conversión del dominio a los contratos de consulta, sin exponer entidades persistidas. */
+/** Conversiones entre contratos públicos y entidades del usuario. */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.ERROR)
 public interface UserMapper {
+
+    @Mapping(target = "estado", constant = "ACTIVE")
+    @Mapping(target = "nombreTratamiento", ignore = true)
+    @Mapping(target = "preferencias", ignore = true)
+    User toEntity(CreateUserRequest solicitud);
 
     /** Lista explícita de propiedades editables; nunca copia identidad ni estado. */
     @BeanMapping(ignoreByDefault = true, nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
@@ -27,6 +34,8 @@ public interface UserMapper {
     void actualizar(UpdateUserRequest request, @MappingTarget User usuario);
 
     UserResponse toResponse(User usuario);
+
+    Documento toEntity(DocumentoDto documento);
 
     UserStatusResponse toStatusResponse(User usuario);
 

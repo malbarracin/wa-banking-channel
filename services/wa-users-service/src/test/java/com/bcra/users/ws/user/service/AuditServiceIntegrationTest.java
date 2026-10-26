@@ -1,6 +1,7 @@
 package com.bcra.users.ws.user.service;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +54,8 @@ class AuditServiceIntegrationTest {
         AuditLog guardado = repository.findById(registro.getId()).orElseThrow();
 
         assertThat(guardado.getId()).isNotNull();
-        assertThat(guardado.getFecha()).isBetween(inicio.minusSeconds(1), Instant.now());
+        // La columna timestamp redondea a microsegundos al persistir el Instant.
+        assertThat(guardado.getFecha()).isBetween(inicio.minusSeconds(1), Instant.now().plus(1, ChronoUnit.MICROS));
         assertThat(guardado.getAccion()).isEqualTo(accion);
         assertThat(guardado.getResultado()).isEqualTo(AuditResult.EXITOSO);
         assertThat(guardado.getTipoDocumento()).isEqualTo("DNI");

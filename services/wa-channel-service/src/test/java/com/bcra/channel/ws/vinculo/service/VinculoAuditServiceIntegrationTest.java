@@ -144,6 +144,35 @@ class VinculoAuditServiceIntegrationTest {
         assertThat(repository.count()).isZero();
     }
 
+    @Test
+    @DisplayName("Revierte las escrituras externas y conserva solo la auditoría de la transacción nueva")
+    void aislaAuditoriaDeEscriturasRevertidas() {
+        TransactionTemplate transaccion = new TransactionTemplate(transactionManager);
+
+        UUID id = transaccion.execute(estado -> {
+            guardarEvento(Instant.parse("2026-01-01T00:00:00Z"));
+            repository.flush();
+            VinculoAuditLog registro = service.registrar(AuditAccion.BLOQUEO,
+                    AuditResultado.RECHAZADO, NUMERO, null, null, null);
+            estado.setRollbackOnly();
+            return registro.getId();
+        });
+
+        assertThat(repository.findAll()).extracting(VinculoAuditLog::getId).containsExactly(id);
+        assertThat(service.consultarHistorial(NUMERO)).extracting(VinculoAuditLog::getId).containsExactly(id);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"938471", "mi primera mascota", "ZX9q7P2v", "\nBearer credencial-opaca\n"})
+    @DisplayName("Omite secretos sin etiquetas reconocibles en el motivo")
+    void excluyeSecretosSinPalabrasClave(String secreto) {
+        service.registrar(AuditAccion.VERIFICACION_FALLIDA, AuditResultado.RECHAZADO,
+                NUMERO, null, null, secreto);
+
+        assertThat(repository.findAll()).singleElement().satisfies(registro ->
+                assertThat(registro.getMotivo()).isEqualTo("Detalle omitido por seguridad").doesNotContain(secreto));
+    }
+
     private VinculoAuditLog guardarEvento(Instant fecha) {
         return repository.save(VinculoAuditLog.builder()
                 .accion(AuditAccion.ACEPTACION_TERMINOS)

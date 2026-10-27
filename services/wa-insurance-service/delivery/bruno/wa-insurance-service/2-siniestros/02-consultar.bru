@@ -1,0 +1,23 @@
+﻿meta {
+  name: Consultar siniestro
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/siniestros/{{numeroCaso}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Estado del caso propio. Respuestas: 200, 401, 403, 404.
+}

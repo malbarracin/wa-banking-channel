@@ -1,0 +1,23 @@
+﻿meta {
+  name: Documentación pendiente
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/siniestros/{{numeroCaso}}/documentacion-pendiente
+  body: none
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Lista de documentos pendientes. Respuestas: 200, 401, 403, 404.
+}

@@ -1,0 +1,33 @@
+meta {
+  name: Denuncia duplicada (409)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/siniestros
+  body: json
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "polizaId": "{{polizaId}}",
+    "tipoSiniestro": "AUTO",
+    "fechaSiniestro": "2026-10-20",
+    "descripcion": "Segundo intento del mismo evento"
+  }
+}
+
+assert {
+  res.status: eq 409
+}
+
+docs {
+  Misma póliza y tipo con caso abierto en ventana → 409 CONFLICT. Ejecutar tras una denuncia exitosa del mismo tipo.
+}

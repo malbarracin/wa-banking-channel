@@ -1,0 +1,39 @@
+﻿meta {
+  name: Denunciar siniestro (AUTO)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/siniestros
+  body: json
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "polizaId": "{{polizaId}}",
+    "tipoSiniestro": "AUTO",
+    "fechaSiniestro": "2026-10-20",
+    "descripcion": "Choque en intersección"
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+script:post-response {
+  if (res.body && res.body.numeroCaso) {
+    bru.setVar("numeroCaso", res.body.numeroCaso);
+  }
+}
+
+docs {
+  Denuncia con campos mínimos. Respuestas: 201, 400, 401, 403, 404, 409.
+}

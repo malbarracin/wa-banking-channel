@@ -1,0 +1,789 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "wa-insurance-service",
+    "description" : "Servicio de seguros bancarios (H6): consulta de pólizas y coberturas, denuncia de siniestros y seguimiento de casos con documentación pendiente. Todas las operaciones requieren credencial de sesión de H2 en X-Credencial-Sesion.",
+    "version" : "0.1.0-SNAPSHOT"
+  },
+  "servers" : [ {
+    "url" : "http://localhost:8085",
+    "description" : "Local"
+  } ],
+  "tags" : [ {
+    "name" : "Seguros",
+    "description" : "Consulta de pólizas vigentes y coberturas"
+  }, {
+    "name" : "Siniestros",
+    "description" : "Denuncia, seguimiento y documentación pendiente"
+  } ],
+  "paths" : {
+    "/api/v1/siniestros" : {
+      "post" : {
+        "tags" : [ "Siniestros" ],
+        "summary" : "Denunciar siniestro",
+        "description" : "Registra la denuncia tras validar póliza autorizada, duplicados y campos mínimos. Genera número de caso único.",
+        "operationId" : "denunciar",
+        "parameters" : [ {
+          "name" : "X-Credencial-Sesion",
+          "in" : "header",
+          "description" : "JWT de sesión validado por H2",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "eyJhbGciOi..."
+        } ],
+        "requestBody" : {
+          "description" : "Datos mínimos para la denuncia",
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DenunciaRequest"
+              },
+              "examples" : {
+                "AUTO" : {
+                  "summary" : "Siniestro de auto",
+                  "description" : "AUTO",
+                  "value" : {
+                    "polizaId" : "e7a62f43-9b82-4c01-b2ab-7f902eab1234",
+                    "tipoSiniestro" : "AUTO",
+                    "fechaSiniestro" : "2026-10-20",
+                    "descripcion" : "Choque en intersección"
+                  }
+                },
+                "HOGAR" : {
+                  "summary" : "Siniestro de hogar",
+                  "description" : "HOGAR",
+                  "value" : {
+                    "polizaId" : "e7a62f43-9b82-4c01-b2ab-7f902eab1234",
+                    "tipoSiniestro" : "HOGAR",
+                    "fechaSiniestro" : "2026-10-18",
+                    "descripcion" : "Rotura de cañería"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "description" : "Caso abierto",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DenunciaResponse"
+                },
+                "example" : {
+                  "numeroCaso" : "SIN-2026-000123",
+                  "proximosPasos" : "Enviá la documentación requerida por los canales oficiales del banco.",
+                  "plazos" : "Los plazos dependen del proceso formal correspondiente a tu ramo; no prometemos liquidación por este canal."
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "Datos inválidos",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "401" : {
+            "description" : "Credencial inválida o ausente",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "403" : {
+            "description" : "No autorizado sobre la póliza",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "404" : {
+            "description" : "Póliza no encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "409" : {
+            "description" : "Siniestro duplicado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/siniestros/{numeroCaso}" : {
+      "get" : {
+        "tags" : [ "Siniestros" ],
+        "summary" : "Consultar siniestro",
+        "description" : "Consulta el estado del caso y la acción pendiente del cliente.",
+        "operationId" : "consultar",
+        "parameters" : [ {
+          "name" : "X-Credencial-Sesion",
+          "in" : "header",
+          "description" : "JWT de sesión validado por H2",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "eyJhbGciOi..."
+        }, {
+          "name" : "numeroCaso",
+          "in" : "path",
+          "description" : "Identificador del caso",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "SIN-2026-000123"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Estado del caso",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SiniestroResponse"
+                },
+                "example" : {
+                  "numeroCaso" : "SIN-2026-000123",
+                  "estado" : "DOCUMENTACION_PENDIENTE",
+                  "pendiente" : "Presentar informe pericial"
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Credencial inválida o ausente",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "403" : {
+            "description" : "Caso no pertenece al titular",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "404" : {
+            "description" : "Caso no encontrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/siniestros/{numeroCaso}/documentacion-pendiente" : {
+      "get" : {
+        "tags" : [ "Siniestros" ],
+        "summary" : "Documentación pendiente",
+        "description" : "Lista documentos pendientes y orientación de envío para el caso propio.",
+        "operationId" : "documentacionPendiente",
+        "parameters" : [ {
+          "name" : "X-Credencial-Sesion",
+          "in" : "header",
+          "description" : "JWT de sesión validado por H2",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "eyJhbGciOi..."
+        }, {
+          "name" : "numeroCaso",
+          "in" : "path",
+          "description" : "Identificador del caso",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "SIN-2026-000123"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Documentación pendiente",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentacionPendienteResponse"
+                },
+                "example" : {
+                  "documentos" : [ "Informe pericial", "Fotografías del siniestro" ],
+                  "orientacionEnvio" : "Enviá estos documentos por los canales oficiales del banco; este chat no reemplaza el proceso formal."
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Credencial inválida o ausente",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "403" : {
+            "description" : "Caso no pertenece al titular",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "404" : {
+            "description" : "Caso no encontrado",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/seguros" : {
+      "get" : {
+        "tags" : [ "Seguros" ],
+        "summary" : "Listar pólizas vigentes",
+        "description" : "Lista las pólizas vigentes donde el cliente es titular o asegurado, validando la credencial contra H2.",
+        "operationId" : "listar",
+        "parameters" : [ {
+          "name" : "X-Credencial-Sesion",
+          "in" : "header",
+          "description" : "JWT de sesión validado por H2",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "eyJhbGciOi..."
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Listado de pólizas",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/PolizaResponse"
+                  }
+                },
+                "example" : [ {
+                  "id" : "e7a62f43-9b82-4c01-b2ab-7f902eab1234",
+                  "numeroPoliza" : "POL-000123",
+                  "ramo" : "AUTO",
+                  "vigente" : true,
+                  "fechaVigenciaDesde" : "2026-01-01",
+                  "fechaVigenciaHasta" : "2027-01-01",
+                  "identificadorCorto" : "0123"
+                } ]
+              }
+            }
+          },
+          "401" : {
+            "description" : "Credencial inválida o ausente",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "403" : {
+            "description" : "Sin autorización sobre el recurso",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/seguros/{polizaId}/coberturas" : {
+      "get" : {
+        "tags" : [ "Seguros" ],
+        "summary" : "Consultar coberturas",
+        "description" : "Muestra coberturas, exclusiones y resumen en lenguaje simple para una póliza del titular.",
+        "operationId" : "consultarCoberturas",
+        "parameters" : [ {
+          "name" : "X-Credencial-Sesion",
+          "in" : "header",
+          "description" : "JWT de sesión validado por H2",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "eyJhbGciOi..."
+        }, {
+          "name" : "polizaId",
+          "in" : "path",
+          "description" : "Identificador de la póliza",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          },
+          "example" : "e7a62f43-9b82-4c01-b2ab-7f902eab1234"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Coberturas de la póliza",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CoberturaResponse"
+                },
+                "example" : {
+                  "coberturas" : [ "Responsabilidad civil", "Daños propios" ],
+                  "exclusiones" : [ "Uso comercial no declarado" ],
+                  "resumen" : true,
+                  "notaPrevalencia" : "Este es un resumen informativo. En caso de disputa prevalecen las condiciones generales oficiales de la póliza."
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Credencial inválida o ausente",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "403" : {
+            "description" : "No autorizado para esta póliza",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          },
+          "404" : {
+            "description" : "Póliza no encontrada",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "example" : null
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "ErrorResponse" : {
+        "type" : "object",
+        "description" : "Error uniforme de la API (code, message, details, timestamp)",
+        "properties" : {
+          "code" : {
+            "type" : "string",
+            "description" : "Código estable",
+            "enum" : [ "VALIDATION_ERROR", "BAD_REQUEST", "UNAUTHORIZED", "FORBIDDEN", "NOT_FOUND", "CONFLICT", "INTERNAL_ERROR" ],
+            "example" : "VALIDATION_ERROR"
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Mensaje legible sin datos sensibles",
+            "example" : "La solicitud tiene datos inválidos"
+          },
+          "details" : {
+            "type" : "array",
+            "description" : "Detalles de validación; nunca null (lista vacía si no aplica)",
+            "items" : {
+              "$ref" : "#/components/schemas/FieldError"
+            }
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Instante UTC ISO-8601",
+            "example" : "2026-10-26T12:00:00Z"
+          }
+        }
+      },
+      "DenunciaRequest" : {
+        "type" : "object",
+        "description" : "Datos mínimos confirmados para abrir una denuncia",
+        "properties" : {
+          "polizaId" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Identificador de la póliza afectada",
+            "example" : "e7a62f43-9b82-4c01-b2ab-7f902eab1234"
+          },
+          "tipoSiniestro" : {
+            "type" : "string",
+            "description" : "Tipo de siniestro",
+            "enum" : [ "HOGAR", "AUTO", "VIDA", "OTROS", "HOGAR", "AUTO", "VIDA", "OTROS" ],
+            "example" : "AUTO"
+          },
+          "fechaSiniestro" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Fecha del hecho (ISO-8601)",
+            "example" : "2026-10-20"
+          },
+          "descripcion" : {
+            "type" : "string",
+            "description" : "Descripción breve sin datos médicos sensibles",
+            "example" : "Choque en intersección",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "descripcion", "fechaSiniestro", "polizaId", "tipoSiniestro" ]
+      },
+      "DenunciaResponse" : {
+        "type" : "object",
+        "description" : "Confirmación de denuncia con número de caso",
+        "properties" : {
+          "numeroCaso" : {
+            "type" : "string",
+            "description" : "Número de caso único",
+            "example" : "SIN-2026-000123"
+          },
+          "proximosPasos" : {
+            "type" : "string",
+            "description" : "Orientación de documentación por canales oficiales",
+            "example" : "Enviá la documentación requerida por los canales oficiales del banco."
+          },
+          "plazos" : {
+            "type" : "string",
+            "description" : "Referencia a plazos del proceso formal (sin liquidación)",
+            "example" : "Los plazos dependen del proceso formal correspondiente a tu ramo; no prometemos liquidación por este canal."
+          }
+        }
+      },
+      "FieldError" : {
+        "type" : "object",
+        "description" : "Detalle de un campo inválido (sin el valor rechazado)",
+        "properties" : {
+          "field" : {
+            "type" : "string",
+            "description" : "Nombre del campo",
+            "example" : "nombre"
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Motivo del rechazo",
+            "example" : "El nombre es obligatorio"
+          }
+        }
+      },
+      "SiniestroResponse" : {
+        "type" : "object",
+        "description" : "Estado de un caso de siniestro propio del titular",
+        "properties" : {
+          "numeroCaso" : {
+            "type" : "string",
+            "description" : "Número de caso",
+            "example" : "SIN-2026-000123"
+          },
+          "estado" : {
+            "type" : "string",
+            "description" : "Estado informado por el sistema de siniestros",
+            "enum" : [ "RECIBIDO", "EN_ANALISIS", "DOCUMENTACION_PENDIENTE", "RESUELTO", "RECIBIDO", "EN_ANALISIS", "DOCUMENTACION_PENDIENTE", "RESUELTO" ],
+            "example" : "DOCUMENTACION_PENDIENTE"
+          },
+          "pendiente" : {
+            "type" : "string",
+            "description" : "Acción pendiente del cliente (sin montos ni datos médicos)",
+            "example" : "Presentar informe pericial"
+          }
+        }
+      },
+      "DocumentacionPendienteResponse" : {
+        "type" : "object",
+        "description" : "Documentos pendientes y orientación de envío formal",
+        "properties" : {
+          "documentos" : {
+            "type" : "array",
+            "description" : "Lista simple de documentos pendientes",
+            "example" : [ "Informe pericial", "Fotografías del siniestro" ],
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "orientacionEnvio" : {
+            "type" : "string",
+            "description" : "Orientación a canales oficiales",
+            "example" : "Enviá estos documentos por los canales oficiales del banco; este chat no reemplaza el proceso formal."
+          }
+        }
+      },
+      "PolizaResponse" : {
+        "type" : "object",
+        "description" : "Póliza vigente autorizada para el cliente autenticado",
+        "properties" : {
+          "id" : {
+            "type" : "string",
+            "format" : "uuid",
+            "description" : "Identificador de la póliza",
+            "example" : "e7a62f43-9b82-4c01-b2ab-7f902eab1234"
+          },
+          "numeroPoliza" : {
+            "type" : "string",
+            "description" : "Número de póliza",
+            "example" : "POL-000123"
+          },
+          "ramo" : {
+            "type" : "string",
+            "description" : "Ramo",
+            "example" : "AUTO"
+          },
+          "vigente" : {
+            "type" : "boolean",
+            "description" : "Indica si la póliza está vigente",
+            "example" : true
+          },
+          "fechaVigenciaDesde" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Inicio de vigencia (ISO-8601)",
+            "example" : "2026-01-01"
+          },
+          "fechaVigenciaHasta" : {
+            "type" : "string",
+            "format" : "date",
+            "description" : "Fin de vigencia (ISO-8601)",
+            "example" : "2027-01-01"
+          },
+          "identificadorCorto" : {
+            "type" : "string",
+            "description" : "Últimos caracteres del número para presentación corta",
+            "example" : "0123"
+          }
+        }
+      },
+      "CoberturaResponse" : {
+        "type" : "object",
+        "description" : "Resumen de coberturas y exclusiones (no reemplaza las condiciones oficiales)",
+        "properties" : {
+          "coberturas" : {
+            "type" : "array",
+            "description" : "Coberturas principales en lenguaje simple",
+            "example" : [ "Responsabilidad civil", "Daños propios" ],
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "exclusiones" : {
+            "type" : "array",
+            "description" : "Exclusiones relevantes resumidas",
+            "example" : [ "Uso comercial no declarado" ],
+            "items" : {
+              "type" : "string"
+            }
+          },
+          "resumen" : {
+            "type" : "boolean",
+            "description" : "Siempre true: indica que es un resumen informativo",
+            "example" : true
+          },
+          "notaPrevalencia" : {
+            "type" : "string",
+            "description" : "Aclara prevalencia de condiciones generales oficiales",
+            "example" : "Este es un resumen informativo. En caso de disputa prevalecen las condiciones generales oficiales de la póliza."
+          }
+        }
+      }
+    },
+    "responses" : {
+      "ValidationError" : {
+        "description" : "Datos inválidos",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "ValidationError" : {
+                "$ref" : "#/components/examples/ValidationError"
+              }
+            }
+          }
+        }
+      },
+      "BadRequest" : {
+        "description" : "Solicitud no válida",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "BadRequest" : {
+                "$ref" : "#/components/examples/BadRequest"
+              }
+            }
+          }
+        }
+      },
+      "Unauthorized" : {
+        "description" : "No autorizado",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "Unauthorized" : {
+                "$ref" : "#/components/examples/Unauthorized"
+              }
+            }
+          }
+        }
+      },
+      "Forbidden" : {
+        "description" : "Prohibido",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "Forbidden" : {
+                "$ref" : "#/components/examples/Forbidden"
+              }
+            }
+          }
+        }
+      },
+      "NotFound" : {
+        "description" : "No encontrado",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "NotFound" : {
+                "$ref" : "#/components/examples/NotFound"
+              }
+            }
+          }
+        }
+      },
+      "Duplicate" : {
+        "description" : "Conflicto / duplicado",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "Duplicate" : {
+                "$ref" : "#/components/examples/Duplicate"
+              }
+            }
+          }
+        }
+      },
+      "InternalError" : {
+        "description" : "Error interno",
+        "content" : {
+          "application/json" : {
+            "schema" : {
+              "$ref" : "#/components/schemas/ErrorResponse"
+            },
+            "examples" : {
+              "InternalError" : {
+                "$ref" : "#/components/examples/InternalError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "examples" : {
+      "ValidationError" : {
+        "value" : "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"La solicitud tiene datos inválidos\",\n  \"details\": [\n    { \"field\": \"descripcion\", \"message\": \"no debe estar vacío\" }\n  ],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      },
+      "BadRequest" : {
+        "value" : "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"La solicitud no es válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      },
+      "Unauthorized" : {
+        "value" : "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"Verificá tu identidad para consultar tus seguros.\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      },
+      "Forbidden" : {
+        "value" : "{\n  \"code\": \"FORBIDDEN\",\n  \"message\": \"Consultá al titular o acudí a un canal formal para operar sobre esta póliza.\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      },
+      "NotFound" : {
+        "value" : "{\n  \"code\": \"NOT_FOUND\",\n  \"message\": \"La póliza no existe.\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      },
+      "Duplicate" : {
+        "value" : "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"Ya existe una denuncia abierta para esta póliza y tipo de evento.\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      },
+      "InternalError" : {
+        "value" : "{\n  \"code\": \"INTERNAL_ERROR\",\n  \"message\": \"Error interno\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+      }
+    }
+  }
+}

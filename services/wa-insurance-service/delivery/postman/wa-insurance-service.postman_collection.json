@@ -1,0 +1,270 @@
+{
+  "info": {
+    "name": "wa-insurance-service",
+    "description": "Servicio de seguros H6. Orden sugerido: 1. Seguros → 2. Siniestros → 3. Errores. Requiere X-Credencial-Sesion válida de H2.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:8085"},
+    {"key": "credencial", "value": ""},
+    {"key": "polizaId", "value": "e7a62f43-9b82-4c01-b2ab-7f902eab1234"},
+    {"key": "numeroCaso", "value": ""}
+  ],
+  "item": [
+    {
+      "name": "1. Seguros",
+      "description": "Consulta de pólizas vigentes y coberturas.",
+      "item": [
+        {
+          "name": "Listar pólizas vigentes",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/seguros", "host": ["{{baseUrl}}"], "path": ["api", "v1", "seguros"]},
+            "description": "Lista pólizas vigentes donde el cliente es titular o asegurado. Respuestas: 200, 401."
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json();",
+            "pm.test('es un array', () => pm.expect(body).to.be.an('array'));",
+            "if (Array.isArray(body) && body.length > 0 && body[0].id) { pm.collectionVariables.set('polizaId', body[0].id); }"
+          ]}}],
+          "response": [{
+            "name": "200 - listado",
+            "originalRequest": {"method": "GET", "header": [{"key": "X-Credencial-Sesion", "value": "{{credencial}}"}], "url": {"raw": "{{baseUrl}}/api/v1/seguros", "host": ["{{baseUrl}}"], "path": ["api", "v1", "seguros"]}},
+            "status": "OK", "code": 200,
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "_postman_previewlanguage": "json",
+            "body": "[\n  {\n    \"id\": \"e7a62f43-9b82-4c01-b2ab-7f902eab1234\",\n    \"numeroPoliza\": \"POL-000123\",\n    \"ramo\": \"AUTO\",\n    \"vigente\": true,\n    \"fechaVigenciaDesde\": \"2026-01-01\",\n    \"fechaVigenciaHasta\": \"2027-01-01\",\n    \"identificadorCorto\": \"0123\"\n  }\n]"
+          }]
+        },
+        {
+          "name": "Consultar coberturas",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/seguros/{{polizaId}}/coberturas", "host": ["{{baseUrl}}"], "path": ["api", "v1", "seguros", "{{polizaId}}", "coberturas"]},
+            "description": "Coberturas, exclusiones y nota de prevalencia. Respuestas: 200, 401, 403, 404."
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json();",
+            "pm.test('resumen true', () => pm.expect(body.resumen).to.eql(true));"
+          ]}}],
+          "response": [{
+            "name": "200 - coberturas",
+            "originalRequest": {"method": "GET", "header": [{"key": "X-Credencial-Sesion", "value": "{{credencial}}"}], "url": {"raw": "{{baseUrl}}/api/v1/seguros/{{polizaId}}/coberturas", "host": ["{{baseUrl}}"], "path": ["api", "v1", "seguros", "{{polizaId}}", "coberturas"]}},
+            "status": "OK", "code": 200,
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "_postman_previewlanguage": "json",
+            "body": "{\n  \"coberturas\": [\"Responsabilidad civil\", \"Daños propios\"],\n  \"exclusiones\": [\"Uso comercial no declarado\"],\n  \"resumen\": true,\n  \"notaPrevalencia\": \"Este es un resumen informativo. En caso de disputa prevalecen las condiciones generales oficiales de la póliza.\"\n}"
+          }]
+        }
+      ]
+    },
+    {
+      "name": "2. Siniestros",
+      "description": "Denuncia, seguimiento y documentación pendiente.",
+      "item": [
+        {
+          "name": "Denunciar siniestro (AUTO)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text"},
+              {"key": "Content-Type", "value": "application/json", "type": "text"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"polizaId\": \"{{polizaId}}\",\n  \"tipoSiniestro\": \"AUTO\",\n  \"fechaSiniestro\": \"2026-10-20\",\n  \"descripcion\": \"Choque en intersección\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{baseUrl}}/api/v1/siniestros", "host": ["{{baseUrl}}"], "path": ["api", "v1", "siniestros"]},
+            "description": "Denuncia con campos mínimos. Respuestas: 201, 400, 401, 403, 404, 409."
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('201 Created', () => pm.response.to.have.status(201));",
+            "const body = pm.response.json();",
+            "pm.test('numeroCaso', () => pm.expect(body.numeroCaso).to.be.a('string'));",
+            "if (body.numeroCaso) { pm.collectionVariables.set('numeroCaso', body.numeroCaso); }"
+          ]}}],
+          "response": [{
+            "name": "201 - creado",
+            "originalRequest": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "url": {"raw": "{{baseUrl}}/api/v1/siniestros", "host": ["{{baseUrl}}"], "path": ["api", "v1", "siniestros"]}, "body": {"mode": "raw", "raw": "{\n  \"polizaId\": \"{{polizaId}}\",\n  \"tipoSiniestro\": \"AUTO\",\n  \"fechaSiniestro\": \"2026-10-20\",\n  \"descripcion\": \"Choque en intersección\"\n}"}},
+            "status": "Created", "code": 201,
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "_postman_previewlanguage": "json",
+            "body": "{\n  \"numeroCaso\": \"SIN-2026-000123\",\n  \"proximosPasos\": \"Enviá la documentación requerida por los canales oficiales del banco.\",\n  \"plazos\": \"Los plazos dependen del proceso formal correspondiente a tu ramo; no prometemos liquidación por este canal.\"\n}"
+          }]
+        },
+        {
+          "name": "Consultar siniestro",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/siniestros/{{numeroCaso}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "siniestros", "{{numeroCaso}}"]},
+            "description": "Estado del caso propio. Respuestas: 200, 401, 403, 404."
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json();",
+            "pm.test('estado', () => pm.expect(body.estado).to.be.a('string'));"
+          ]}}],
+          "response": [{
+            "name": "200 - estado",
+            "originalRequest": {"method": "GET", "header": [{"key": "X-Credencial-Sesion", "value": "{{credencial}}"}], "url": {"raw": "{{baseUrl}}/api/v1/siniestros/{{numeroCaso}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "siniestros", "{{numeroCaso}}"]}},
+            "status": "OK", "code": 200,
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "_postman_previewlanguage": "json",
+            "body": "{\n  \"numeroCaso\": \"SIN-2026-000123\",\n  \"estado\": \"DOCUMENTACION_PENDIENTE\",\n  \"pendiente\": \"Presentar informe pericial\"\n}"
+          }]
+        },
+        {
+          "name": "Documentación pendiente",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/siniestros/{{numeroCaso}}/documentacion-pendiente", "host": ["{{baseUrl}}"], "path": ["api", "v1", "siniestros", "{{numeroCaso}}", "documentacion-pendiente"]},
+            "description": "Lista de documentos pendientes. Respuestas: 200, 401, 403, 404."
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json();",
+            "pm.test('documentos', () => pm.expect(body.documentos).to.be.an('array'));"
+          ]}}],
+          "response": [{
+            "name": "200 - docs",
+            "originalRequest": {"method": "GET", "header": [{"key": "X-Credencial-Sesion", "value": "{{credencial}}"}], "url": {"raw": "{{baseUrl}}/api/v1/siniestros/{{numeroCaso}}/documentacion-pendiente", "host": ["{{baseUrl}}"], "path": ["api", "v1", "siniestros", "{{numeroCaso}}", "documentacion-pendiente"]}},
+            "status": "OK", "code": 200,
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "_postman_previewlanguage": "json",
+            "body": "{\n  \"documentos\": [\"Informe pericial\", \"Fotografías del siniestro\"],\n  \"orientacionEnvio\": \"Enviá estos documentos por los canales oficiales del banco; este chat no reemplaza el proceso formal.\"\n}"
+          }]
+        }
+      ]
+    },
+    {
+      "name": "3. Errores",
+      "description": "Casos de error reales del contrato.",
+      "item": [
+        {
+          "name": "Sin credencial (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/api/v1/seguros", "host": ["{{baseUrl}}"], "path": ["api", "v1", "seguros"]},
+            "description": "Sin header X-Credencial-Sesion → 401 UNAUTHORIZED."
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('401 UNAUTHORIZED', () => pm.response.to.have.status(401));",
+            "const body = pm.response.json();",
+            "pm.test('code', () => pm.expect(body.code).to.eql('UNAUTHORIZED'));"
+          ]}}],
+          "response": [{
+            "name": "401 - unauthorized",
+            "originalRequest": {"method": "GET", "header": [], "url": {"raw": "{{baseUrl}}/api/v1/seguros", "host": ["{{baseUrl}}"], "path": ["api", "v1", "seguros"]}},
+            "status": "Unauthorized", "code": 401,
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "_postman_previewlanguage": "json",
+            "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"Verificá tu identidad para consultar tus seguros.\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+          }]
+        },
+        {
+          "name": "Denuncia inválida (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text"},
+              {"key": "Content-Type", "value": "application/json", "type": "text"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"polizaId\": \"{{polizaId}}\",\n  \"tipoSiniestro\": \"AUTO\",\n  \"fechaSiniestro\": \"2026-10-20\",\n  \"descripcion\": \"\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{baseUrl}}/api/v1/siniestros", "host": ["{{baseUrl}}"], "path": ["api", "v1", "siniestros"]},
+            "description": "descripcion vacía → 400 VALIDATION_ERROR."
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('400 VALIDATION_ERROR', () => pm.response.to.have.status(400));",
+            "const body = pm.response.json();",
+            "pm.test('code', () => pm.expect(body.code).to.eql('VALIDATION_ERROR'));"
+          ]}}],
+          "response": [{
+            "name": "400 - validation",
+            "originalRequest": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "url": {"raw": "{{baseUrl}}/api/v1/siniestros", "host": ["{{baseUrl}}"], "path": ["api", "v1", "siniestros"]}, "body": {"mode": "raw", "raw": "{}"}},
+            "status": "Bad Request", "code": 400,
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "_postman_previewlanguage": "json",
+            "body": "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"La solicitud tiene datos inválidos\",\n  \"details\": [{ \"field\": \"descripcion\", \"message\": \"no debe estar vacío\" }],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+          }]
+        },
+        {
+          "name": "Póliza inexistente (404)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text"}],
+            "url": {"raw": "{{baseUrl}}/api/v1/seguros/00000000-0000-0000-0000-000000000000/coberturas", "host": ["{{baseUrl}}"], "path": ["api", "v1", "seguros", "00000000-0000-0000-0000-000000000000", "coberturas"]},
+            "description": "UUID inexistente → 404 NOT_FOUND."
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('404 NOT_FOUND', () => pm.response.to.have.status(404));",
+            "const body = pm.response.json();",
+            "pm.test('code', () => pm.expect(body.code).to.eql('NOT_FOUND'));"
+          ]}}],
+          "response": [{
+            "name": "404 - not found",
+            "originalRequest": {"method": "GET", "header": [], "url": {"raw": "{{baseUrl}}/api/v1/seguros/00000000-0000-0000-0000-000000000000/coberturas", "host": ["{{baseUrl}}"], "path": ["api", "v1", "seguros", "00000000-0000-0000-0000-000000000000", "coberturas"]}},
+            "status": "Not Found", "code": 404,
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "_postman_previewlanguage": "json",
+            "body": "{\n  \"code\": \"NOT_FOUND\",\n  \"message\": \"La póliza no existe.\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+          }]
+        },
+        {
+          "name": "Denuncia duplicada (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text"},
+              {"key": "Content-Type", "value": "application/json", "type": "text"}
+            ],
+            "body": {"mode": "raw", "raw": "{\n  \"polizaId\": \"{{polizaId}}\",\n  \"tipoSiniestro\": \"AUTO\",\n  \"fechaSiniestro\": \"2026-10-20\",\n  \"descripcion\": \"Segundo intento del mismo evento\"\n}", "options": {"raw": {"language": "json"}}},
+            "url": {"raw": "{{baseUrl}}/api/v1/siniestros", "host": ["{{baseUrl}}"], "path": ["api", "v1", "siniestros"]},
+            "description": "Misma póliza y tipo con caso abierto en ventana → 409 CONFLICT. Ejecutar tras una denuncia exitosa del mismo tipo."
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('409 CONFLICT', () => pm.response.to.have.status(409));",
+            "const body = pm.response.json();",
+            "pm.test('code', () => pm.expect(body.code).to.eql('CONFLICT'));"
+          ]}}],
+          "response": [{
+            "name": "409 - conflict",
+            "originalRequest": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "url": {"raw": "{{baseUrl}}/api/v1/siniestros", "host": ["{{baseUrl}}"], "path": ["api", "v1", "siniestros"]}, "body": {"mode": "raw", "raw": "{}"}},
+            "status": "Conflict", "code": 409,
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "_postman_previewlanguage": "json",
+            "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"Ya existe una denuncia abierta para esta póliza y tipo de evento.\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+          }]
+        }
+      ]
+    },
+    {
+      "name": "4. Salud",
+      "item": [
+        {
+          "name": "Actuator health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {"raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"]},
+            "description": "Healthcheck del servicio."
+          },
+          "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": [
+            "pm.test('200 OK', () => pm.response.to.have.status(200));"
+          ]}}],
+          "response": [{
+            "name": "200 - up",
+            "originalRequest": {"method": "GET", "header": [], "url": {"raw": "{{baseUrl}}/actuator/health", "host": ["{{baseUrl}}"], "path": ["actuator", "health"]}},
+            "status": "OK", "code": 200,
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "_postman_previewlanguage": "json",
+            "body": "{\n  \"status\": \"UP\"\n}"
+          }]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+﻿meta {
+  name: Consultar coberturas
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/seguros/{{polizaId}}/coberturas
+  body: none
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Coberturas, exclusiones y nota de prevalencia. Respuestas: 200, 401, 403, 404.
+}

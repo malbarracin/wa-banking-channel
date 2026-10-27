@@ -1,8 +1,8 @@
 ---
 title: Plataforma de Eventos (Kafka) — especificación
-status: borrador
+status: aprobada
 source: null
-updated: 2026-10-27T19:22:32.729Z
+updated: 2026-10-27T19:27:33.951Z
 ---
 
 # Plataforma de Eventos (Kafka) — especificación

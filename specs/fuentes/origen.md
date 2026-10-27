@@ -1,8 +1,8 @@
 ---
 title: Origen de los requisitos
-status: borrador
+status: aprobada
 source: https://app.notion.com/p/H2-Servicio-de-Acceso-y-Sesi-n-38275bb08ca781c8b7d5f5a2c29b8770
-updated: 2026-10-27T19:24:29.958Z
+updated: 2026-10-27T19:27:33.910Z
 ---
 
 fuentes/origen — Origen de los requisitos (aprobada)

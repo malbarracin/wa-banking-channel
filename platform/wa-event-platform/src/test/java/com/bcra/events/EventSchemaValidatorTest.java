@@ -69,6 +69,8 @@ class EventSchemaValidatorTest {
         String valid = event("MessageReceived", "{\"customerAddress\":\"test\",\"body\":\"Hola\"}").toString();
         rejects("wa.message.received.v1", valid + " {}");
         rejects("wa.message.received.v1", valid + " invalid");
+        assertThatCode(() -> validator.validate("wa.message.received.v1", valid + " \n\t"))
+            .doesNotThrowAnyException();
     }
 
     @Test

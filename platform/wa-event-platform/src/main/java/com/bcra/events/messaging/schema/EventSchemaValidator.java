@@ -1,5 +1,6 @@
 package com.bcra.events.messaging.schema;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.JsonSchema;
@@ -38,7 +39,7 @@ public class EventSchemaValidator {
             throw new InvalidEventException();
         }
         try {
-            JsonNode event = mapper.readTree(value);
+            JsonNode event = mapper.reader().with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readTree(value);
             if (event == null || !schema.validate(event).isEmpty()) {
                 throw new InvalidEventException();
             }

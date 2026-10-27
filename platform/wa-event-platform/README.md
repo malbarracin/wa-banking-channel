@@ -42,7 +42,32 @@ Actuator expone /actuator/health, /actuator/info y /actuator/prometheus.
 Logs ECS JSON: las entradas MDC, incluido correlationId cuando se propague en mensajería,
 se incorporan al log estructurado.
 
-## Seguridad
+## Observabilidad de TASK-73
+
+El filtro HTTP acepta el header `correlationId` si tiene formato UUID; si falta o es inválido genera uno.
+Devuelve el identificador en el header de respuesta y lo mantiene en MDC durante el request,
+restaurando el contexto anterior incluso ante errores. El llamador debe conservar el mismo UUID en el
+sobre del evento: KafkaEventProducer lo copia a headers y KafkaEventConsumer lo verifica y coloca en MDC.
+No se copian cuerpos, credenciales ni otros headers al MDC.
+
+Consultar `/actuator/health`, `/actuator/info` y `/actuator/prometheus` en el puerto de la aplicación.
+Los logs usan ECS JSON e incluyen `correlationId` desde MDC; no registrar payloads ni mensajes de excepciones
+que puedan contener datos del cliente. No usar identificadores de conversación o correlación como etiquetas.
+
+Spring Boot registra los clientes creados por sus factories con Micrometer. Con consumidores activos,
+`kafka_consumer_fetch_manager_records_lag_max` muestra el máximo lag del cliente y
+`kafka_consumer_fetch_manager_records_consumed_total` el volumen consumido. Estas series aparecen después
+de crear el cliente y recibir sus métricas; H0.1 no ejecuta listeners de negocio ni inventa lag cero.
+Clientes creados manualmente necesitan `KafkaClientMetrics` con cierre al destruirlos.
+`platform_kafka_delivery_errors_total` cuenta cada intento de consumo fallido, incluidos reintentos;
+`platform_kafka_dlq_published_total` cuenta recuperaciones confirmadas y `platform_kafka_dlq_errors_total`
+recuperaciones fallidas. Los contadores se conectan al DefaultErrorHandler y no contienen etiquetas de PII.
+El contador de publicaciones es acumulativo, no representa el tamaño actual de la DLQ.
+
+Las pruebas cubren HTTP/MDC, endpoints, lag nativo y contadores del error handler. La propagación por H0,
+H0.2, H9 y Twilio requiere pruebas del canal completo cuando esos componentes estén disponibles.
+
+## Seguridad de despliegue
 
 PLAINTEXT es exclusivamente para desarrollo local. Antes de desplegar fuera de local,
 configurar TLS + SASL y ACL por topic y componente, con credenciales inyectadas por entorno

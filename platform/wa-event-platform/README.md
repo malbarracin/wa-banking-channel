@@ -3,6 +3,12 @@
 Base H0.1 con Java 21, Spring Boot 3, groupId `com.bcra`, paquete `com.bcra.events` y puerto 8092.
 TASK-69 confirma el paquete propuesto por arquitectura; project.yaml no define integracion.
 
+El [handoff de operación e integración](handoff.md) reúne responsabilidades de H0/H0.2,
+topics y schemas, variables, arranque local, reproducción y reproceso de DLQ, métricas y
+límites de verificación. Decisiones aceptadas: [Kafka backbone](../../docs/adr/ADR-001-kafka-backbone.md),
+[at-least-once e idempotencia](../../docs/adr/ADR-002-at-least-once-idempotency.md) y
+[partición por conversación](../../docs/adr/ADR-003-partition-by-conversation.md).
+
 ## Ejecución y verificación
 
 Desde este directorio: `./mvnw -q -B clean verify` (Windows: `.\mvnw.cmd -q -B clean verify`).

@@ -47,3 +47,17 @@ Se revalidan horario, límites (excluyendo la propia reserva), saldo, moneda y v
 Las transferencias ajenas o inexistentes devuelven 404; sesión inválida, 401.
 Los terceros deben tener cuenta destino local: no existe un adaptador de liquidación interbancaria;
 un destino no disponible se rechaza con 409 sin debitar fondos.
+
+## OpenAPI y Swagger
+
+Con el servicio iniciado, Swagger UI está disponible en
+`http://localhost:8084/swagger-ui.html` (puerto configurable mediante `PORT`).
+La UI y la especificación no requieren credencial; las operaciones de cuentas sí validan
+`X-Credencial-Sesion` con H2 en cada solicitud.
+
+La especificación se consulta en `/v3/api-docs` (JSON) o `/v3/api-docs.yaml` (YAML).
+`./mvnw -q -B verify` regenera `delivery/openapi/openapi.json` y `openapi.yaml`
+y verifica los seis endpoints, los ejemplos de éxito/error y el acceso a Swagger.
+Los ejemplos contienen datos ficticios: usar cuentas del titular, un tercero de su agenda,
+el identificador devuelto al preparar y una credencial H2 vigente para ejecutar solicitudes.
+Para continuar movimientos, copiar el cursor de la respuesta anterior y conservar los filtros.

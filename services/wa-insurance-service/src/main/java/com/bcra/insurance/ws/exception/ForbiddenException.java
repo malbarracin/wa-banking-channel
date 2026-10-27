@@ -1,6 +1,6 @@
 package com.bcra.insurance.ws.exception;
 
-/** Acceso sin una relación autorizada con el recurso. */
+/** El cliente autenticado no tiene autorización para acceder al recurso. */
 public class ForbiddenException extends RuntimeException {
 
     public ForbiddenException(String message) {

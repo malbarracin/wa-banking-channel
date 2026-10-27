@@ -150,6 +150,24 @@ class SeguroRepositoryTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
+    @Test
+    @DisplayName("Persiste pendiente y documentos pendientes informados por el sistema")
+    void persisteSeguimientoDelSistema() {
+        UUID polizaId = polizas.save(poliza("P-1", "DNI", "12345678", true)).getId();
+        Siniestro guardado = siniestros.saveAndFlush(Siniestro.builder().numeroCaso("C-SEG")
+                .polizaId(polizaId).tipoSiniestro(TipoSiniestro.HOGAR)
+                .fechaSiniestro(LocalDate.of(2026, 10, 26)).descripcion("Daño en el hogar")
+                .estado(EstadoSiniestro.DOCUMENTACION_PENDIENTE).pendiente("Falta DNI")
+                .documentosPendientes(List.of("DNI", "Fotos")).fechaApertura(APERTURA)
+                .ventanaDuplicadoHasta(APERTURA.plusSeconds(3600)).build());
+        entityManager.clear();
+
+        Siniestro recuperado = siniestros.findByNumeroCaso("C-SEG").orElseThrow();
+        assertThat(recuperado.getId()).isEqualTo(guardado.getId());
+        assertThat(recuperado.getPendiente()).isEqualTo("Falta DNI");
+        assertThat(recuperado.getDocumentosPendientes()).containsExactly("DNI", "Fotos");
+    }
+
     @ParameterizedTest
     @EnumSource(TipoSiniestro.class)
     @DisplayName("Cada tipo de siniestro conserva su identidad y deja de bloquear al resolverse")

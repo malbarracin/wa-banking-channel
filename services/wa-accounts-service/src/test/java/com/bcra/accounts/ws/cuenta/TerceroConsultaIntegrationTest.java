@@ -15,6 +15,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.bcra.accounts.ws.cuenta.client.CredencialesServiceClient;
+import com.bcra.accounts.ws.cuenta.client.CredencialesServiceUnavailableException;
 import com.bcra.accounts.ws.cuenta.client.dto.ValidarCredencialResponse;
 import com.bcra.accounts.ws.cuenta.entity.AuditoriaAccion;
 import com.bcra.accounts.ws.cuenta.entity.AuditoriaResultado;
@@ -138,6 +139,47 @@ class TerceroConsultaIntegrationTest {
         verify(credencialesServiceClient, times(2)).validar(CREDENCIAL);
         verifyNoInteractions(terceroAgendadoRepository);
         assertThat(auditoriaCuentaRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Cada sesión recibe su propia agenda y la auditoría conserva ambas identidades")
+    void aislaAgendasEntreSesionesConsecutivas() throws Exception {
+        String otraCredencial = "otra-sesion-validada";
+        when(credencialesServiceClient.validar(otraCredencial)).thenReturn(titular("456"));
+
+        mockMvc.perform(get("/api/v1/terceros").header("X-Credencial-Sesion", CREDENCIAL))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].alias").value("propio"));
+        mockMvc.perform(get("/api/v1/terceros").header("X-Credencial-Sesion", otraCredencial)
+                        .param("documentoNumero", "123").param("documentoTipo", "PASAPORTE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].alias").value("ajeno"));
+
+        assertThat(auditoriaCuentaRepository.findAll())
+                .extracting(auditoria -> auditoria.getDocumentoNumero())
+                .containsExactlyInAnyOrder("123", "456");
+        verify(credencialesServiceClient).validar(CREDENCIAL);
+        verify(credencialesServiceClient).validar(otraCredencial);
+    }
+
+    @Test
+    @DisplayName("Una falla al validar la sesión impide consultar terceros y devuelve un error seguro")
+    void impideConsultaCuandoElValidadorNoEstaDisponible() throws Exception {
+        when(credencialesServiceClient.validar(CREDENCIAL))
+                .thenThrow(new CredencialesServiceUnavailableException());
+
+        mockMvc.perform(get("/api/v1/terceros").header("X-Credencial-Sesion", CREDENCIAL))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+                .andExpect(jsonPath("$.message").value("Error interno"))
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.stackTrace").doesNotExist());
+
+        verifyNoInteractions(terceroAgendadoRepository);
+        assertThat(auditoriaCuentaRepository.count()).isZero();
     }
 
     private ValidarCredencialResponse titular(String documentoNumero) {

@@ -8,9 +8,18 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import com.bcra.accounts.ws.cuenta.client.CredencialesServiceClient;
+import com.bcra.accounts.ws.cuenta.client.RestCredencialesServiceClient;
+
 /** Configura el transporte del cliente de validación de credenciales de H2. */
 @Configuration
 public class RestClientConfig {
+
+    /** Expone el puerto de validación de H2 para los servicios de cuentas. */
+    @Bean
+    public CredencialesServiceClient credencialesServiceClient(RestClient credencialesRestClient) {
+        return new RestCredencialesServiceClient(credencialesRestClient);
+    }
 
     /** Crea el cliente de H2 con URL y tiempos de espera parametrizables. */
     @Bean

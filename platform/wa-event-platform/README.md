@@ -10,10 +10,17 @@ Ejecutar el JAR con `java -jar target/wa-event-platform-0.1.0-SNAPSHOT.jar`.
 Desde la raíz: `python scripts/verify_integracion.py`.
 Las variables de .env.example se exportan al entorno del proceso; Spring no carga .env automáticamente.
 
-El arranque y las pruebas de base no necesitan un broker. Para desarrollo, configurar
-KAFKA_BOOTSTRAP_SERVERS con un broker Kafka en modo KRaft, sin ZooKeeper.
-La creación automática de topics está desactivada. Topics, contratos, retry/DLQ y contenedores
-se implementan en las tareas siguientes; esta base no publica ni consume eventos.
+Para desarrollo ejecutar `docker compose up -d --wait` desde este directorio y luego iniciar el JAR
+en el host. El broker KRaft de un nodo escucha solo en localhost:9092 y conserva datos en un volumen.
+KafkaAdmin crea los cuatro topics declarados (3 particiones, réplica 1) y actualiza su retención.
+Si Kafka no está disponible el arranque falla; para pruebas sin broker usar KAFKA_ADMIN_AUTO_CREATE=false.
+Retenciones: received/ready-to-send 7d, status 30d, DLQ 90d; configurables en .env.example.
+El catálogo está en shared/contracts/events/topics.md. La creación implícita del broker está desactivada.
+Las pruebas levantan Kafka KRaft embebido sin Docker y verifican topics, retención y orden por conversationId.
+La publicación validada, listeners de negocio y retry/DLQ se implementan en tareas posteriores.
+La configuración base usa String, acks=all, idempotencia, snappy, commit manual y read_committed.
+Actuator integra métricas de clientes Kafka cuando hay productores/consumidores activos;
+las observaciones de template y listeners están habilitadas.
 
 ## Estructura y observabilidad
 

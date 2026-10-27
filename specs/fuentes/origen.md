@@ -1,9 +1,12 @@
 ---
 title: Origen de los requisitos
-status: aprobada
+status: borrador
 source: https://app.notion.com/p/H2-Servicio-de-Acceso-y-Sesi-n-38275bb08ca781c8b7d5f5a2c29b8770
-updated: 2026-10-26T18:19:37.757Z
+updated: 2026-10-27T19:24:29.958Z
 ---
+
+fuentes/origen — Origen de los requisitos (aprobada)
+Fuente: https://app.notion.com/p/H2-Servicio-de-Acceso-y-Sesi-n-38275bb08ca781c8b7d5f5a2c29b8770
 
 # Origen de los requisitos
 
@@ -49,10 +52,7 @@ Inventario complementario: contexto y objetivo (§§1–2) en propósito; depend
 | Página | 👤 H1 — Servicio de Usuarios (Hitos — Canal WhatsApp Banco) |
 | Actualizado | 2026-10-26 |
 
-La página de Notion es autocontenida para este hito: no tiene subpáginas ni bases de datos hijas en alcance más
-allá de las propiedades del hito (Dominio: Usuarios). Se buscó en el workspace una política de estados de
-usuario o de privacidad de datos que complementara el hito y no se encontró ninguna: queda registrado como
-pregunta abierta en `usuarios/spec`.
+La página de Notion es autocontenida para este hito: no tiene subpáginas ni bases de datos hijas en alcance más allá de las propiedades del hito (Dominio: Usuarios). Se buscó en el workspace una política de estados de usuario o de privacidad de datos que complementara el hito y no se encontró ninguna: queda registrado como pregunta abierta en `usuarios/spec`.
 
 ### Decisiones tomadas con la persona
 
@@ -82,13 +82,7 @@ pregunta abierta en `usuarios/spec`.
 | Página | 💬 H3 — Servicio Canal WhatsApp (Hitos — Canal WhatsApp Banco) |
 | Actualizado | 2026-10-26 |
 
-La página de Notion es autocontenida para este hito: no tiene subpáginas ni bases de datos hijas en alcance más
-allá de las propiedades del hito (Dominio: Canal). El hito depende funcionalmente de H1 (ya especificado en
-`usuarios/spec`, consulta de existencia/estado de cliente) y de H2 (emisión/revocación de credencial, fuera de
-este hito). Varios puntos quedan explícitamente delegados por la fuente a una política del banco/Compliance aún
-no definida (método de verificación, límite de intentos, criterios de bloqueo por riesgo): se dejaron como
-`## Preguntas abiertas` en `canal-whatsapp/spec` sin bloquear el resto del hito, siguiendo el mismo criterio que
-`usuarios/spec` con la política de privacidad pendiente de Compliance.
+La página de Notion es autocontenida para este hito: no tiene subpáginas ni bases de datos hijas en alcance más allá de las propiedades del hito (Dominio: Canal). El hito depende funcionalmente de H1 (ya especificado en `usuarios/spec`, consulta de existencia/estado de cliente) y de H2 (emisión/revocación de credencial, fuera de este hito). Varios puntos quedan explícitamente delegados por la fuente a una política del banco/Compliance aún no definida (método de verificación, límite de intentos, criterios de bloqueo por riesgo): se dejaron como `## Preguntas abiertas` en `canal-whatsapp/spec` sin bloquear el resto del hito, siguiendo el mismo criterio que `usuarios/spec` con la política de privacidad pendiente de Compliance.
 
 ### Requisito → fuente
 
@@ -118,15 +112,7 @@ no definida (método de verificación, límite de intentos, criterios de bloqueo
 | Página | 🔐 H2 — Servicio de Acceso y Sesión (Hitos — Canal WhatsApp Banco) |
 | Actualizado | 2026-10-26 |
 
-La página de Notion es autocontenida para este hito: no tiene subpáginas ni bases de datos hijas en alcance (sin
-backlinks en el workspace), y no se encontró ninguna página complementaria de política de vigencia, renovación o
-riesgo. El hito depende funcionalmente de H1 (el cliente debe existir) y de H3 (quien gestiona la verificación y
-el vínculo activo y solicita la emisión/revocación); H4, H5 y H6 dependen de H2 para validar la credencial antes
-de operar. La propia fuente excluye de su alcance el "detalle técnico del formato de la credencial", y deja sin
-cerrar valores concretos de vigencia, ventana de renovación, señal de riesgo y alcance de la revocación masiva
-("política del banco"/"política de riesgo"): se dejaron como `## Preguntas abiertas` en `acceso-sesion/spec` sin
-bloquear el resto del hito, con el mismo criterio que las políticas pendientes de `usuarios/spec` y
-`canal-whatsapp/spec`.
+La página de Notion es autocontenida para este hito: no tiene subpáginas ni bases de datos hijas en alcance (sin backlinks en el workspace), y no se encontró ninguna página complementaria de política de vigencia, renovación o riesgo. El hito depende funcionalmente de H1 (el cliente debe existir) y de H3 (quien gestiona la verificación y el vínculo activo y solicita la emisión/revocación); H4, H5 y H6 dependen de H2 para validar la credencial antes de operar. La propia fuente excluye de su alcance el "detalle técnico del formato de la credencial", y deja sin cerrar valores concretos de vigencia, ventana de renovación, señal de riesgo y alcance de la revocación masiva ("política del banco"/"política de riesgo"): se dejaron como `## Preguntas abiertas` en `acceso-sesion/spec` sin bloquear el resto del hito, con el mismo criterio que las políticas pendientes de `usuarios/spec` y `canal-whatsapp/spec`.
 
 ### Requisito → fuente
 
@@ -162,3 +148,26 @@ La página de Notion es autocontenida para este hito: no tiene subpáginas ni ba
 | Transferencia entre cuentas propias | cuentas | H4 — sección 3 (en alcance, punto 4); sección 5, reglas 3, 4, 5 y 7; sección 6, flujo F3; sección 7, criterios 3, 5 y 6; sección 8 (mensajes de confirmación, éxito y límite) |
 | Transferencia a tercero agendado | cuentas | H4 — sección 3 (en alcance, punto 5 y fuera de alcance); sección 5, regla 2; sección 6, flujo F4; sección 7, criterio 4; sección 8 |
 | Seguridad de acceso — credencial de sesión y vínculo | cuentas | H4 — sección 4 (actor Cliente sin JWT); sección 5, regla 1; sección 9 (dependencia H2); sección 11 (seguridad de acceso) |
+
+## H0.1 — Plataforma de Eventos (Kafka)
+
+| Campo | Valor |
+|-------|-------|
+| Proyecto | wa-banking-channel (platform/wa-event-platform) |
+| Fuente | Notion |
+| Link | https://app.notion.com/p/H0-1-Plataforma-de-Eventos-Kafka-3a675bb08ca781db9516c18960a48060 |
+| Página | 📨 H0.1 — Plataforma de Eventos (Kafka) (Hitos — Canal WhatsApp Banco) |
+| Actualizado | 2026-07-24 |
+
+La página de Notion es autocontenida para este hito: provee la columna vertebral asíncrona del canal para H0 Gateway y H0.2 Orquestador. Los contratos se publican en `shared/contracts/events/`. No tiene subpáginas ni bases de datos hijas enlazadas.
+
+### Requisito → fuente
+
+| Requisito | Área | Id en la fuente |
+|-----------|------|-----------------|
+| Convenciones de topics, claves, retención y versionado | plataforma-eventos | H0.1 §§3, 4 |
+| Contratos versionados y validados | plataforma-eventos | H0.1 §§4, 7 |
+| At-least-once, idempotencia, partición por conversación | plataforma-eventos | H0.1 §§2, 6 |
+| Retry/DLQ y reproceso | plataforma-eventos | H0.1 §§4, 6 |
+| Observabilidad y trazabilidad con correlationId | plataforma-eventos | H0.1 §§2, 4, 6 |
+| Seguridad (cifrado en tránsito, sin PII/secreto) | plataforma-eventos | H0.1 §§2, 4, 6 |

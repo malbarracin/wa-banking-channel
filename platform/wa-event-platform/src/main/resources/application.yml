@@ -10,15 +10,21 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     admin:
-      auto-create: false
+      auto-create: ${KAFKA_ADMIN_AUTO_CREATE:true}
+      fail-fast: ${KAFKA_ADMIN_FAIL_FAST:true}
+      modify-topic-configs: true
     producer:
       acks: all
+      compression-type: snappy
+      retries: ${KAFKA_PRODUCER_RETRIES:10}
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
       properties:
         enable.idempotence: true
         max.in.flight.requests.per.connection: 5
     consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP_ID:wa-event-platform}
+      auto-offset-reset: earliest
       enable-auto-commit: false
       isolation-level: read_committed
       max-poll-records: 100
@@ -26,6 +32,20 @@ spring:
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     listener:
       ack-mode: manual
+      concurrency: 3
+      observation-enabled: true
+    template:
+      observation-enabled: true
+
+platform:
+  kafka:
+    topics:
+      partitions: ${KAFKA_TOPIC_PARTITIONS:3}
+      replicas: ${KAFKA_TOPIC_REPLICAS:1}
+      received-retention: ${KAFKA_RECEIVED_RETENTION:7d}
+      ready-to-send-retention: ${KAFKA_READY_TO_SEND_RETENTION:7d}
+      status-retention: ${KAFKA_STATUS_RETENTION:30d}
+      dlq-retention: ${KAFKA_DLQ_RETENTION:90d}
 
 management:
   endpoints:

@@ -31,6 +31,12 @@ springdoc:
   swagger-ui.path: /swagger-ui.html
 
 limits:
+  transferencia:
+    horario-inicio: ${TRANSFERENCIAS_HORARIO_INICIO:08:00}
+    horario-fin: ${TRANSFERENCIAS_HORARIO_FIN:17:00}
+    zona: ${TRANSFERENCIAS_ZONA:America/Argentina/Buenos_Aires}
+    dias: ${TRANSFERENCIAS_DIAS:MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY}
+    expiracion-preparada-minutos: ${TRANSFERENCIAS_EXPIRACION_MINUTOS:5}
   movimientos:
     ventana-dias: ${MOVIMIENTOS_VENTANA_DIAS:90}
     tope-por-mensaje: ${MOVIMIENTOS_TOPE_POR_MENSAJE:10}

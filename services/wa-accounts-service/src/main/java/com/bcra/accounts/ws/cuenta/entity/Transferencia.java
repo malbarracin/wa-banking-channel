@@ -67,6 +67,13 @@ public class Transferencia {
     @Column(nullable = false, updatable = false)
     private Instant fechaCreacion;
 
+    /** Vencimiento de la preparación; nullable para registros históricos previos a este flujo. */
+    @Column
+    private Instant expiraEn;
+
+    @Column(length = 255)
+    private String concepto;
+
     @Column(nullable = true)
     private Instant fechaEjecucion;
 

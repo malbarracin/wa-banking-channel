@@ -1,111 +1,192 @@
 # wa-event-platform
 
-Base H0.1 con Java 21, Spring Boot 3, groupId `com.bcra`, paquete `com.bcra.events` y puerto 8092.
-TASK-69 confirma el paquete propuesto por arquitectura; project.yaml no define integracion.
+Base H0.1 — Plataforma de eventos Kafka del canal WhatsApp Banking. Java 21, Spring Boot 3, groupId `com.bcra`, paquete `com.bcra.events`, puerto `8092`.
 
-El [handoff de operación e integración](handoff.md) reúne responsabilidades de H0/H0.2,
-topics y schemas, variables, arranque local, reproducción y reproceso de DLQ, métricas y
-límites de verificación. Decisiones aceptadas: [Kafka backbone](../../docs/adr/ADR-001-kafka-backbone.md),
-[at-least-once e idempotencia](../../docs/adr/ADR-002-at-least-once-idempotency.md) y
-[partición por conversación](../../docs/adr/ADR-003-partition-by-conversation.md).
+## Límites (qué hace / qué no hace)
 
-## Arranque local
+**Hace:**
+- Topics, convenciones, esquemas versionados y configuración Kafka KRaft local.
+- Productor/consumidor con validación de esquemas, reintentos con backoff y DLQ.
+- Idempotencia a nivel infraestructura (entrega at-least-once). Cada componente debe deduplicar.
+- Trazabilidad con `correlationId` (propagado en headers/MDC).
+- Métricas de entrega, DLQ y lag nativo con Micrometer/Actuator.
 
-Requisitos: JDK 21, Docker Compose, Python (verificador). Postgres no aplica a H0.1.
+**No hace:**
+- Lógica de negocio o conversación.
+- Persistencia de negocio (Postgres no aplica a H0.1).
+- Listeners de negocio activos (base para integración por H0/H0.2).
+- Transformación a lenguaje natural o coordinación de flujos.
 
-1. Broker KRaft + topics del contrato (`shared/contracts/events/topics.md`):
+## Documentación relacionada
+
+- [Handoff de operación e integración](handoff.md)
+- [Catálogo de topics](../../shared/contracts/events/topics.md)
+- [Catálogo de contratos de eventos](../../shared/contracts/events/README.md)
+- ADRs: [Kafka backbone](../../docs/adr/ADR-001-kafka-backbone.md), [at-least-once e idempotencia](../../docs/adr/ADR-002-at-least-once-idempotency.md), [partición por conversación](../../docs/adr/ADR-003-partition-by-conversation.md)
+
+## Requisitos
+
+- JDK 21
+- Docker Compose
+- Python 3 (para `scripts/verify_integracion.py`)
+- Maven Wrapper (incluido)
+
+## Variables de entorno
+
+Copiar `platform/wa-event-platform/.env.example` a las variables del entorno. **No** commitear valores reales.
+
+| Variable | Default | Descripción |
+| --- | --- | --- |
+| `SERVER_PORT` | `8092` | Puerto de la aplicación |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Bootstrap servers de Kafka |
+| `KAFKA_ADMIN_AUTO_CREATE` | `true` | Crear/actualizar topics al arrancar (false solo para tests sin broker) |
+| `KAFKA_ADMIN_FAIL_FAST` | `true` | Fallar si Kafka no responde al arrancar |
+| `KAFKA_TOPIC_PARTITIONS` | `3` | Particiones por topic (mínimo 3) |
+| `KAFKA_TOPIC_REPLICAS` | `1` | Réplicas por topic (local) |
+| `KAFKA_RECEIVED_RETENTION` | `7d` | Retención `wa.message.received.v1` |
+| `KAFKA_READY_TO_SEND_RETENTION` | `7d` | Retención `wa.message.ready-to-send.v1` |
+| `KAFKA_STATUS_RETENTION` | `30d` | Retención `wa.message.status.v1` |
+| `KAFKA_DLQ_RETENTION` | `90d` | Retención `wa.message.dlq.v1` |
+| `KAFKA_PRODUCER_RETRIES` | `10` | Reintentos del productor (acks=all, idempotencia habilitada) |
+| `KAFKA_CONSUMER_GROUP_ID` | `wa-event-platform` | Group ID (cada componente debe usar el propio) |
+| `KAFKA_CONSUMER_MAX_RETRIES` | `3` | Reintentos de consumo tras intento inicial |
+| `KAFKA_CONSUMER_RETRY_INITIAL_INTERVAL` | `1000` | Intervalo inicial backoff (ms) |
+| `KAFKA_CONSUMER_RETRY_MAX_INTERVAL` | `10000` | Intervalo máximo backoff (ms) |
+
+> Fuera de local: configurar TLS + SASL y ACL por topic/componente. Ver [Seguridad](#seguridad).
+
+## Cómo levantarlo
+
+### 1) Broker KRaft + topics
+
+Desde `platform/wa-event-platform`:
 
 ```powershell
-cd platform/wa-event-platform
 docker compose up -d --wait
 ```
 
-`kafka-init` crea los cuatro topics (3 particiones, réplica 1, retenciones 7d/7d/30d/90d) y termina.
-Listeners: `localhost:9092` (host) y `kafka:29092` (red Docker). Volumen `kafka-data`.
-Detener: `docker compose stop`; `docker compose down` conserva el volumen.
+- Crea broker KRaft (sin ZooKeeper) en `localhost:9092` (host) / `kafka:29092` (red Docker).
+- `kafka-init` crea los 4 topics con 3 particiones/1 réplica y retenciones configuradas.
+- Volumen persistente `kafka-data`. `docker compose stop` / `docker compose down` (conserva volumen).
 
-2. App en el host (desarrollo habitual):
+### 2) Aplicación en host (desarrollo)
 
 ```powershell
+# Windows
 .\mvnw.cmd -q -B clean verify
-# exportar variables de .env.example; bootstrap = localhost:9092
+# Exportar variables de .env.example; bootstrap = localhost:9092
 java -jar target/wa-event-platform-0.1.0-SNAPSHOT.jar
 ```
 
-Linux/macOS: `./mvnw -q -B clean verify`. Spring no carga `.env` solo: exportar o copiar a `.env` y cargar en el shell.
+```bash
+# Linux/macOS
+./mvnw -q -B clean verify
+export $(grep -v '^#' .env.example | xargs)
+java -jar target/wa-event-platform-0.1.0-SNAPSHOT.jar
+```
 
-3. App en contenedor (opcional):
+Spring Boot **no** carga `.env` automáticamente; exportar variables o cargar desde shell.
+
+### 3) Aplicación en contenedor (opcional)
 
 ```powershell
+# Desde platform/wa-event-platform
 docker compose --profile app up -d --wait
-# o desde la raíz del repo:
+# O desde raíz del repo
 docker build -f platform/wa-event-platform/Dockerfile -t wa-event-platform:local .
 ```
 
-Health: `http://localhost:8092/actuator/health`. Sin secretos en imagen ni compose; solo `.env` / `.env.example`.
+## Cómo probarlo
 
-4. Verificación del equipo (raíz del repo): `python scripts/verify_integracion.py`.
-CI corre `./mvnw -B clean verify` y build de imagen para este componente.
+### Tests unitarios/integración (sin Docker requerido para embebido)
 
-KafkaAdmin también declara/actualiza retención al arrancar la app.
-Si Kafka no está disponible el arranque falla; para pruebas sin broker usar `KAFKA_ADMIN_AUTO_CREATE=false`.
-El catálogo está en `shared/contracts/events/topics.md`. Creación implícita del broker desactivada.
-Las pruebas levantan Kafka KRaft embebido sin Docker y verifican topics, retención y orden por conversationId.
-KafkaEventProducer valida antes de enviar y devuelve un futuro que el llamador debe observar antes de confirmar.
-KafkaEventConsumer es una base para listeners de cada componente: valida esquema, clave y correlationId,
-ejecuta el efecto con MDC y confirma únicamente tras éxito; restaura el MDC incluso ante errores.
-Cada componente debe deduplicar messageId en la misma transacción de su efecto (H0/H0.2).
-No hay listeners de negocio activos en H0.1.
-DefaultErrorHandler se aplica a la factory autoconfigurada: tres reintentos con backoff exponencial
-de 1000 ms hasta 10000 ms, configurables por las variables KAFKA_CONSUMER_* de .env.example.
-InvalidEventException no se reintenta. DeadLetterPublisher espera confirmación de Kafka y propaga fallos,
-para evitar recuperar el registro si no se pudo publicar en DLQ.
-La DLQ cumple su esquema DeadLetter, conserva originalValueBase64 para reproceso y coordenadas originales;
-solo publica headers correlationId, eventType, eventVersion y errorCode, sin mensajes de excepción ni stack traces.
-Si falta correlationId válido, deriva uno estable de topic/partición/offset; messageId identifica esas coordenadas.
-La DLQ requiere los mismos controles de acceso y protección de datos que los topics originales: Base64 no cifra.
-La configuración base usa String, acks=all, idempotencia, snappy, commit manual y read_committed.
-Actuator integra métricas de clientes Kafka cuando hay productores/consumidores activos;
-las observaciones de template y listeners están habilitadas.
+```powershell
+# Windows
+.\mvnw.cmd -q -B clean verify
+```
 
-## Estructura y observabilidad
+```bash
+# Linux/macOS
+./mvnw -q -B clean verify
+```
 
-Paquetes messaging/{producer,consumer,config,schema}, topic, dlq, config y observability
-reservados mediante package-info.java. Lombok y MapStruct preparados con sus procesadores.
-Actuator expone /actuator/health, /actuator/info y /actuator/prometheus.
-Logs ECS JSON: las entradas MDC, incluido correlationId cuando se propague en mensajería,
-se incorporan al log estructurado.
+Cobertura JaCoCo mínima **80% líneas**. Reportes: `target/site/jacoco/index.html`, `target/surefire-reports/`.
 
-## Observabilidad de TASK-73
+Tests relevantes:
+- `KafkaPlatformIntegrationTest` — topics, retención, orden por `conversationId` (Kafka KRaft embebido)
+- `KafkaMessagingTest` — validación, reintentos, ACK
+- `KafkaMessagingIntegrationTest` — envío real y publicación a DLQ
+- `EventSchemaValidatorTest` — contratos JSON Schema
+- Tests de observabilidad (MDC/correlationId, métricas, endpoints)
 
-El filtro HTTP acepta el header `correlationId` si tiene formato UUID; si falta o es inválido genera uno.
-Devuelve el identificador en el header de respuesta y lo mantiene en MDC durante el request,
-restaurando el contexto anterior incluso ante errores. El llamador debe conservar el mismo UUID en el
-sobre del evento: KafkaEventProducer lo copia a headers y KafkaEventConsumer lo verifica y coloca en MDC.
-No se copian cuerpos, credenciales ni otros headers al MDC.
+### Verificación del equipo (desde raíz)
 
-Consultar `/actuator/health`, `/actuator/info` y `/actuator/prometheus` en el puerto de la aplicación.
-Los logs usan ECS JSON e incluyen `correlationId` desde MDC; no registrar payloads ni mensajes de excepciones
-que puedan contener datos del cliente. No usar identificadores de conversación o correlación como etiquetas.
+```powershell
+python scripts/verify_integracion.py
+```
 
-Spring Boot registra los clientes creados por sus factories con Micrometer. Con consumidores activos,
-`kafka_consumer_fetch_manager_records_lag_max` muestra el máximo lag del cliente y
-`kafka_consumer_fetch_manager_records_consumed_total` el volumen consumido. Estas series aparecen después
-de crear el cliente y recibir sus métricas; H0.1 no ejecuta listeners de negocio ni inventa lag cero.
-Clientes creados manualmente necesitan `KafkaClientMetrics` con cierre al destruirlos.
-`platform_kafka_delivery_errors_total` cuenta cada intento de consumo fallido, incluidos reintentos;
-`platform_kafka_dlq_published_total` cuenta recuperaciones confirmadas y `platform_kafka_dlq_errors_total`
-recuperaciones fallidas. Los contadores se conectan al DefaultErrorHandler y no contienen etiquetas de PII.
-El contador de publicaciones es acumulativo, no representa el tamaño actual de la DLQ.
+### Health/Métricas
 
-Las pruebas cubren HTTP/MDC, endpoints, lag nativo y contadores del error handler. La propagación por H0,
-H0.2, H9 y Twilio requiere pruebas del canal completo cuando esos componentes estén disponibles.
+- Health: `http://localhost:8092/actuator/health`
+- Info: `http://localhost:8092/actuator/info`
+- Prometheus: `http://localhost:8092/actuator/prometheus`
 
-## Seguridad de despliegue
+## Contratos
 
-PLAINTEXT es exclusivamente para desarrollo local. Antes de desplegar fuera de local,
-configurar TLS + SASL y ACL por topic y componente, con credenciales inyectadas por entorno
-(por ejemplo SPRING_KAFKA_PROPERTIES_SECURITY_PROTOCOL, SPRING_KAFKA_PROPERTIES_SASL_MECHANISM
-y SPRING_KAFKA_PROPERTIES_SASL_JAAS_CONFIG); nunca almacenarlas ni registrarlas.
-Actuator debe quedar en la red interna. No hay endpoints de negocio ni deserialización de tipos arbitrarios.
-No enviar secretos ni PII innecesaria en eventos o logs.
+- **Topics**: ver [shared/contracts/events/topics.md](../../shared/contracts/events/topics.md)
+- **Eventos/Schemas**: ver [shared/contracts/events/README.md](../../shared/contracts/events/README.md)
+- **Schemas JSON**: `shared/contracts/events/*.schema.json` (empaquetados por Maven en `contracts/events`)
+- Clave obligatoria: `conversationId`. Headers: `correlationId`, `eventType`, `eventVersion` (iguales al sobre).
+- Validación con NetworkNT; `additionalProperties: false` en sobre y payloads.
+
+## Retry, DLQ y reproceso
+
+- **No reintentable**: `InvalidEventException` → DLQ inmediato (sin reintentos).
+- **Reintentable**: backoff exponencial con `KAFKA_CONSUMER_*` hasta agotar reintentos → DLQ.
+- **DLQ**: `wa.message.dlq.v1` con evento `DeadLetter`. Conserva `originalValueBase64`, coordenadas originales. Solo headers `correlationId`, `eventType`, `eventVersion`, `errorCode`. Sin stack traces.
+- **Reproceso**: ver procedimiento en [shared/contracts/events/README.md#reproceso-de-dlq-guía-para-soporte](../../shared/contracts/events/README.md#reproceso-de-dlq-guía-para-soporte) y [handoff.md](handoff.md#retry-reproducción-y-reproceso-dlq).
+- **Nota**: publicar JSON inválido por consola **no** activa DLQ automáticamente (H0.1 no tiene listeners de negocio activos). Usar tests integrados o consumidor integrador.
+
+## Trazabilidad (correlationId)
+
+- Filtro HTTP acepta/propaga `correlationId` UUID; lo devuelve en header de respuesta y lo pone en MDC.
+- `KafkaEventProducer` copia `correlationId` a headers Kafka.
+- `KafkaEventConsumer` verifica `correlationId` válido y lo coloca en MDC (se restaura incluso ante errores).
+- No copiar cuerpos/credenciales a MDC. No usar IDs como etiquetas de métricas.
+
+## Observabilidad
+
+| Métrica | Descripción |
+| --- | --- |
+| `platform_kafka_delivery_errors_total` | Intentos de consumo fallidos (incluye reintentos) |
+| `platform_kafka_dlq_published_total` | Recuperaciones a DLQ confirmadas (acumulativo, no tamaño actual) |
+| `platform_kafka_dlq_errors_total` | Fallos al publicar en DLQ |
+| `kafka_consumer_fetch_manager_records_lag_max` | Lag nativo (solo con consumidores activos) |
+| `kafka_consumer_fetch_manager_records_consumed_total` | Volumen consumido (solo con consumidores activos) |
+
+Logs en formato **ECS JSON** con `correlationId` desde MDC. Clientes Kafka instrumentados por Spring Boot/Micrometer.
+
+## Seguridad
+
+- **Local**: PLAINTEXT exclusivamente.
+- **Fuera de local**: configurar TLS + SASL, ACL por topic/componente, réplica 3, `min.insync.replicas=2`. Inyectar credenciales por entorno (`SPRING_KAFKA_PROPERTIES_*`), **nunca** commitearlas.
+- Actuator debe quedar en red interna.
+- No enviar secretos, PII innecesaria, documentos ni credenciales en eventos o logs.
+- DLQ requiere ACL restringida (Base64 **no** cifra).
+
+## Troubleshooting
+
+| Problema | Causa/Solución |
+| --- | --- |
+| App no arranca (Kafka no disponible) | Verificar `docker compose ps`. Usar `KAFKA_ADMIN_AUTO_CREATE=false` solo para tests sin broker. |
+| Topics no creados | Revisar `kafka-init`. Inspeccionar con `kafka-topics.sh --describe`. KafkaAdmin actualiza retención al arrancar. |
+| DLQ no recibe eventos inválidos con consola | H0.1 no tiene listeners activos; usar `KafkaMessagingIntegrationTest` o conectar consumidor integrador. |
+| Lag en 0 o no aparece | `kafka_consumer_fetch_manager_*` aparece solo con consumidores activos. H0.1 no inventa lag cero. |
+| Errores de validación se reintentan | Verificar `addNotRetryableExceptions(InvalidEventException.class)`. `InvalidEventException` es no reintentable. |
+| Fallo al publicar a DLQ | `DeadLetterPublisher` propaga error y **no** confirma el registro original; revisar ACL/permisos Kafka. |
+
+## Integración con otros componentes
+
+- **H0 (Gateway Twilio)**: publica `MessageReceived`/`MessageStatus`, consume `MessageReadyToSend`. Debe propagar `correlationId` y deduplicar por `messageId`.
+- **H0.2 (Orquestador)**: consume `MessageReceived`/`MessageStatus`, publica `MessageReadyToSend`. Debe usar outbox, deduplicar por `messageId` en transacción, respetar orden por `conversationId`.
+- Ver [handoff.md](handoff.md) para detalles de responsabilidades y contrato con integradores.

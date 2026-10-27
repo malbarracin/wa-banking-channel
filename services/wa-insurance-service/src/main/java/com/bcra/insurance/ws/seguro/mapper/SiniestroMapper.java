@@ -4,12 +4,18 @@ import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
+import com.bcra.insurance.ws.seguro.dto.DenunciaResponse;
 import com.bcra.insurance.ws.seguro.dto.SiniestroResponse;
 import com.bcra.insurance.ws.seguro.entity.Siniestro;
 
-/** Proyecta el caso persistido hacia la respuesta de seguimiento. */
+/** Proyecta el caso persistido hacia respuestas de denuncia y seguimiento. */
 @Mapper(componentModel = "spring")
 public interface SiniestroMapper {
+
+    @Mapping(target = "numeroCaso", source = "siniestro.numeroCaso")
+    @Mapping(target = "proximosPasos", source = "proximosPasos")
+    @Mapping(target = "plazos", source = "plazos")
+    DenunciaResponse toDenunciaResponse(Siniestro siniestro, String proximosPasos, String plazos);
 
     @Mapping(target = "pendiente", source = ".", qualifiedByName = "pendiente")
     SiniestroResponse toResponse(Siniestro siniestro);

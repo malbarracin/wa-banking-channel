@@ -25,3 +25,7 @@ clients:
     base-url: http://localhost:8082
     connect-timeout: 2s
     read-timeout: 3s
+
+insurance:
+  siniestros:
+    ventana-duplicado-dias: 30

@@ -11,6 +11,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.mapstruct.factory.Mappers;
 
+import com.bcra.insurance.ws.seguro.dto.DenunciaResponse;
 import com.bcra.insurance.ws.seguro.dto.SiniestroResponse;
 import com.bcra.insurance.ws.seguro.entity.EstadoSiniestro;
 import com.bcra.insurance.ws.seguro.entity.Siniestro;
@@ -21,6 +22,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 class SiniestroMapperTest {
 
     private final SiniestroMapper mapper = Mappers.getMapper(SiniestroMapper.class);
+
+    @Test
+    @DisplayName("Proyecta número de caso y próximos pasos de la denuncia")
+    void proyectaDenunciaResponse() {
+        Siniestro siniestro = siniestro(EstadoSiniestro.RECIBIDO, null);
+
+        DenunciaResponse respuesta = mapper.toDenunciaResponse(siniestro,
+                "Enviá la documentación requerida por los canales oficiales del banco.",
+                "Los plazos dependen del proceso formal correspondiente a tu ramo.");
+
+        assertThat(respuesta.numeroCaso()).isEqualTo("SIN-1");
+        assertThat(respuesta.proximosPasos()).contains("canales oficiales");
+        assertThat(respuesta.plazos()).contains("proceso formal");
+    }
 
     @Test
     @DisplayName("Conserva el texto de pendiente informado por el sistema de siniestros")

@@ -45,6 +45,7 @@ class RestCredencialesServiceClientTest {
 
     @BeforeEach
     void configurar(WireMockRuntimeInfo servidor) {
+        // Timeouts como prod: 200ms en @BeforeEach provoca SocketTimeout flaky bajo carga de WireMock.
         cliente = crearCliente(servidor.getHttpBaseUrl(), Duration.ofSeconds(2), Duration.ofSeconds(3));
     }
 

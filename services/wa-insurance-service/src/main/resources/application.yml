@@ -35,3 +35,7 @@ clients:
     base-url: ${CREDENTIALS_SERVICE_BASE_URL:http://localhost:8082}
     connect-timeout: ${CREDENTIALS_SERVICE_CONNECT_TIMEOUT:2s}
     read-timeout: ${CREDENTIALS_SERVICE_READ_TIMEOUT:3s}
+
+insurance:
+  siniestros:
+    ventana-duplicado-dias: ${SINIESTROS_VENTANA_DUPLICADO_DIAS:30}

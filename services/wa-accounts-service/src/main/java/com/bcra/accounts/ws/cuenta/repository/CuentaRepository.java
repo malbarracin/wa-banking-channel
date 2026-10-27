@@ -16,6 +16,14 @@ import com.bcra.accounts.ws.cuenta.entity.Cuenta;
 /** Acceso a persistencia de Cuenta. */
 public interface CuentaRepository extends JpaRepository<Cuenta, UUID> {
 
+    /** Incluye destino de tercero local y ordena todos los bloqueos para evitar ciclos entre titulares. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select c from Cuenta c where (c.titularDocumentoTipo = :tipo "
+            + "and c.titularDocumentoNumero = :numero) or c.numeroCuenta in "
+            + "(select t.tercero.numeroCuentaDestino from Transferencia t where t.id = :id) order by c.id")
+    List<Cuenta> bloquearParaConfirmar(@Param("tipo") String tipo, @Param("numero") String numero,
+            @Param("id") UUID id);
+
     /** Serializa preparaciones del titular incluso si parten de cuentas distintas. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from Cuenta c where c.titularDocumentoTipo = :tipo "

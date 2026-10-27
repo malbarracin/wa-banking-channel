@@ -21,11 +21,24 @@ public class TransferenciaAuditoriaService {
 
     private final AuditoriaCuentaRepository repository;
 
+    /** La confirmación exitosa se confirma o revierte junto con el estado y los fondos. */
+    @Transactional
+    public void registrarConfirmacion(ValidarCredencialResponse titular, UUID id, AuditoriaAccion accion) {
+        registrar(titular, id, AuditoriaResultado.EXITOSO, accion);
+    }
+
     /** Registra el intento aun cuando la transacción de preparación se revierta. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void registrar(ValidarCredencialResponse titular, UUID transferenciaId, AuditoriaResultado resultado) {
+        registrar(titular, transferenciaId, resultado, AuditoriaAccion.PREPARAR_TRANSFERENCIA);
+    }
+
+    /** Registra confirmaciones y rechazos independientemente de la transacción financiera. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrar(ValidarCredencialResponse titular, UUID transferenciaId, AuditoriaResultado resultado,
+            AuditoriaAccion accion) {
         AuditoriaCuenta auditoria = new AuditoriaCuenta();
-        auditoria.setAccion(AuditoriaAccion.PREPARAR_TRANSFERENCIA);
+        auditoria.setAccion(accion);
         auditoria.setResultado(resultado);
         auditoria.setDocumentoTipo(titular.documentoTipo());
         auditoria.setDocumentoNumero(titular.documentoNumero());

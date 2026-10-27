@@ -107,3 +107,26 @@ bloquear el resto del hito, con el mismo criterio que las políticas pendientes 
 | Validación de credencial para los servicios de productos | acceso-sesion | H2 — sección 3 (en alcance); sección 4 (actor Servicios de productos); sección 7, criterio 2 |
 | La credencial nunca se expone en texto al cliente | acceso-sesion | H2 — sección 5, regla 5; sección 7, criterio 4 |
 | Registro de emisiones y revocaciones | acceso-sesion | H2 — sección 3 (en alcance, "Registro de emisiones y revocaciones") |
+
+## H4 — Servicio de Cuentas
+
+| Campo | Valor |
+|-------|-------|
+| Proyecto | wa-banking-channel (services/wa-accounts-service) |
+| Fuente | Notion |
+| Link | https://app.notion.com/p/H4-Servicio-de-Cuentas-36875bb08ca7815e8642e555eebdfc6a |
+| Página | 🏦 H4 — Servicio de Cuentas (Hitos — Canal WhatsApp Banco) |
+| Actualizado | 2026-10-27 |
+
+La página de Notion es autocontenida para este hito: no tiene subpáginas ni bases de datos hijas en alcance más allá de las propiedades del hito (Dominio: Cuentas). El hito depende funcionalmente de H1 (cliente existente), H2 (credencial válida obligatoria para toda operación) y H3 (vínculo activo y verificación de identidad). Es independiente de H5 y H6 salvo políticas transversales de límites globales. Varios valores de política del banco (límites concretos, horario bancario, umbral de doble confirmación, ventana de movimientos, productos multi-moneda) quedan sin cerrar en la fuente: se registran como `## Preguntas abiertas` en `cuentas/spec` sin bloquear el hito, siguiendo el criterio de las specs anteriores.
+
+### Requisito → fuente
+
+| Requisito | Área | Id en la fuente |
+|-----------|------|-----------------|
+| Consulta de cuentas del titular | cuentas | H4 — sección 3 (en alcance, punto 1); sección 5, regla 1; sección 6, flujo F1; sección 7, criterio 2; sección 11 |
+| Consulta de saldo de una cuenta | cuentas | H4 — sección 3 (en alcance, punto 2); sección 6, flujo F1; sección 11 |
+| Consulta de movimientos de una cuenta | cuentas | H4 — sección 3 (en alcance, punto 3); sección 5, regla 6; sección 6, flujo F2; sección 8 (mensaje de saldo) |
+| Transferencia entre cuentas propias | cuentas | H4 — sección 3 (en alcance, punto 4); sección 5, reglas 3, 4, 5 y 7; sección 6, flujo F3; sección 7, criterios 3, 5 y 6; sección 8 (mensajes de confirmación, éxito y límite) |
+| Transferencia a tercero agendado | cuentas | H4 — sección 3 (en alcance, punto 5 y fuera de alcance); sección 5, regla 2; sección 6, flujo F4; sección 7, criterio 4; sección 8 |
+| Seguridad de acceso — credencial de sesión y vínculo | cuentas | H4 — sección 4 (actor Cliente sin JWT); sección 5, regla 1; sección 9 (dependencia H2); sección 11 (seguridad de acceso) |

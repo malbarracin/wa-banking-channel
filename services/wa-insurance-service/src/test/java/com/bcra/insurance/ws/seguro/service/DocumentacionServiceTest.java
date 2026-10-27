@@ -56,4 +56,22 @@ class DocumentacionServiceTest {
         assertThatThrownBy(() -> service.listarPendiente("valida", "SIN-X"))
                 .isInstanceOf(SiniestroNoEncontradoException.class);
     }
+
+    @Test
+    @DisplayName("Devuelve lista vacía si el sistema no informó documentos pendientes")
+    void listaVaciaSinDocumentosInformados() {
+        Instant ahora = Instant.now();
+        Siniestro siniestro = Siniestro.builder().numeroCaso("SIN-2").polizaId(UUID.randomUUID())
+                .tipoSiniestro(TipoSiniestro.HOGAR).fechaSiniestro(LocalDate.now())
+                .descripcion("Daño").estado(EstadoSiniestro.EN_ANALISIS)
+                .documentosPendientes(null).fechaApertura(ahora)
+                .ventanaDuplicadoHasta(ahora.plusSeconds(3600)).build();
+        siniestro.setDocumentosPendientes(null);
+        when(siniestros.obtenerPropio("valida", "SIN-2")).thenReturn(siniestro);
+
+        DocumentacionPendienteResponse respuesta = service.listarPendiente("valida", "SIN-2");
+
+        assertThat(respuesta.documentos()).isEmpty();
+        assertThat(respuesta.orientacionEnvio()).contains("canales oficiales");
+    }
 }

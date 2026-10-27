@@ -116,6 +116,19 @@ class SiniestroServiceTest {
                 .isInstanceOf(SiniestroNoAutorizadoException.class);
     }
 
+    @Test
+    @DisplayName("Informa 404 si la póliza asociada al caso ya no existe")
+    void informaPolizaAsociadaInexistente() {
+        UUID polizaId = UUID.randomUUID();
+        Siniestro siniestro = siniestro(polizaId, EstadoSiniestro.RECIBIDO, null);
+        when(credenciales.validar("valida")).thenReturn(identidad("DNI", "12345678"));
+        when(siniestros.findByNumeroCaso("SIN-1")).thenReturn(Optional.of(siniestro));
+        when(polizas.findById(polizaId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.consultar("valida", "SIN-1"))
+                .isInstanceOf(SiniestroNoEncontradoException.class);
+    }
+
     private static ValidarCredencialResponse identidad(String tipo, String numero) {
         return new ValidarCredencialResponse(true, "+5491112345678", tipo, numero, Instant.now().plusSeconds(300));
     }

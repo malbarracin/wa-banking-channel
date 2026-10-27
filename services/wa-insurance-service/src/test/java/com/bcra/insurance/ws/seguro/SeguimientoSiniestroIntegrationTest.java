@@ -104,6 +104,19 @@ class SeguimientoSiniestroIntegrationTest {
     }
 
     @Test
+    @DisplayName("GET documentacion-pendiente con lista vacía aún orienta el envío formal")
+    void documentacionPendienteSinItems() throws Exception {
+        Poliza poliza = guardarPoliza("12345678");
+        guardarSiniestro("SIN-250", poliza.getId(), EstadoSiniestro.RESUELTO, null, List.of());
+
+        mvc.perform(get("/api/v1/siniestros/{numeroCaso}/documentacion-pendiente", "SIN-250")
+                .header("X-Credencial-Sesion", "valida"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.documentos.length()").value(0))
+                .andExpect(jsonPath("$.orientacionEnvio", containsString("canales oficiales")));
+    }
+
+    @Test
     @DisplayName("Ambos endpoints exigen credencial y mantienen el contrato de error")
     void rechazaSinCredencial() throws Exception {
         mvc.perform(get("/api/v1/siniestros/{numeroCaso}", "SIN-1"))

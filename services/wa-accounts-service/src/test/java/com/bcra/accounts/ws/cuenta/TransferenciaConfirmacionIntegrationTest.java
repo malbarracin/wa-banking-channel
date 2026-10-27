@@ -9,6 +9,9 @@ import java.util.concurrent.Executors;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +24,8 @@ import com.bcra.accounts.ws.cuenta.client.dto.ValidarCredencialResponse;
 import com.bcra.accounts.ws.cuenta.dto.ConfirmarTransferenciaRequest;
 import com.bcra.accounts.ws.cuenta.dto.TransferenciaRequest;
 import com.bcra.accounts.ws.cuenta.entity.Cuenta;
+import com.bcra.accounts.ws.cuenta.entity.AuditoriaAccion;
+import com.bcra.accounts.ws.cuenta.entity.AuditoriaResultado;
 import com.bcra.accounts.ws.cuenta.entity.EstadoTransferencia;
 import com.bcra.accounts.ws.cuenta.entity.LimiteCanal;
 import com.bcra.accounts.ws.cuenta.entity.Moneda;
@@ -165,6 +170,140 @@ class TransferenciaConfirmacionIntegrationTest {
                 .isEqualTo(EstadoTransferencia.EJECUTADA);
         assertThat(cuentas.findByNumeroCuenta("tercero").orElseThrow().getSaldoDisponible())
                 .isEqualByComparingTo("10100");
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"confirmar", "CONFIRMAR ", " CONFIRMAR", "SI"})
+    @DisplayName("Rechaza toda confirmación que no sea el literal exacto sin mover fondos")
+    void rechazaConfirmacionNoExacta(String confirmacion) throws Exception {
+        UUID id = preparar("100");
+        String cuerpo = new com.fasterxml.jackson.databind.ObjectMapper()
+                .writeValueAsString(new ConfirmarTransferenciaRequest(confirmacion));
+
+        mockMvc.perform(post("/api/v1/transferencias/{id}/confirmar", id)
+                .header("X-Credencial-Sesion", "sesion").contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        assertThat(transferencias.findById(id).orElseThrow().getEstado()).isEqualTo(EstadoTransferencia.PREPARADA);
+        verificarSinMovimientos("10000");
+    }
+
+    @Test
+    @DisplayName("La primera confirmación no renueva el vencimiento ni mueve fondos")
+    void expiraEntreConfirmaciones() throws Exception {
+        UUID id = preparar("600");
+        when(clock.instant()).thenReturn(AHORA.plusSeconds(299));
+        confirmar(id, "CONFIRMAR").andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("CONFIRMADA"))
+                .andExpect(jsonPath("$.comprobante").doesNotExist());
+        verificarSinMovimientos("10000");
+        assertThat(transferencias.findById(id).orElseThrow().getExpiraEn()).isEqualTo(AHORA.plusSeconds(300));
+
+        when(clock.instant()).thenReturn(AHORA.plusSeconds(300));
+        confirmar(id, "CONFIRMAR").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"));
+
+        verificarSinMovimientos("10000");
+    }
+
+    @Test
+    @DisplayName("Revalida el saldo disponible al confirmar y conserva ambos saldos ante rechazo")
+    void rechazaSaldoReducidoTrasPreparar() throws Exception {
+        UUID id = preparar("100");
+        Cuenta origen = cuentas.findByNumeroCuenta("origen").orElseThrow();
+        origen.setSaldoDisponible(new BigDecimal("99"));
+        cuentas.saveAndFlush(origen);
+
+        confirmar(id, "CONFIRMAR").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"));
+
+        verificarSinMovimientos("99");
+        assertThat(transferencias.findById(id).orElseThrow().getEstado()).isEqualTo(EstadoTransferencia.PREPARADA);
+        assertThat(auditorias.findAll()).filteredOn(a -> a.getAccion() == AuditoriaAccion.RECHAZAR_TRANSFERENCIA)
+                .singleElement().satisfies(a -> {
+                    assertThat(a.getResultado()).isEqualTo(AuditoriaResultado.RECHAZADO);
+                    assertThat(a.getTransferenciaId()).isEqualTo(id);
+                });
+    }
+
+    @Test
+    @DisplayName("Revalida límites reducidos después de preparar sin debitar")
+    void rechazaLimiteReducidoTrasPreparar() throws Exception {
+        UUID id = preparar("100");
+        LimiteCanal limite = limites.findAll().getFirst();
+        limite.setLimiteDiario(new BigDecimal("99"));
+        limites.saveAndFlush(limite);
+
+        confirmar(id, "CONFIRMAR").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"));
+
+        verificarSinMovimientos("10000");
+    }
+
+    @Test
+    @DisplayName("Rechaza un destino desactivado después de preparar sin debitar el origen")
+    void rechazaDestinoDesactivadoTrasPreparar() throws Exception {
+        UUID id = preparar("100");
+        Cuenta destino = cuentas.findByNumeroCuenta("destino").orElseThrow();
+        destino.setActiva(false);
+        cuentas.saveAndFlush(destino);
+
+        confirmar(id, "CONFIRMAR").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"));
+
+        verificarSinMovimientos("10000");
+    }
+
+    @Test
+    @DisplayName("Comprobante, movimientos y auditoría corresponden a la misma ejecución persistida")
+    void conservaTrazabilidadDeEjecucion() throws Exception {
+        UUID id = preparar("100");
+
+        confirmar(id, "CONFIRMAR").andExpect(status().isOk())
+                .andExpect(jsonPath("$.comprobante.fecha").value(AHORA.toString()))
+                .andExpect(jsonPath("$.comprobante.moneda").value("ARS"));
+
+        var transferencia = transferencias.findById(id).orElseThrow();
+        assertThat(transferencia.getEstado()).isEqualTo(EstadoTransferencia.EJECUTADA);
+        assertThat(transferencia.getFechaEjecucion()).isEqualTo(AHORA);
+        assertThat(transferencia.getReferencia()).isNotBlank();
+        assertThat(movimientos.findAll()).hasSize(2).allSatisfy(movimiento -> {
+            assertThat(movimiento.getReferencia()).isEqualTo(transferencia.getReferencia());
+            assertThat(movimiento.getMonto()).isEqualByComparingTo("100");
+            assertThat(movimiento.getMoneda()).isEqualTo(Moneda.ARS);
+            assertThat(movimiento.getFecha()).isEqualTo(AHORA);
+        });
+        assertThat(movimientos.findAll()).filteredOn(m -> m.getTipo() == TipoMovimiento.DEBITO)
+                .singleElement().satisfies(m -> {
+                    assertThat(m.getCuenta().getId()).isEqualTo(
+                            cuentas.findByNumeroCuenta("origen").orElseThrow().getId());
+                    assertThat(m.getSaldoResultante()).isEqualByComparingTo("9900");
+                });
+        assertThat(movimientos.findAll()).filteredOn(m -> m.getTipo() == TipoMovimiento.CREDITO)
+                .singleElement().satisfies(m -> {
+                    assertThat(m.getCuenta().getId()).isEqualTo(
+                            cuentas.findByNumeroCuenta("destino").orElseThrow().getId());
+                    assertThat(m.getSaldoResultante()).isEqualByComparingTo("10100");
+                });
+        assertThat(auditorias.findAll()).filteredOn(a -> a.getAccion() == AuditoriaAccion.EJECUTAR_TRANSFERENCIA)
+                .singleElement().satisfies(a -> {
+                    assertThat(a.getTransferenciaId()).isEqualTo(id);
+                    assertThat(a.getResultado()).isEqualTo(AuditoriaResultado.EXITOSO);
+                });
+    }
+
+    private void verificarSinMovimientos(String disponibleOrigen) {
+        Cuenta origen = cuentas.findByNumeroCuenta("origen").orElseThrow();
+        Cuenta destino = cuentas.findByNumeroCuenta("destino").orElseThrow();
+        assertThat(origen.getSaldoDisponible()).isEqualByComparingTo(disponibleOrigen);
+        assertThat(origen.getSaldoContable()).isEqualByComparingTo("10000");
+        assertThat(destino.getSaldoDisponible()).isEqualByComparingTo("10000");
+        assertThat(destino.getSaldoContable()).isEqualByComparingTo("10000");
+        assertThat(movimientos.count()).isZero();
     }
 
     private UUID preparar(String monto) {

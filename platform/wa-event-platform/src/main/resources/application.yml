@@ -39,6 +39,10 @@ spring:
 
 platform:
   kafka:
+    retry:
+      max-retries: ${KAFKA_CONSUMER_MAX_RETRIES:3}
+      initial-interval: ${KAFKA_CONSUMER_RETRY_INITIAL_INTERVAL:1000}
+      max-interval: ${KAFKA_CONSUMER_RETRY_MAX_INTERVAL:10000}
     topics:
       partitions: ${KAFKA_TOPIC_PARTITIONS:3}
       replicas: ${KAFKA_TOPIC_REPLICAS:1}

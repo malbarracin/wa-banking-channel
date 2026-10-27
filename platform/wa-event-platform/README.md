@@ -17,7 +17,19 @@ Si Kafka no está disponible el arranque falla; para pruebas sin broker usar KAF
 Retenciones: received/ready-to-send 7d, status 30d, DLQ 90d; configurables en .env.example.
 El catálogo está en shared/contracts/events/topics.md. La creación implícita del broker está desactivada.
 Las pruebas levantan Kafka KRaft embebido sin Docker y verifican topics, retención y orden por conversationId.
-La publicación validada, listeners de negocio y retry/DLQ se implementan en tareas posteriores.
+KafkaEventProducer valida antes de enviar y devuelve un futuro que el llamador debe observar antes de confirmar.
+KafkaEventConsumer es una base para listeners de cada componente: valida esquema, clave y correlationId,
+ejecuta el efecto con MDC y confirma únicamente tras éxito; restaura el MDC incluso ante errores.
+Cada componente debe deduplicar messageId en la misma transacción de su efecto (H0/H0.2).
+No hay listeners de negocio activos en H0.1.
+DefaultErrorHandler se aplica a la factory autoconfigurada: tres reintentos con backoff exponencial
+de 1000 ms hasta 10000 ms, configurables por las variables KAFKA_CONSUMER_* de .env.example.
+InvalidEventException no se reintenta. DeadLetterPublisher espera confirmación de Kafka y propaga fallos,
+para evitar recuperar el registro si no se pudo publicar en DLQ.
+La DLQ cumple su esquema DeadLetter, conserva originalValueBase64 para reproceso y coordenadas originales;
+solo publica headers correlationId, eventType, eventVersion y errorCode, sin mensajes de excepción ni stack traces.
+Si falta correlationId válido, deriva uno estable de topic/partición/offset; messageId identifica esas coordenadas.
+La DLQ requiere los mismos controles de acceso y protección de datos que los topics originales: Base64 no cifra.
 La configuración base usa String, acks=all, idempotencia, snappy, commit manual y read_committed.
 Actuator integra métricas de clientes Kafka cuando hay productores/consumidores activos;
 las observaciones de template y listeners están habilitadas.

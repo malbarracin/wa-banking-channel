@@ -161,6 +161,37 @@ class DenunciaSiniestroIntegrationTest {
     }
 
     @Test
+    @DisplayName("Un caso en estado recibido dentro de la ventana bloquea un segundo caso")
+    void rechazaDuplicadoConRecibido() throws Exception {
+        Poliza poliza = guardar("POL-3050", "12345678");
+        Instant ahora = Instant.now();
+        siniestros.save(Siniestro.builder()
+                .numeroCaso("SIN-RECIBIDO")
+                .polizaId(poliza.getId())
+                .tipoSiniestro(TipoSiniestro.OTROS)
+                .fechaSiniestro(LocalDate.now().minusDays(1))
+                .descripcion("Caso recién recibido")
+                .estado(EstadoSiniestro.RECIBIDO)
+                .fechaApertura(ahora)
+                .ventanaDuplicadoHasta(ahora.plusSeconds(86400 * 30L))
+                .build());
+
+        String cuerpo = """
+                {"polizaId":"%s","tipoSiniestro":"OTROS","fechaSiniestro":"2026-10-23","descripcion":"Segunda denuncia"}
+                """.formatted(poliza.getId());
+
+        mvc.perform(post("/api/v1/siniestros")
+                        .header("X-Credencial-Sesion", "valida")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpo))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists());
+        assertThat(siniestros.findAll()).hasSize(1);
+    }
+
+    @Test
     @DisplayName("Documentación pendiente dentro de la ventana bloquea un segundo caso")
     void rechazaDuplicadoConDocumentacionPendiente() throws Exception {
         Poliza poliza = guardar("POL-3100", "12345678");

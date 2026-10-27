@@ -28,6 +28,13 @@ public class AuditoriaCuentaService {
         auditoriaCuentaRepository.save(auditoria);
     }
 
+    /** Registra la consulta de agenda sin persistir datos de los destinatarios. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarListadoTerceros(ValidarCredencialResponse titular) {
+        AuditoriaCuenta auditoria = crear(titular, AuditoriaAccion.LISTAR_TERCEROS, AuditoriaResultado.EXITOSO);
+        auditoriaCuentaRepository.save(auditoria);
+    }
+
     /** Registra el saldo consultado sin persistir los importes en la auditoría. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void registrarSaldo(ValidarCredencialResponse titular, UUID cuentaId) {

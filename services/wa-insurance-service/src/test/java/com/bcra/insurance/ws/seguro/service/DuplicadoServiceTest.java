@@ -1,6 +1,8 @@
 package com.bcra.insurance.ws.seguro.service;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,9 +51,13 @@ class DuplicadoServiceTest {
 
         duplicados.asegurarSinDuplicado(polizaId, TipoSiniestro.HOGAR);
 
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Collection<EstadoSiniestro>> estados = ArgumentCaptor.forClass(Collection.class);
         ArgumentCaptor<Instant> limite = ArgumentCaptor.forClass(Instant.class);
         verify(siniestros).findByPolizaIdAndTipoSiniestroAndEstadoInAndFechaAperturaAfter(
-                eq(polizaId), eq(TipoSiniestro.HOGAR), any(), limite.capture());
+                eq(polizaId), eq(TipoSiniestro.HOGAR), estados.capture(), limite.capture());
+        assertThat(estados.getValue()).containsExactlyInAnyOrderElementsOf(EnumSet.of(
+                EstadoSiniestro.RECIBIDO, EstadoSiniestro.EN_ANALISIS, EstadoSiniestro.DOCUMENTACION_PENDIENTE));
         assertThat(limite.getValue()).isBefore(Instant.now());
     }
 

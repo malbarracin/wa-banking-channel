@@ -41,13 +41,16 @@ class RestCredencialesServiceClientTest {
              "documentoNumero":"12345678","fechaExpiracion":"2099-01-01T00:00:00Z"}
             """;
 
+    private WireMockRuntimeInfo servidor;
     private CredencialesServiceClient cliente;
 
     @BeforeEach
     void configurar(WireMockRuntimeInfo servidor) {
+        this.servidor = servidor;
         var configuracion = new RestClientConfig();
+        // Timeouts como prod: 200ms en @BeforeEach provoca SocketTimeout flaky bajo carga de WireMock.
         cliente = configuracion.credencialesServiceClient(configuracion.credencialesRestClient(
-                RestClient.builder(), servidor.getHttpBaseUrl(), Duration.ofMillis(200), Duration.ofMillis(200)));
+                RestClient.builder(), servidor.getHttpBaseUrl(), Duration.ofSeconds(2), Duration.ofSeconds(3)));
     }
 
     @Test
@@ -179,10 +182,14 @@ class RestCredencialesServiceClientTest {
     @Test
     @DisplayName("El timeout de lectura configurado cancela la validación y conserva la causa")
     void limitaTiempoDeLectura() {
+        var configuracion = new RestClientConfig();
+        CredencialesServiceClient clienteCorto = configuracion.credencialesServiceClient(
+                configuracion.credencialesRestClient(
+                        RestClient.builder(), servidor.getHttpBaseUrl(), Duration.ofMillis(200), Duration.ofMillis(200)));
         stubFor(post(PATH).willReturn(aResponse().withFixedDelay(1000)
                 .withHeader("Content-Type", "application/json").withBody(RESPUESTA)));
 
-        assertThatThrownBy(() -> cliente.validar("jwt-interno"))
+        assertThatThrownBy(() -> clienteCorto.validar("jwt-interno"))
                 .isInstanceOf(CredencialesServiceUnavailableException.class)
                 .hasRootCauseInstanceOf(java.net.SocketTimeoutException.class);
     }

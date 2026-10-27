@@ -161,6 +161,84 @@ class DenunciaSiniestroIntegrationTest {
     }
 
     @Test
+    @DisplayName("Documentación pendiente dentro de la ventana bloquea un segundo caso")
+    void rechazaDuplicadoConDocumentacionPendiente() throws Exception {
+        Poliza poliza = guardar("POL-3100", "12345678");
+        Instant ahora = Instant.now();
+        siniestros.save(Siniestro.builder()
+                .numeroCaso("SIN-DOC-PEND")
+                .polizaId(poliza.getId())
+                .tipoSiniestro(TipoSiniestro.HOGAR)
+                .fechaSiniestro(LocalDate.now().minusDays(2))
+                .descripcion("Caso con docs pendientes")
+                .estado(EstadoSiniestro.DOCUMENTACION_PENDIENTE)
+                .fechaApertura(ahora)
+                .ventanaDuplicadoHasta(ahora.plusSeconds(86400 * 30L))
+                .build());
+
+        String cuerpo = """
+                {"polizaId":"%s","tipoSiniestro":"HOGAR","fechaSiniestro":"2026-10-23","descripcion":"Segunda denuncia"}
+                """.formatted(poliza.getId());
+
+        mvc.perform(post("/api/v1/siniestros")
+                        .header("X-Credencial-Sesion", "valida")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpo))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.timestamp").exists());
+        assertThat(siniestros.findAll()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Un caso abierto fuera de la ventana de duplicados permite una nueva denuncia")
+    void permiteFueraDeVentana() throws Exception {
+        Poliza poliza = guardar("POL-3200", "12345678");
+        Instant aperturaAntigua = Instant.now().minusSeconds(86400 * 31L);
+        siniestros.save(Siniestro.builder()
+                .numeroCaso("SIN-ANTIGUO")
+                .polizaId(poliza.getId())
+                .tipoSiniestro(TipoSiniestro.AUTO)
+                .fechaSiniestro(LocalDate.now().minusDays(40))
+                .descripcion("Caso antiguo aún abierto")
+                .estado(EstadoSiniestro.RECIBIDO)
+                .fechaApertura(aperturaAntigua)
+                .ventanaDuplicadoHasta(aperturaAntigua.plusSeconds(86400 * 30L))
+                .build());
+
+        String cuerpo = """
+                {"polizaId":"%s","tipoSiniestro":"AUTO","fechaSiniestro":"2026-10-24","descripcion":"Nuevo choque"}
+                """.formatted(poliza.getId());
+
+        mvc.perform(post("/api/v1/siniestros")
+                        .header("X-Credencial-Sesion", "valida")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpo))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.numeroCaso", startsWith("SIN-")));
+        assertThat(siniestros.findAll()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("Descripción en blanco responde VALIDATION_ERROR sin abrir caso")
+    void rechazaDescripcionEnBlanco() throws Exception {
+        Poliza poliza = guardar("POL-3300", "12345678");
+        String cuerpo = """
+                {"polizaId":"%s","tipoSiniestro":"HOGAR","fechaSiniestro":"2026-10-20","descripcion":"   "}
+                """.formatted(poliza.getId());
+
+        mvc.perform(post("/api/v1/siniestros")
+                        .header("X-Credencial-Sesion", "valida")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpo))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists());
+        assertThat(siniestros.findAll()).isEmpty();
+    }
+
+    @Test
     @DisplayName("Sin credencial responde 401; póliza ajena 403; inexistente 404")
     void respetaAutorizacion() throws Exception {
         Poliza ajena = guardar("POL-4000", "otro");

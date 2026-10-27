@@ -17,24 +17,30 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 class KafkaMessagingConfigurationTest {
+    private final io.micrometer.core.instrument.simple.SimpleMeterRegistry registry =
+            new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+    private final com.bcra.events.observability.KafkaDeliveryMetrics metrics =
+            new com.bcra.events.observability.KafkaDeliveryMetrics(registry);
     private final KafkaMessagingConfiguration configuration = new KafkaMessagingConfiguration();
 
     @Test
     @DisplayName("Errores de validación van a DLQ en el primer intento")
     void invalidEventIsNotRetried() {
         var publisher = mock(DeadLetterPublisher.class);
-        var handler = configuration.kafkaErrorHandler(publisher, 3, 1, 4);
+        var handler = configuration.kafkaErrorHandler(publisher, metrics, 3, 1, 4);
         var record = new ConsumerRecord<>("wa.message.received.v1", 0, 1, "conversation", "{}");
         var exception = new InvalidEventException();
         assertThat(handler.handleOne(exception, record, null, mock(MessageListenerContainer.class))).isTrue();
         verify(publisher).accept(eq(record), any(), eq(exception));
+        assertThat(registry.get("platform.kafka.delivery.errors").counter().count()).isEqualTo(1);
+        assertThat(registry.get("platform.kafka.dlq.published").counter().count()).isEqualTo(1);
     }
 
     @Test
     @DisplayName("Reintentos transitorios son acotados y terminan en DLQ")
     void transientFailureExhaustsConfiguredRetries() {
         var publisher = mock(DeadLetterPublisher.class);
-        var handler = configuration.kafkaErrorHandler(publisher, 2, 1, 2);
+        var handler = configuration.kafkaErrorHandler(publisher, metrics, 2, 1, 2);
         var record = new ConsumerRecord<>("wa.message.received.v1", 0, 1, "conversation", "{}");
         var exception = new IllegalStateException("synthetic failure");
         var container = mock(MessageListenerContainer.class);
@@ -49,11 +55,11 @@ class KafkaMessagingConfigurationTest {
     @DisplayName("Rechaza configuración de reintentos inválida")
     void rejectsInvalidRetrySettings() {
         var publisher = mock(DeadLetterPublisher.class);
-        assertThatThrownBy(() -> configuration.kafkaErrorHandler(publisher, -1, 1, 2))
+        assertThatThrownBy(() -> configuration.kafkaErrorHandler(publisher, metrics, -1, 1, 2))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> configuration.kafkaErrorHandler(publisher, 1, 0, 2))
+        assertThatThrownBy(() -> configuration.kafkaErrorHandler(publisher, metrics, 1, 0, 2))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> configuration.kafkaErrorHandler(publisher, 1, 2, 1))
+        assertThatThrownBy(() -> configuration.kafkaErrorHandler(publisher, metrics, 1, 2, 1))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

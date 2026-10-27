@@ -34,12 +34,15 @@ class EventsApplicationTest {
 
     @Test
     void exposesHealthAndPrometheus() {
+        assertThat(client.getForEntity("/actuator/info", String.class).getStatusCode()).isEqualTo(HttpStatus.OK);
         var health = client.getForEntity("/actuator/health", String.class);
         assertThat(health.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(health.getBody()).contains("\"status\":\"UP\"");
         var metrics = client.getForEntity("/actuator/prometheus", String.class);
         assertThat(metrics.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(metrics.getBody()).contains("jvm_");
+        assertThat(metrics.getBody()).contains("platform_kafka_delivery_errors_total", "platform_kafka_dlq_published_total");
+        assertThat(health.getHeaders().getFirst("correlationId")).isNotBlank();
     }
 
 }

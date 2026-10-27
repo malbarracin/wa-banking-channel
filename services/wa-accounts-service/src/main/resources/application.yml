@@ -30,6 +30,11 @@ springdoc:
   api-docs.path: /v3/api-docs
   swagger-ui.path: /swagger-ui.html
 
+limits:
+  movimientos:
+    ventana-dias: ${MOVIMIENTOS_VENTANA_DIAS:90}
+    tope-por-mensaje: ${MOVIMIENTOS_TOPE_POR_MENSAJE:10}
+
 clients:
   wa-credentials-service:
     base-url: ${CREDENTIALS_SERVICE_BASE_URL:http://localhost:8082}

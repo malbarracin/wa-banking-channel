@@ -6,12 +6,13 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
 import com.bcra.accounts.ws.cuenta.entity.Movimiento;
 import com.bcra.accounts.ws.cuenta.entity.TipoMovimiento;
 
 /** Acceso a persistencia de Movimiento. */
-public interface MovimientoRepository extends JpaRepository<Movimiento, UUID> {
+public interface MovimientoRepository extends JpaRepository<Movimiento, UUID>, JpaSpecificationExecutor<Movimiento> {
 
     Page<Movimiento> findByCuentaIdOrderByFechaDesc(UUID cuentaId, Pageable pageable);
 

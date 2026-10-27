@@ -60,8 +60,10 @@ java -jar target/wa-event-platform-0.1.0-SNAPSHOT.jar
 ```
 
 En Linux usar `./mvnw -q -B clean verify`. El JAR corre en el host; el listener anunciado
-es localhost:9092. Compose usa `apache/kafka:3.9.1` KRaft de un nodo, sin ZooKeeper,
-puerto publicado solo en loopback, creación implícita desactivada y volumen persistente.
+al host es localhost:9092 (interno Docker: kafka:29092). Compose usa `apache/kafka:3.9.1`
+KRaft de un nodo, sin ZooKeeper, `kafka-init` según topics.md, puerto en loopback,
+creación implícita desactivada y volumen persistente. App en contenedor:
+`docker compose --profile app up -d --wait` (Dockerfile multi-stage, contexto raíz del repo).
 Detener con `docker compose stop`; `docker compose down` conserva el volumen.
 
 Exportar variables de [.env.example](.env.example) al entorno del proceso; Spring no carga

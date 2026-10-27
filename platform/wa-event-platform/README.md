@@ -9,19 +9,47 @@ límites de verificación. Decisiones aceptadas: [Kafka backbone](../../docs/adr
 [at-least-once e idempotencia](../../docs/adr/ADR-002-at-least-once-idempotency.md) y
 [partición por conversación](../../docs/adr/ADR-003-partition-by-conversation.md).
 
-## Ejecución y verificación
+## Arranque local
 
-Desde este directorio: `./mvnw -q -B clean verify` (Windows: `.\mvnw.cmd -q -B clean verify`).
-Ejecutar el JAR con `java -jar target/wa-event-platform-0.1.0-SNAPSHOT.jar`.
-Desde la raíz: `python scripts/verify_integracion.py`.
-Las variables de .env.example se exportan al entorno del proceso; Spring no carga .env automáticamente.
+Requisitos: JDK 21, Docker Compose, Python (verificador). Postgres no aplica a H0.1.
 
-Para desarrollo ejecutar `docker compose up -d --wait` desde este directorio y luego iniciar el JAR
-en el host. El broker KRaft de un nodo escucha solo en localhost:9092 y conserva datos en un volumen.
-KafkaAdmin crea los cuatro topics declarados (3 particiones, réplica 1) y actualiza su retención.
-Si Kafka no está disponible el arranque falla; para pruebas sin broker usar KAFKA_ADMIN_AUTO_CREATE=false.
-Retenciones: received/ready-to-send 7d, status 30d, DLQ 90d; configurables en .env.example.
-El catálogo está en shared/contracts/events/topics.md. La creación implícita del broker está desactivada.
+1. Broker KRaft + topics del contrato (`shared/contracts/events/topics.md`):
+
+```powershell
+cd platform/wa-event-platform
+docker compose up -d --wait
+```
+
+`kafka-init` crea los cuatro topics (3 particiones, réplica 1, retenciones 7d/7d/30d/90d) y termina.
+Listeners: `localhost:9092` (host) y `kafka:29092` (red Docker). Volumen `kafka-data`.
+Detener: `docker compose stop`; `docker compose down` conserva el volumen.
+
+2. App en el host (desarrollo habitual):
+
+```powershell
+.\mvnw.cmd -q -B clean verify
+# exportar variables de .env.example; bootstrap = localhost:9092
+java -jar target/wa-event-platform-0.1.0-SNAPSHOT.jar
+```
+
+Linux/macOS: `./mvnw -q -B clean verify`. Spring no carga `.env` solo: exportar o copiar a `.env` y cargar en el shell.
+
+3. App en contenedor (opcional):
+
+```powershell
+docker compose --profile app up -d --wait
+# o desde la raíz del repo:
+docker build -f platform/wa-event-platform/Dockerfile -t wa-event-platform:local .
+```
+
+Health: `http://localhost:8092/actuator/health`. Sin secretos en imagen ni compose; solo `.env` / `.env.example`.
+
+4. Verificación del equipo (raíz del repo): `python scripts/verify_integracion.py`.
+CI corre `./mvnw -B clean verify` y build de imagen para este componente.
+
+KafkaAdmin también declara/actualiza retención al arrancar la app.
+Si Kafka no está disponible el arranque falla; para pruebas sin broker usar `KAFKA_ADMIN_AUTO_CREATE=false`.
+El catálogo está en `shared/contracts/events/topics.md`. Creación implícita del broker desactivada.
 Las pruebas levantan Kafka KRaft embebido sin Docker y verifican topics, retención y orden por conversationId.
 KafkaEventProducer valida antes de enviar y devuelve un futuro que el llamador debe observar antes de confirmar.
 KafkaEventConsumer es una base para listeners de cada componente: valida esquema, clave y correlationId,

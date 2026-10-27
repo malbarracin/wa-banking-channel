@@ -124,6 +124,22 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("Las violaciones de constraints llegan al cliente como 400 con detalles sin valores rechazados")
+    void respondeConstraintsPorHttp() throws Exception {
+        mockMvc.perform(get("/probe/constraint"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("La solicitud tiene datos inválidos"))
+                .andExpect(jsonPath("$.details", hasSize(1)))
+                .andExpect(jsonPath("$.details[0].field").value("name"))
+                .andExpect(jsonPath("$.details[0].message").isNotEmpty())
+                .andExpect(jsonPath("$.details[0].rejectedValue").doesNotExist())
+                .andExpect(jsonPath("$.timestamp").isString())
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andExpect(jsonPath("$.exception").doesNotExist());
+    }
+
+    @Test
     @DisplayName("La respuesta expone una lista de detalles inmutable")
     void protegeLaListaDeDetalles() {
         var response = new ErrorResponse(ErrorCode.BAD_REQUEST, "Inválido", List.of(), Instant.now());
@@ -180,6 +196,14 @@ class GlobalExceptionHandlerTest {
 
         @PostMapping("/probe/body")
         public void body(@Valid @RequestBody ProbeRequest request) {
+        }
+
+        @GetMapping("/probe/constraint")
+        public void constraint() {
+            try (var factory = Validation.buildDefaultValidatorFactory()) {
+                var violations = factory.getValidator().validate(new ProbeRequest(""));
+                throw new jakarta.validation.ConstraintViolationException(violations);
+            }
         }
     }
 }

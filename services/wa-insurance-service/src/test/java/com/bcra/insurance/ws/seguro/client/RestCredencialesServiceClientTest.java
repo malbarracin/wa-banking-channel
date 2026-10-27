@@ -8,6 +8,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.autoconfigure.web.client.RestClientAutoConfiguration;
+import org.springframework.boot.convert.ApplicationConversionService;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.web.client.RestClient;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -66,6 +70,31 @@ class RestCredencialesServiceClientTest {
     }
 
     @Test
+    @DisplayName("Spring crea el cliente con la URL y los tiempos configurados por propiedades")
+    void configuraClienteDesdePropiedades(WireMockRuntimeInfo servidor) {
+        stubFor(post(PATH).willReturn(aResponse().withHeader("Content-Type", "application/json")
+                .withBody(RESPUESTA)));
+        var contexto = new ApplicationContextRunner()
+                .withInitializer(aplicacion -> aplicacion.getBeanFactory()
+                        .setConversionService(ApplicationConversionService.getSharedInstance()))
+                .withConfiguration(AutoConfigurations.of(RestClientAutoConfiguration.class))
+                .withUserConfiguration(RestClientConfig.class)
+                .withPropertyValues(
+                        "clients.wa-credentials-service.base-url=" + servidor.getHttpBaseUrl(),
+                        "clients.wa-credentials-service.connect-timeout=2s",
+                        "clients.wa-credentials-service.read-timeout=3s");
+
+        contexto.run(aplicacion -> {
+            assertThat(aplicacion).hasNotFailed().hasSingleBean(CredencialesServiceClient.class);
+            var respuesta = aplicacion.getBean(CredencialesServiceClient.class).validar("jwt-interno");
+
+            assertThat(respuesta.vigente()).isTrue();
+            assertThat(respuesta.documentoNumero()).isEqualTo("12345678");
+        });
+        verify(1, postRequestedFor(urlEqualTo(PATH)));
+    }
+
+    @Test
     @DisplayName("Consulta H2 en cada llamada y observa una revocación sin caché")
     void observaRevocacion() {
         stubFor(post(PATH).willReturn(aResponse().withHeader("Content-Type", "application/json")
@@ -120,6 +149,19 @@ class RestCredencialesServiceClientTest {
 
         assertThatThrownBy(() -> cliente.validar("jwt-interno"))
                 .isInstanceOf(CredencialesServiceUnavailableException.class);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"numeroWhatsapp", "documentoTipo", "documentoNumero", "fechaExpiracion"})
+    @DisplayName("Una identidad vigente con un dato obligatorio nulo impide autorizar")
+    void rechazaIdentidadConDatoNulo(String campo) {
+        String respuesta = RESPUESTA.replaceAll("\"" + campo + "\":\"[^\"]*\"", "\"" + campo + "\":null");
+        stubFor(post(PATH).willReturn(aResponse().withHeader("Content-Type", "application/json")
+                .withBody(respuesta)));
+
+        assertThatThrownBy(() -> cliente.validar("jwt-interno"))
+                .isInstanceOf(CredencialesServiceUnavailableException.class);
+        verify(1, postRequestedFor(urlEqualTo(PATH)));
     }
 
     @ParameterizedTest

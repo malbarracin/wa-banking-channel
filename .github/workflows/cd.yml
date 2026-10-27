@@ -14,6 +14,7 @@ on:
           - wa-users-service
           - wa-channel-service
           - wa-credentials-service
+          - wa-accounts-service
       environment:
         description: "Entorno de destino (dev|prod)"
         required: true

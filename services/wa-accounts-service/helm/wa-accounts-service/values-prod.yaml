@@ -1,0 +1,19 @@
+replicaCount: 2
+
+image:
+  pullPolicy: Always
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi
+
+spring:
+  profiles:
+    active: prod
+
+ingress:
+  enabled: false

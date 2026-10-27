@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [wa-users-service, wa-channel-service, wa-credentials-service]
+        service: [wa-users-service, wa-channel-service, wa-credentials-service, wa-accounts-service]
     defaults:
       run:
         working-directory: services/${{ matrix.service }}
@@ -37,7 +37,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [wa-users-service, wa-channel-service, wa-credentials-service]
+        service: [wa-users-service, wa-channel-service, wa-credentials-service, wa-accounts-service]
     defaults:
       run:
         working-directory: services/${{ matrix.service }}
@@ -62,6 +62,9 @@ jobs:
           - service: wa-credentials-service
             chart: services/wa-credentials-service/helm/wa-credentials-service
             extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder --set-string env.CREDENTIAL_JWT_SECRET=lint-only-jwt-secret-at-least-32b"
+          - service: wa-accounts-service
+            chart: services/wa-accounts-service/helm/wa-accounts-service
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"
     steps:
       - name: Checkout
         uses: actions/checkout@v4

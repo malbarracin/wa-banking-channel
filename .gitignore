@@ -1,4 +1,6 @@
 .maven-cache/
+.env
+**/.env
 
 # >>> opensoma: agentes y configuración de soma (no van al repositorio) >>>
 .opensoma/

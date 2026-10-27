@@ -7,6 +7,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,6 +29,8 @@ import com.bcra.insurance.ws.seguro.repository.PolizaRepository;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -141,6 +145,93 @@ class ConsultaSegurosIntegrationTest {
                 .header("X-Credencial-Sesion", "valida"))
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"))
                 .andExpect(jsonPath("$.details").isEmpty()).andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    @DisplayName("Incluye las pólizas cuya vigencia comienza o termina hoy")
+    void incluyeLimitesDeVigencia() throws Exception {
+        LocalDate hoy = LocalDate.now();
+        Poliza comienzaHoy = guardar("POL-1000", "12345678", true);
+        comienzaHoy.setFechaVigenciaDesde(hoy);
+        Poliza terminaHoy = guardar("POL-2000", "12345678", true);
+        terminaHoy.setFechaVigenciaHasta(hoy);
+
+        mvc.perform(get("/api/v1/seguros").header("X-Credencial-Sesion", "valida"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].id").value(comienzaHoy.getId().toString()))
+                .andExpect(jsonPath("$[0].ramo").value("HOGAR"))
+                .andExpect(jsonPath("$[0].numeroPoliza").value("POL-1000"))
+                .andExpect(jsonPath("$[0].fechaVigenciaDesde").value(hoy.toString()))
+                .andExpect(jsonPath("$[1].id").value(terminaHoy.getId().toString()))
+                .andExpect(jsonPath("$[1].fechaVigenciaHasta").value(hoy.toString()));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"PASAPORTE,12345678,DNI,otro", "DNI,otro,PASAPORTE,12345678",
+            "PASAPORTE,12345678,PASAPORTE,12345678"})
+    @DisplayName("Exige coincidencia de tipo y número en una misma relación autorizada")
+    void rechazaCoincidenciasParciales(String tipoTitular, String numeroTitular,
+            String tipoAsegurado, String numeroAsegurado) throws Exception {
+        Poliza poliza = guardar("POL-1000", numeroTitular, true);
+        poliza.setTitularDocumentoTipo(tipoTitular);
+        poliza.setAseguradoDocumentoTipo(tipoAsegurado);
+        poliza.setAseguradoDocumentoNumero(numeroAsegurado);
+
+        mvc.perform(get("/api/v1/seguros").header("X-Credencial-Sesion", "valida"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isEmpty());
+        mvc.perform(get("/api/v1/seguros/{id}/coberturas", poliza.getId())
+                .header("X-Credencial-Sesion", "valida"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").exists());
+    }
+
+    @Test
+    @DisplayName("Revalida la credencial en cada consulta y rechaza una sesión revocada")
+    void rechazaSesionRevocadaTrasConsultaExitosa() throws Exception {
+        Poliza poliza = guardar("POL-1000", "12345678", true);
+        mvc.perform(get("/api/v1/seguros").header("X-Credencial-Sesion", "valida"))
+                .andExpect(status().isOk());
+        when(credenciales.validar("valida"))
+                .thenThrow(new UnauthorizedException("Verificá tu identidad para consultar tus seguros."));
+
+        mvc.perform(get("/api/v1/seguros").header("X-Credencial-Sesion", "valida"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").exists());
+        mvc.perform(get("/api/v1/seguros/{id}/coberturas", poliza.getId())
+                .header("X-Credencial-Sesion", "valida"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.coberturas").doesNotExist());
+        verify(credenciales, times(3)).validar("valida");
+    }
+
+    @Test
+    @DisplayName("El resumen contiene únicamente coberturas y exclusiones de la póliza seleccionada")
+    void aislaResumenPorPoliza() throws Exception {
+        Poliza propia = guardar("POL-1000", "12345678", true);
+        Poliza ajena = guardar("POL-2000", "otro", true);
+        coberturas.save(Cobertura.builder().poliza(propia).descripcion("Condiciones completas")
+                .resumen("Incendio").build());
+        coberturas.save(Cobertura.builder().poliza(ajena).descripcion("Condiciones ajenas")
+                .resumen("Cobertura ajena").build());
+        exclusiones.save(Exclusion.builder().poliza(propia).descripcion("Daño intencional").build());
+        exclusiones.save(Exclusion.builder().poliza(ajena).descripcion("Exclusión ajena").build());
+
+        mvc.perform(get("/api/v1/seguros/{id}/coberturas", propia.getId())
+                .header("X-Credencial-Sesion", "valida"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.coberturas.length()").value(1))
+                .andExpect(jsonPath("$.coberturas[0]").value("Incendio"))
+                .andExpect(jsonPath("$.exclusiones.length()").value(1))
+                .andExpect(jsonPath("$.exclusiones[0]").value("Daño intencional"));
     }
 
     private Poliza guardar(String numero, String documento, boolean vigente) {

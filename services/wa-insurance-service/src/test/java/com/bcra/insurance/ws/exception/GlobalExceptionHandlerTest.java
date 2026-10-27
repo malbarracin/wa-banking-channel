@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.hasSize;
@@ -46,6 +48,8 @@ class GlobalExceptionHandlerTest {
         "/probe/illegal,400,BAD_REQUEST",
         "/probe/number?value=texto,400,BAD_REQUEST",
         "/probe/number,400,BAD_REQUEST",
+        "/probe/unauthorized,401,UNAUTHORIZED",
+        "/probe/forbidden,403,FORBIDDEN",
         "/probe/missing,404,NOT_FOUND",
         "/probe/conflict,409,CONFLICT",
         "/probe/unexpected,500,INTERNAL_ERROR"
@@ -56,11 +60,15 @@ class GlobalExceptionHandlerTest {
 
         response.andExpect(status().is(httpStatus))
                 .andExpect(jsonPath("$.code").value(code))
+                .andExpect(jsonPath("$.message").isString())
                 .andExpect(jsonPath("$.details", hasSize(0)))
                 .andExpect(jsonPath("$.timestamp").isString())
                 .andExpect(jsonPath("$.trace").doesNotExist())
                 .andExpect(jsonPath("$.exception").doesNotExist());
         assertThat(response.andReturn().getResponse().getContentAsString()).doesNotContain("sensitive");
+        String timestamp = new ObjectMapper()
+                .readTree(response.andReturn().getResponse().getContentAsString()).get("timestamp").asText();
+        assertThat(Instant.parse(timestamp)).isBeforeOrEqualTo(Instant.now());
     }
 
     @Test
@@ -114,6 +122,16 @@ class GlobalExceptionHandlerTest {
 
     @RestController
     static class ErrorProbeController {
+
+        @GetMapping("/probe/unauthorized")
+        public void unauthorized() {
+            throw new UnauthorizedException("Credencial de sesión inválida");
+        }
+
+        @GetMapping("/probe/forbidden")
+        public void forbidden() {
+            throw new ForbiddenException("No tiene autorización para acceder al recurso");
+        }
 
         @GetMapping("/probe/illegal")
         public void illegal() {

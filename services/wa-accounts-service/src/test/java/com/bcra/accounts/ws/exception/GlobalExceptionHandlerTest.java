@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -62,7 +65,25 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.timestamp").isString())
                 .andExpect(jsonPath("$.trace").doesNotExist())
                 .andExpect(jsonPath("$.exception").doesNotExist());
-        assertThat(response.andReturn().getResponse().getContentAsString()).doesNotContain("sensitive");
+        String body = response.andReturn().getResponse().getContentAsString();
+        assertThat(body).doesNotContain("sensitive");
+        var error = new ObjectMapper().readTree(body);
+        assertThat(error.size()).isEqualTo(4);
+        assertThat(error.get("message").asText()).isNotBlank();
+        assertThat(Instant.parse(error.get("timestamp").asText())).isBeforeOrEqualTo(Instant.now());
+        assertThat(error.get("timestamp").asText()).endsWith("Z");
+    }
+
+    @Test
+    @DisplayName("Un recurso HTTP inexistente devuelve 404 sin revelar su ruta")
+    void ocultaLaRutaDelRecursoInexistente() throws Exception {
+        mockMvc.perform(get("/probe/resource"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("El recurso no existe"))
+                .andExpect(jsonPath("$.details", hasSize(0)))
+                .andExpect(jsonPath("$.timestamp").isString())
+                .andExpect(jsonPath("$.trace").doesNotExist());
     }
 
     @Test
@@ -150,6 +171,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/probe/unexpected")
         public void unexpected() {
             throw new IllegalStateException("sensitive");
+        }
+
+        @GetMapping("/probe/resource")
+        public void recursoInexistente() throws NoResourceFoundException {
+            throw new NoResourceFoundException(org.springframework.http.HttpMethod.GET, "sensitive");
         }
 
         @PostMapping("/probe/body")

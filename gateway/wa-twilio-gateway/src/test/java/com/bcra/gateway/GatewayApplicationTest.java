@@ -1,9 +1,12 @@
 package com.bcra.gateway;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,9 +40,21 @@ class GatewayApplicationTest {
         assertThat(response.getBody()).contains("jvm_memory_used_bytes");
     }
 
-    @Test
-    void sensitiveActuatorEndpointsAreNotExposed() {
-        assertThat(restTemplate.getForEntity("/actuator/env", String.class).getStatusCode().value())
+    @ParameterizedTest
+    @ValueSource(strings = {"env", "configprops", "beans", "heapdump", "loggers", "mappings"})
+    void sensitiveActuatorEndpointsAreNotExposed(String endpoint) {
+        assertThat(restTemplate.getForEntity("/actuator/" + endpoint, String.class).getStatusCode().value())
                 .isEqualTo(404);
+    }
+
+    @Test
+    void errorsDoNotExposeInternalDetailsEvenWhenRequested() {
+        var response = restTemplate.getForEntity("/missing?trace=true&message=true", JsonNode.class);
+        assertThat(response.getStatusCode().value()).isEqualTo(404);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().has("trace")).isFalse();
+        assertThat(response.getBody().has("exception")).isFalse();
+        assertThat(response.getBody().has("message")).isFalse();
+        assertThat(response.getBody().has("errors")).isFalse();
     }
 }

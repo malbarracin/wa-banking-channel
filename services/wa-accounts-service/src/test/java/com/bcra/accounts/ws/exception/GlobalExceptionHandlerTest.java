@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -62,7 +65,25 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.timestamp").isString())
                 .andExpect(jsonPath("$.trace").doesNotExist())
                 .andExpect(jsonPath("$.exception").doesNotExist());
-        assertThat(response.andReturn().getResponse().getContentAsString()).doesNotContain("sensitive");
+        String body = response.andReturn().getResponse().getContentAsString();
+        assertThat(body).doesNotContain("sensitive");
+        var error = new ObjectMapper().readTree(body);
+        assertThat(error.size()).isEqualTo(4);
+        assertThat(error.get("message").asText()).isNotBlank();
+        assertThat(Instant.parse(error.get("timestamp").asText())).isBeforeOrEqualTo(Instant.now());
+        assertThat(error.get("timestamp").asText()).endsWith("Z");
+    }
+
+    @Test
+    @DisplayName("Un recurso HTTP inexistente devuelve 404 sin revelar su ruta")
+    void ocultaLaRutaDelRecursoInexistente() throws Exception {
+        mockMvc.perform(get("/probe/resource"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("El recurso no existe"))
+                .andExpect(jsonPath("$.details", hasSize(0)))
+                .andExpect(jsonPath("$.timestamp").isString())
+                .andExpect(jsonPath("$.trace").doesNotExist());
     }
 
     @Test
@@ -100,6 +121,22 @@ class GlobalExceptionHandlerTest {
             assertThat(response.getBody().details()).extracting(FieldError::field).containsExactly("name");
             assertThat(response.getBody().timestamp()).isBeforeOrEqualTo(Instant.now());
         }
+    }
+
+    @Test
+    @DisplayName("Las violaciones de constraints llegan al cliente como 400 con detalles sin valores rechazados")
+    void respondeConstraintsPorHttp() throws Exception {
+        mockMvc.perform(get("/probe/constraint"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").value("La solicitud tiene datos inválidos"))
+                .andExpect(jsonPath("$.details", hasSize(1)))
+                .andExpect(jsonPath("$.details[0].field").value("name"))
+                .andExpect(jsonPath("$.details[0].message").isNotEmpty())
+                .andExpect(jsonPath("$.details[0].rejectedValue").doesNotExist())
+                .andExpect(jsonPath("$.timestamp").isString())
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andExpect(jsonPath("$.exception").doesNotExist());
     }
 
     @Test
@@ -152,8 +189,21 @@ class GlobalExceptionHandlerTest {
             throw new IllegalStateException("sensitive");
         }
 
+        @GetMapping("/probe/resource")
+        public void recursoInexistente() throws NoResourceFoundException {
+            throw new NoResourceFoundException(org.springframework.http.HttpMethod.GET, "sensitive");
+        }
+
         @PostMapping("/probe/body")
         public void body(@Valid @RequestBody ProbeRequest request) {
+        }
+
+        @GetMapping("/probe/constraint")
+        public void constraint() {
+            try (var factory = Validation.buildDefaultValidatorFactory()) {
+                var violations = factory.getValidator().validate(new ProbeRequest(""));
+                throw new jakarta.validation.ConstraintViolationException(violations);
+            }
         }
     }
 }

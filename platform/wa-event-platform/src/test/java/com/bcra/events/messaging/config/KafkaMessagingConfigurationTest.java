@@ -12,6 +12,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -49,6 +50,26 @@ class KafkaMessagingConfigurationTest {
         verifyNoInteractions(publisher);
         assertThat(handler.handleOne(exception, record, null, container)).isTrue();
         verify(publisher, times(1)).accept(eq(record), any(), eq(exception));
+        assertThat(registry.get("platform.kafka.delivery.errors").counter().count()).isEqualTo(3);
+        assertThat(registry.get("platform.kafka.dlq.published").counter().count()).isEqualTo(1);
+        assertThat(registry.get("platform.kafka.dlq.errors").counter().count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Un fallo de DLQ cuenta como error y no como publicación confirmada")
+    void countsFailedDlqPublicationWithoutReportingRecovery() {
+        var publisher = mock(DeadLetterPublisher.class);
+        var handler = configuration.kafkaErrorHandler(publisher, metrics, 0, 1, 2);
+        var record = new ConsumerRecord<>("wa.message.received.v1", 0, 2, "conversation", "{}");
+        var exception = new InvalidEventException();
+        doThrow(new IllegalStateException("synthetic publication failure"))
+                .when(publisher).accept(eq(record), any(), eq(exception));
+
+        assertThat(handler.handleOne(exception, record, null, mock(MessageListenerContainer.class))).isFalse();
+
+        assertThat(registry.get("platform.kafka.delivery.errors").counter().count()).isEqualTo(1);
+        assertThat(registry.get("platform.kafka.dlq.errors").counter().count()).isEqualTo(1);
+        assertThat(registry.get("platform.kafka.dlq.published").counter().count()).isZero();
     }
 
     @Test

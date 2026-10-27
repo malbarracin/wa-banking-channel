@@ -308,6 +308,66 @@ class TransferenciaPreparacionIntegrationTest {
         assertThat(auditorias.count()).isEqualTo(2);
     }
 
+    @Test
+    @DisplayName("Una reserva confirmada vigente reduce el saldo disponible para nuevas preparaciones")
+    void descuentaReservaConfirmadaDelSaldo() throws Exception {
+        origen.setSaldoDisponible(new BigDecimal("100"));
+        cuentas.saveAndFlush(origen);
+        guardarHistorial(origen, "80", EstadoTransferencia.CONFIRMADA, AHORA, AHORA.plusSeconds(300));
+
+        solicitar(cuerpo("21")).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.message").value("Saldo disponible insuficiente"))
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        assertThat(transferencias.count()).isEqualTo(1);
+        assertThat(cuentas.findById(origen.getId()).orElseThrow().getSaldoDisponible())
+                .isEqualByComparingTo("100");
+    }
+
+    @Test
+    @DisplayName("El límite diario incluye reservas confirmadas de otra cuenta del titular")
+    void acumulaConfirmadasEntreCuentas() throws Exception {
+        guardarHistorial(destino, "900", EstadoTransferencia.CONFIRMADA, AHORA, AHORA.plusSeconds(300));
+
+        solicitar(cuerpo("101")).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.message").value("Límite diario superado"))
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        assertThat(transferencias.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("El límite mensual permite el máximo exacto y rechaza el siguiente centavo")
+    void permiteLimiteMensualExacto() throws Exception {
+        guardarHistorial(destino, "1500", EstadoTransferencia.EJECUTADA,
+                Instant.parse("2026-10-01T15:00:00Z"), AHORA.minusSeconds(100));
+
+        solicitar(cuerpo("500")).andExpect(status().isCreated());
+        solicitar(cuerpo("0.01")).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.message").value("Límite mensual superado"))
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        assertThat(transferencias.count()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("Las transferencias ejecutadas del mes anterior no consumen los límites actuales")
+    void excluyeEjecucionesDelMesAnterior() throws Exception {
+        guardarHistorial(origen, "10000", EstadoTransferencia.EJECUTADA,
+                Instant.parse("2026-09-30T15:00:00Z"), AHORA.minusSeconds(100));
+
+        solicitar(cuerpo("1000")).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.estado").value("PREPARADA"));
+
+        assertThat(transferencias.count()).isEqualTo(2);
+    }
+
     private boolean prepararConcurrente(CountDownLatch inicio) throws InterruptedException {
         inicio.await(5, TimeUnit.SECONDS);
         try {

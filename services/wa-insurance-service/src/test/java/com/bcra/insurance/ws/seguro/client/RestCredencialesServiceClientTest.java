@@ -45,9 +45,14 @@ class RestCredencialesServiceClientTest {
 
     @BeforeEach
     void configurar(WireMockRuntimeInfo servidor) {
+        cliente = crearCliente(servidor.getHttpBaseUrl(), Duration.ofSeconds(2), Duration.ofSeconds(3));
+    }
+
+    private static CredencialesServiceClient crearCliente(String baseUrl, Duration connectTimeout,
+            Duration readTimeout) {
         var configuracion = new RestClientConfig();
-        cliente = configuracion.credencialesServiceClient(configuracion.credencialesRestClient(
-                RestClient.builder(), servidor.getHttpBaseUrl(), Duration.ofMillis(200), Duration.ofMillis(200)));
+        return configuracion.credencialesServiceClient(configuracion.credencialesRestClient(
+                RestClient.builder(), baseUrl, connectTimeout, readTimeout));
     }
 
     @Test
@@ -178,11 +183,13 @@ class RestCredencialesServiceClientTest {
 
     @Test
     @DisplayName("El timeout de lectura configurado cancela la validación y conserva la causa")
-    void limitaTiempoDeLectura() {
+    void limitaTiempoDeLectura(WireMockRuntimeInfo servidor) {
+        var clienteConTimeoutCorto = crearCliente(servidor.getHttpBaseUrl(), Duration.ofMillis(200),
+                Duration.ofMillis(200));
         stubFor(post(PATH).willReturn(aResponse().withFixedDelay(1000)
                 .withHeader("Content-Type", "application/json").withBody(RESPUESTA)));
 
-        assertThatThrownBy(() -> cliente.validar("jwt-interno"))
+        assertThatThrownBy(() -> clienteConTimeoutCorto.validar("jwt-interno"))
                 .isInstanceOf(CredencialesServiceUnavailableException.class)
                 .hasRootCauseInstanceOf(java.net.SocketTimeoutException.class);
     }

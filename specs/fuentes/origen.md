@@ -7,6 +7,38 @@ updated: 2026-10-26T18:19:37.757Z
 
 # Origen de los requisitos
 
+## H6 — Servicio de Seguros
+
+| Campo | Valor |
+|-------|-------|
+| Proyecto | mi-proyecto (project.yaml) |
+| Componente de la fuente | services/wa-insurance-service |
+| Fuente | Notion |
+| Link | https://app.notion.com/p/H6-Servicio-de-Seguros-36875bb08ca781129b47cd3ced785221 |
+| Página / ID | H6 — Servicio de Seguros / 36875bb08ca781129b47cd3ced785221 |
+| Actualizado | 2026-10-27 |
+
+La fuente específica del paso prevalece para H6 sobre la URL de ejemplo de `project.yaml`. Se leyó la página completa con Notion; no contiene subpáginas ni bases de datos hijas enlazadas en su contenido. La base de hitos y el roadmap aparecen como ancestros, no como requisitos adicionales enlazados de H6. Se preservan las especificaciones anteriores.
+
+Resolved via user decision: respuesta A en `.opensoma/runs/20261027-b0a3/steps/004-analista-sigue1/prompt.md`: denuncias abiertas = recibido, en análisis y documentación pendiente; resuelto permite otra denuncia dentro de la ventana. Reflejado en S6 de `seguros/spec`.
+
+### Requisito → fuente
+
+| Requisito | Área | Id en la fuente |
+|-----------|------|-----------------|
+| S1 — Acceso con credencial y vínculo activo | seguros | H6 §§1, 5.1, 6 F1, 7, 9, 11 |
+| S2 — Autorización sobre pólizas y casos | seguros | H6 §§4, 5.2, 11 |
+| S3 — Listado de pólizas vigentes | seguros | H6 §§3, 6 F1, 8 |
+| S4 — Coberturas y exclusiones comprensibles | seguros | H6 §§3, 5.5, 6 F1, 7, 8 |
+| S5 — Captura mínima y confirmación de denuncia | seguros | H6 §§3, 6 F2 |
+| S6 — Prevención de denuncias duplicadas | seguros | H6 §§5.3, 7 + decisión humana A |
+| S7 — Número de caso y próximos pasos | seguros | H6 §§3, 5.4, 6 F2, 7, 8 |
+| S8 — Seguimiento fiel al sistema de siniestros | seguros | H6 §§3, 4, 5.7, 6 F3, 7, 8 |
+| S9 — Recordatorio de documentación pendiente | seguros | H6 §3; §6 F3 |
+| S10 — Privacidad y límites del canal | seguros | H6 §§3 fuera de alcance, 5.6, 7, 11 |
+
+Inventario complementario: contexto y objetivo (§§1–2) en propósito; dependencias y entregable (callout y §9) en alcance; riesgos y supuestos (§10) en decisiones y supuestos; mensajes (§8) en escenarios; políticas no concretadas en preguntas abiertas. Especificación en borrador para aprobación humana. Se usa apply_patch por instrucción expresa de la persona para crear o modificar archivos.
+
 ## H1 — Servicio de Usuarios
 
 | Campo | Valor |

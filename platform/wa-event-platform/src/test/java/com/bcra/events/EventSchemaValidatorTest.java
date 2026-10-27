@@ -64,6 +64,38 @@ class EventSchemaValidatorTest {
         rejects("wa.message.status.v1", event("MessageStatus", "{\"status\":\"unknown\"}").toString());
     }
 
+    @Test
+    void rejectsTrailingContentAfterValidEvent() throws Exception {
+        String valid = event("MessageReceived", "{\"customerAddress\":\"test\",\"body\":\"Hola\"}").toString();
+        rejects("wa.message.received.v1", valid + " {}");
+        rejects("wa.message.received.v1", valid + " invalid");
+    }
+
+    @Test
+    void enforcesPayloadAndIdentifierBoundaries() throws Exception {
+        for (String field : new String[] {"conversationId", "messageId"}) {
+            ObjectNode value = event("MessageReceived", "{\"customerAddress\":\"test\",\"body\":\"Hola\"}");
+            value.put(field, "a".repeat(256));
+            assertThatCode(() -> validator.validate("wa.message.received.v1", value.toString()))
+                .doesNotThrowAnyException();
+            value.put(field, "a".repeat(257));
+            rejects("wa.message.received.v1", value.toString());
+            value.put(field, "");
+            rejects("wa.message.received.v1", value.toString());
+        }
+        ObjectNode value = event("DeadLetter", "{\"originalTopic\":\"wa.message.received.v1\","
+            + "\"originalPartition\":0,\"originalOffset\":0,\"originalValueBase64\":\"e30=\","
+            + "\"errorCode\":\"SCHEMA_VALIDATION_FAILED\"}");
+        ObjectNode payload = (ObjectNode) value.get("payload");
+        for (String field : new String[] {"originalPartition", "originalOffset"}) {
+            ObjectNode invalid = value.deepCopy();
+            ((ObjectNode) invalid.get("payload")).put(field, -1);
+            rejects("wa.message.dlq.v1", invalid.toString());
+        }
+        payload.put("originalValueBase64", "not base64!");
+        rejects("wa.message.dlq.v1", value.toString());
+    }
+
     private ObjectNode event(String type, String payload) throws Exception {
         ObjectNode event = mapper.createObjectNode();
         event.put("eventId", "7bd3715a-72b5-4f7f-a6a4-f120ce339b5c");

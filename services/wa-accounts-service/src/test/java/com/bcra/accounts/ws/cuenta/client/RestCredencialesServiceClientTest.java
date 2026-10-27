@@ -126,6 +126,30 @@ class RestCredencialesServiceClientTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"numeroWhatsapp", "documentoTipo", "documentoNumero"})
+    @DisplayName("Una identidad vigente sin un campo obligatorio se trata como falla de H2")
+    void rechazaIdentidadIncompleta(String campo) {
+        String respuesta = RESPUESTA.replaceAll("\"" + campo + "\":\"[^\"]*\"", "\"" + campo + "\":null");
+        servidor.expect(requestTo(URL)).andRespond(withSuccess(respuesta, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> cliente.validar("jwt-interno"))
+                .isInstanceOf(CredencialesServiceUnavailableException.class);
+        servidor.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"numeroWhatsapp", "documentoTipo", "documentoNumero"})
+    @DisplayName("Una identidad vigente con campos en blanco nunca autoriza la operación")
+    void rechazaIdentidadConCamposEnBlanco(String campo) {
+        String respuesta = RESPUESTA.replaceAll("\"" + campo + "\":\"[^\"]*\"", "\"" + campo + "\":\" \"");
+        servidor.expect(requestTo(URL)).andRespond(withSuccess(respuesta, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> cliente.validar("jwt-interno"))
+                .isInstanceOf(CredencialesServiceUnavailableException.class);
+        servidor.verify();
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"no-vigente", "expirada"})
     @DisplayName("Rechaza sesiones no vigentes o vencidas aunque H2 responda 200")
     void rechazaSesionNoVigente(String caso) {

@@ -1,13 +1,18 @@
 package com.bcra.accounts.ws.config;
 
 import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
+
+import com.bcra.accounts.ws.cuenta.client.CredencialesServiceUnavailableException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -61,6 +66,38 @@ class RestClientConfigTest {
                     .isInstanceOfSatisfying(RestClientResponseException.class,
                             excepcion -> assertThat(excepcion.getStatusCode().value()).isEqualTo(401));
         } finally {
+            servidor.stop(0);
+        }
+    }
+
+    @Test
+    @DisplayName("El timeout de lectura configurado impide esperar indefinidamente a H2")
+    void aplicaTimeoutDeLecturaAlValidar() throws Exception {
+        var liberarServidor = new CountDownLatch(1);
+        HttpServer servidor = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        servidor.createContext(VALIDAR_PATH, intercambio -> {
+            try (intercambio) {
+                intercambio.getRequestBody().readAllBytes();
+                try {
+                    liberarServidor.await(5, TimeUnit.SECONDS);
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+        servidor.start();
+        try {
+            var configuracion = new RestClientConfig();
+            String baseUrl = "http://127.0.0.1:" + servidor.getAddress().getPort();
+            RestClient transporte = configuracion.credencialesRestClient(RestClient.builder(), baseUrl,
+                    CONNECT_TIMEOUT, Duration.ofMillis(100));
+            var cliente = configuracion.credencialesServiceClient(transporte);
+
+            assertThatThrownBy(() -> cliente.validar("jwt-de-prueba"))
+                    .isInstanceOf(CredencialesServiceUnavailableException.class)
+                    .hasRootCauseInstanceOf(SocketTimeoutException.class);
+        } finally {
+            liberarServidor.countDown();
             servidor.stop(0);
         }
     }

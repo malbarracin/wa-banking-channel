@@ -133,6 +133,33 @@ class KafkaMessagingTest {
                 .doesNotContain("private diagnostic");
     }
 
+    @Test
+    @DisplayName("Un efecto transitorio puede reintentarse y confirmar solo tras éxito")
+    void acknowledgesSuccessfulRedeliveryAfterTransientFailure() {
+        var consumer = new KafkaEventConsumer(validator, mapper);
+        var acknowledgment = mock(Acknowledgment.class);
+        var original = record(EVENT);
+        MDC.put("correlationId", "previous");
+        try {
+            assertThatThrownBy(() -> consumer.consume(original, acknowledgment, event -> {
+                assertThat(MDC.get("correlationId")).isEqualTo(CORRELATION);
+                throw new IllegalStateException("synthetic transient failure");
+            })).isInstanceOf(IllegalStateException.class);
+            verifyNoInteractions(acknowledgment);
+            assertThat(MDC.get("correlationId")).isEqualTo("previous");
+
+            consumer.consume(original, acknowledgment, event -> {
+                assertThat(event.path("messageId").asText()).isEqualTo("synthetic-message");
+                assertThat(MDC.get("correlationId")).isEqualTo(CORRELATION);
+                verifyNoInteractions(acknowledgment);
+            });
+            verify(acknowledgment).acknowledge();
+            assertThat(MDC.get("correlationId")).isEqualTo("previous");
+        } finally {
+            MDC.clear();
+        }
+    }
+
     private ConsumerRecord<String, String> record(String value) {
         var record = new ConsumerRecord<>(TOPIC, 0, 1, "synthetic-conversation", value);
         record.headers().add("correlationId", CORRELATION.getBytes(StandardCharsets.UTF_8));

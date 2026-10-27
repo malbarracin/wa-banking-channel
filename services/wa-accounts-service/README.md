@@ -25,7 +25,7 @@ limite_mensual y umbral_doble_confirmacion. Si no existe una política compatibl
 preparación. Los acumulados son por titular, producto y moneda e incluyen ejecutadas y reservas
 vigentes (PREPARADA/CONFIRMADA); estas últimas también comprometen saldo de la cuenta origen.
 Las cuentas del titular se bloquean con PESSIMISTIC_WRITE en orden estable durante la preparación.
-La confirmación deberá usar el mismo protocolo de bloqueo y revalidar reglas y vencimiento.
+La confirmación usa el mismo orden de bloqueo y revalida reglas y vencimiento.
 Solo se admite la misma moneda: no hay productos multi-moneda habilitados.
 
 Horario: TRANSFERENCIAS_HORARIO_INICIO (08:00 inclusivo), TRANSFERENCIAS_HORARIO_FIN (17:00
@@ -33,3 +33,17 @@ exclusivo), TRANSFERENCIAS_ZONA (America/Argentina/Buenos_Aires) y TRANSFERENCIA
 (MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY). La vigencia se configura mediante
 TRANSFERENCIAS_EXPIRACION_MINUTOS (5). Son valores iniciales configurables, no políticas bancarias definitivas.
 Aplicar delivery/sql/002-transferencia-preparacion.sql sobre bases existentes antes del despliegue.
+
+POST /api/v1/transferencias/{id}/confirmar recibe X-Credencial-Sesion y el JSON
+`{"confirmacion":"CONFIRMAR"}` (literal exacto). Devuelve 200 con estado EJECUTADA, fechaEjecucion,
+referencia UUID y comprobante (fecha, origen, destino, monto, moneda, referencia).
+Si requiere doble confirmación, el primer pedido devuelve 200 con estado CONFIRMADA y sin comprobante;
+el segundo CONFIRMAR ejecuta. Una confirmación distinta interrumpe la secuencia, devuelve 409 y exige
+nuevamente las dos confirmaciones. El vencimiento original no se extiende.
+Saldos disponibles/contables, movimientos DEBITO/CREDITO, estado y auditoría exitosa se confirman
+en una sola transacción. Se bloquean las cuentas del titular y el destino local del tercero en orden UUID,
+y después la transferencia; una ejecución repetida devuelve 409 sin generar otro débito.
+Se revalidan horario, límites (excluyendo la propia reserva), saldo, moneda y vigencia del destinatario.
+Las transferencias ajenas o inexistentes devuelven 404; sesión inválida, 401.
+Los terceros deben tener cuenta destino local: no existe un adaptador de liquidación interbancaria;
+un destino no disponible se rechaza con 409 sin debitar fondos.

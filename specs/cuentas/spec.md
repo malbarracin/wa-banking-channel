@@ -1,8 +1,8 @@
 ---
 title: Cuentas — especificación
-status: borrador
+status: aprobada
 source: https://app.notion.com/p/H4-Servicio-de-Cuentas-36875bb08ca7815e8642e555eebdfc6a
-updated: 2026-10-27T13:25:45Z
+updated: 2026-10-27T13:32:57.162Z
 ---
 
 # Cuentas — especificación

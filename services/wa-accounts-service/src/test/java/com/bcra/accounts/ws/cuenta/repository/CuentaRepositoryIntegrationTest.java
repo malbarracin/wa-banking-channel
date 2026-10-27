@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import com.bcra.accounts.ws.cuenta.entity.AuditoriaAccion;
@@ -183,6 +184,86 @@ class CuentaRepositoryIntegrationTest {
 
         assertThatThrownBy(() -> limites.saveAndFlush(crearLimite()))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("Rechaza transferencias con cuenta destino y tercero simultáneamente")
+    void rechazaTransferenciaConDosDestinatarios() {
+        Cuenta origen = cuentas.saveAndFlush(crearCuenta("001", "123"));
+        Cuenta destino = cuentas.saveAndFlush(crearCuenta("002", "123"));
+        TerceroAgendado tercero = new TerceroAgendado();
+        tercero.setTitularDocumentoTipo("DNI");
+        tercero.setTitularDocumentoNumero("123");
+        tercero.setAlias("Destinatario");
+        tercero.setNumeroCuentaDestino("003");
+        tercero.setActivo(true);
+        terceros.saveAndFlush(tercero);
+        Transferencia transferencia = crearTransferencia(origen);
+        transferencia.setCuentaDestino(destino);
+        transferencia.setTercero(tercero);
+
+        assertThatThrownBy(() -> transferencias.saveAndFlush(transferencia))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    @DisplayName("Excluye terceros inactivos y titulares con distinto tipo de documento")
+    void filtraTercerosPorEstadoYDocumentoCompleto() {
+        TerceroAgendado activo = new TerceroAgendado();
+        activo.setTitularDocumentoTipo("DNI");
+        activo.setTitularDocumentoNumero("123");
+        activo.setAlias("Activo");
+        activo.setNumeroCuentaDestino("001");
+        activo.setActivo(true);
+        terceros.saveAndFlush(activo);
+        TerceroAgendado inactivo = new TerceroAgendado();
+        inactivo.setTitularDocumentoTipo("DNI");
+        inactivo.setTitularDocumentoNumero("123");
+        inactivo.setAlias("Inactivo");
+        inactivo.setNumeroCuentaDestino("002");
+        inactivo.setActivo(false);
+        terceros.saveAndFlush(inactivo);
+        entityManager.clear();
+
+        assertThat(terceros.findByTitularDocumentoTipoAndTitularDocumentoNumeroAndActivoTrue("DNI", "123"))
+                .extracting(TerceroAgendado::getId).containsExactly(activo.getId());
+        assertThat(terceros.findByTitularDocumentoTipoAndTitularDocumentoNumeroAndActivoTrue("PASAPORTE", "123"))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("Pagina movimientos del más reciente al más antiguo sin incluir otras cuentas")
+    void paginaMovimientosEnOrdenDescendentePorCuenta() {
+        Cuenta cuenta = cuentas.saveAndFlush(crearCuenta("001", "123"));
+        Cuenta otraCuenta = cuentas.saveAndFlush(crearCuenta("002", "456"));
+        Instant inicio = Instant.parse("2026-10-27T12:00:00Z");
+        movimientos.saveAndFlush(crearMovimiento(cuenta, inicio));
+        movimientos.saveAndFlush(crearMovimiento(cuenta, inicio.plusSeconds(1)));
+        movimientos.saveAndFlush(crearMovimiento(otraCuenta, inicio.plusSeconds(2)));
+        entityManager.clear();
+
+        Page<Movimiento> primeraPagina = movimientos.findByCuentaIdOrderByFechaDesc(
+                cuenta.getId(), PageRequest.of(0, 1));
+        Page<Movimiento> segundaPagina = movimientos.findByCuentaIdOrderByFechaDesc(
+                cuenta.getId(), PageRequest.of(1, 1));
+
+        assertThat(primeraPagina.getTotalElements()).isEqualTo(2);
+        assertThat(primeraPagina).extracting(Movimiento::getFecha).containsExactly(inicio.plusSeconds(1));
+        assertThat(segundaPagina).extracting(Movimiento::getFecha).containsExactly(inicio);
+        assertThat(primeraPagina.hasNext()).isTrue();
+        assertThat(segundaPagina.hasNext()).isFalse();
+    }
+
+    private Movimiento crearMovimiento(Cuenta cuenta, Instant fecha) {
+        Movimiento movimiento = new Movimiento();
+        movimiento.setCuenta(cuenta);
+        movimiento.setFecha(fecha);
+        movimiento.setTipo(TipoMovimiento.CREDITO);
+        movimiento.setMonto(BigDecimal.ONE);
+        movimiento.setMoneda(Moneda.ARS);
+        movimiento.setDescripcion("Crédito");
+        movimiento.setSaldoResultante(BigDecimal.TEN);
+        return movimiento;
     }
 
     private LimiteCanal crearLimite() {

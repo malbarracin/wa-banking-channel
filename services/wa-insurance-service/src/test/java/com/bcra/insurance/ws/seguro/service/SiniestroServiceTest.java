@@ -98,6 +98,20 @@ class SiniestroServiceTest {
     }
 
     @Test
+    @DisplayName("No consulta duplicados ni persiste si la póliza no está autorizada")
+    void noPersisteSinPolizaAutorizada() {
+        UUID polizaId = UUID.randomUUID();
+        when(polizaService.obtenerAutorizada("invalida", polizaId))
+                .thenThrow(new UnauthorizedException("Verificá tu identidad para consultar tus seguros."));
+
+        assertThatThrownBy(() -> service.denunciar("invalida",
+                new DenunciaRequest(polizaId, TipoSiniestro.HOGAR, LocalDate.now(), "Daño")))
+                .isInstanceOf(UnauthorizedException.class);
+        verify(duplicados, never()).asegurarSinDuplicado(any(), any());
+        verify(siniestros, never()).save(any());
+    }
+
+    @Test
     @DisplayName("No persiste si el control de duplicados detecta conflicto")
     void noPersisteAnteDuplicado() {
         UUID polizaId = UUID.randomUUID();

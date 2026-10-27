@@ -31,6 +31,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -297,6 +298,31 @@ class DenunciaSiniestroIntegrationTest {
                         .content(inexistente))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+    }
+
+    @Test
+    @DisplayName("Tras el alta, el titular consulta el caso por GET con el mismo número")
+    void denunciaLuegoConsultaPorNumero() throws Exception {
+        Poliza poliza = guardar("POL-5500", "12345678");
+        String cuerpo = """
+                {"polizaId":"%s","tipoSiniestro":"HOGAR","fechaSiniestro":"2026-10-20","descripcion":"Daño por agua"}
+                """.formatted(poliza.getId());
+
+        String numeroCaso = mvc.perform(post("/api/v1/siniestros")
+                        .header("X-Credencial-Sesion", "valida")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpo))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.numeroCaso", startsWith("SIN-")))
+                .andReturn().getResponse().getContentAsString()
+                .replaceAll("(?s).*\"numeroCaso\"\\s*:\\s*\"([^\"]+)\".*", "$1");
+
+        mvc.perform(get("/api/v1/siniestros/{numeroCaso}", numeroCaso)
+                        .header("X-Credencial-Sesion", "valida"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numeroCaso").value(numeroCaso))
+                .andExpect(jsonPath("$.estado").value("RECIBIDO"))
+                .andExpect(jsonPath("$.pendiente").isNotEmpty());
     }
 
     @Test

@@ -73,6 +73,37 @@ class TwilioWebhookControllerTest {
     }
 
     @Test
+    void rejectsTamperedBodyWithoutPublishing() throws Exception {
+        mvc.perform(post("/webhook/twilio").contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .content("MessageSid=" + SID + "&Body=changed")
+                .header("X-Twilio-Signature", signature(PUBLIC_URL, FORM)))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(publisher);
+    }
+
+    @Test
+    void concurrentRetryDoesNotAcknowledgePendingPublication() throws Exception {
+        var confirmation = new CompletableFuture<Void>();
+        var enteredPublisher = new CompletableFuture<Void>();
+        when(publisher.publish(anyMap())).thenAnswer(invocation -> {
+            enteredPublisher.complete(null);
+            return confirmation;
+        });
+        try (var executor = java.util.concurrent.Executors.newSingleThreadExecutor()) {
+            var first = executor.submit(() -> send(signature(PUBLIC_URL, FORM)));
+            try {
+                enteredPublisher.get(2, java.util.concurrent.TimeUnit.SECONDS);
+                send(signature(PUBLIC_URL, FORM)).andExpect(status().isServiceUnavailable());
+            } finally {
+                confirmation.complete(null);
+            }
+            first.get(2, java.util.concurrent.TimeUnit.SECONDS).andExpect(status().isOk());
+        }
+        send(signature(PUBLIC_URL, FORM)).andExpect(status().isOk());
+        verify(publisher, times(1)).publish(FORM);
+    }
+
+    @Test
     void acknowledgesDuplicateWithoutRepublishing() throws Exception {
         send(signature(PUBLIC_URL, FORM)).andExpect(status().isOk());
         send(signature(PUBLIC_URL, FORM)).andExpect(status().isOk());

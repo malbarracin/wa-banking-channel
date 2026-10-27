@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DeadLetter",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "eventId",
+    "eventType",
+    "eventVersion",
+    "occurredAt",
+    "correlationId",
+    "conversationId",
+    "messageId",
+    "payload"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "eventType": {
+      "const": "DeadLetter"
+    },
+    "eventVersion": {
+      "const": 1
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "correlationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "conversationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "messageId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "originalTopic",
+        "originalPartition",
+        "originalOffset",
+        "originalValueBase64",
+        "errorCode"
+      ],
+      "properties": {
+        "originalTopic": {
+          "enum": [
+            "wa.message.received.v1",
+            "wa.message.ready-to-send.v1",
+            "wa.message.status.v1"
+          ]
+        },
+        "originalPartition": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "originalOffset": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "originalValueBase64": {
+          "type": "string",
+          "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+        },
+        "errorCode": {
+          "enum": [
+            "SCHEMA_VALIDATION_FAILED",
+            "RETRIES_EXHAUSTED",
+            "NON_RETRYABLE_ERROR"
+          ]
+        }
+      }
+    }
+  }
+}

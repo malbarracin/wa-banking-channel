@@ -17,6 +17,7 @@ import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.test.context.EmbeddedKafka;
+import org.springframework.kafka.test.utils.KafkaTestUtils;
 import org.springframework.test.annotation.DirtiesContext;
 
 import com.bcra.events.topic.TopicDefinitions;
@@ -39,6 +40,9 @@ class KafkaPlatformIntegrationTest {
     @Test
     @DisplayName("Crea los cuatro topics con tres particiones y retención configurable")
     void createsTopicsAndConfiguresRetention() throws Exception {
+        assertThat(TopicDefinitions.values()).extracting(TopicDefinitions::topicName)
+                .containsExactlyInAnyOrder("wa.message.received.v1", "wa.message.ready-to-send.v1",
+                        "wa.message.status.v1", "wa.message.dlq.v1");
         try (var admin = AdminClient.create(Map.of("bootstrap.servers", properties.getBootstrapServers()))) {
             for (TopicDefinitions definition : TopicDefinitions.values()) {
                 var description = admin.describeTopics(List.of(definition.topicName()))
@@ -56,6 +60,7 @@ class KafkaPlatformIntegrationTest {
                 };
                 assertThat(config.get(TopicConfig.RETENTION_MS_CONFIG).value())
                         .isEqualTo(Long.toString(retention.toMillis()));
+                assertThat(config.get(TopicConfig.CLEANUP_POLICY_CONFIG).value()).isEqualTo("delete");
             }
         }
     }
@@ -78,7 +83,7 @@ class KafkaPlatformIntegrationTest {
                 new StringDeserializer(), new StringDeserializer())) {
             consumer.assign(List.of(new org.apache.kafka.common.TopicPartition(
                     topic, first.getRecordMetadata().partition())));
-            var records = consumer.poll(Duration.ofSeconds(10));
+            var records = KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(10), 2);
             assertThat(records.records(topic)).extracting(record -> record.key())
                     .containsExactly(conversationId, conversationId);
             assertThat(records.records(topic)).extracting(record -> record.value()).containsExactly("first", "second");

@@ -29,3 +29,9 @@ management:
 springdoc:
   api-docs.path: /v3/api-docs
   swagger-ui.path: /swagger-ui.html
+
+clients:
+  wa-credentials-service:
+    base-url: ${CREDENTIALS_SERVICE_BASE_URL:http://localhost:8082}
+    connect-timeout: ${CREDENTIALS_SERVICE_CONNECT_TIMEOUT:2s}
+    read-timeout: ${CREDENTIALS_SERVICE_READ_TIMEOUT:3s}

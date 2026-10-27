@@ -54,6 +54,10 @@ public class Poliza {
     @Column(nullable = false)
     private String titularDocumentoNumero;
 
+    private String aseguradoDocumentoTipo;
+
+    private String aseguradoDocumentoNumero;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     @Setter(AccessLevel.NONE)

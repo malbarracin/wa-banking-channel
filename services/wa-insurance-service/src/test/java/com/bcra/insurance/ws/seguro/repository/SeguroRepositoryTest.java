@@ -150,6 +150,54 @@ class SeguroRepositoryTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
+    @ParameterizedTest
+    @EnumSource(TipoSiniestro.class)
+    @DisplayName("Cada tipo de siniestro conserva su identidad y deja de bloquear al resolverse")
+    void excluyeDelFiltroUnSiniestroResuelto(TipoSiniestro tipo) {
+        UUID polizaId = polizas.save(poliza("P-1", "DNI", "12345678", true)).getId();
+        Siniestro abierto = siniestros.saveAndFlush(
+                siniestro("C-1", polizaId, tipo, EstadoSiniestro.RECIBIDO, APERTURA));
+        entityManager.clear();
+
+        assertThat(siniestros.findByPolizaIdAndTipoSiniestroAndEstadoInAndFechaAperturaAfter(
+                polizaId, tipo, ABIERTOS, APERTURA.minusSeconds(1)))
+                .extracting(Siniestro::getId).containsExactly(abierto.getId());
+        Siniestro recuperado = siniestros.findByNumeroCaso("C-1").orElseThrow();
+        assertThat(recuperado.getTipoSiniestro()).isEqualTo(tipo);
+        recuperado.setEstado(EstadoSiniestro.RESUELTO);
+        siniestros.flush();
+        entityManager.clear();
+
+        assertThat(siniestros.findByNumeroCaso("C-1")).hasValueSatisfying(resuelto ->
+                assertThat(resuelto.getEstado()).isEqualTo(EstadoSiniestro.RESUELTO));
+        assertThat(siniestros.findByPolizaIdAndTipoSiniestroAndEstadoInAndFechaAperturaAfter(
+                polizaId, tipo, ABIERTOS, APERTURA.minusSeconds(1))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Eliminar coberturas y exclusiones conserva la póliza y sus otras condiciones")
+    void conservaPolizaAlEliminarCondiciones() {
+        Poliza propia = polizas.save(poliza("P-1", "DNI", "12345678", true));
+        Cobertura cobertura = coberturas.save(Cobertura.builder().poliza(propia)
+                .descripcion("Incendio").resumen("Incendio del hogar").build());
+        Exclusion exclusion = exclusiones.save(Exclusion.builder().poliza(propia)
+                .descripcion("Daño intencional").build());
+        Cobertura conservada = coberturas.save(Cobertura.builder().poliza(propia)
+                .descripcion("Robo").resumen("Robo en el hogar").build());
+        entityManager.flush();
+        entityManager.clear();
+
+        coberturas.deleteById(cobertura.getId());
+        exclusiones.deleteById(exclusion.getId());
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(polizas.findById(propia.getId())).isPresent();
+        assertThat(coberturas.findByPolizaId(propia.getId()))
+                .extracting(Cobertura::getId).containsExactly(conservada.getId());
+        assertThat(exclusiones.findByPolizaId(propia.getId())).isEmpty();
+    }
+
     private Poliza poliza(String numero, String tipoDocumento, String documento, boolean vigente) {
         return Poliza.builder().numeroPoliza(numero).ramo("HOGAR").vigente(vigente)
                 .fechaVigenciaDesde(LocalDate.of(2026, 1, 1)).fechaVigenciaHasta(LocalDate.of(2026, 12, 31))

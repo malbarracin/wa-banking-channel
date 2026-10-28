@@ -16,6 +16,9 @@ class BootstrapConfigurationTest {
     @DisplayName("Expone Actuator y permite configurar Kafka sin infraestructura externa")
     void exposesActuatorAndBindsExternalKafkaConfiguration() {
         SpringApplication application = new SpringApplication(OrchestratorApplication.class);
+        application.addInitializers(context -> context.getBeanFactory().registerSingleton(
+                "conversationStateRepository", org.mockito.Mockito.mock(
+                        com.bcra.orchestrator.conversation.repository.ConversationStateRepository.class)));
         String[] arguments = {
             "--server.port=0",
             "--spring.autoconfigure.exclude="

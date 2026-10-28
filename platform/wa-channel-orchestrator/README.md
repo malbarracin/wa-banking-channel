@@ -77,6 +77,26 @@ Para ejecutar solo PostgreSQL con Docker disponible:
 
 Si la caché Maven del usuario es de solo lectura, agregar `'-Dmaven.repo.local=.maven-cache'`.
 
+## Contexto de conversación (TASK-93)
+
+`ConversationService.loadOrCreate(conversationId, correlationId)` inicializa el estado técnico `INITIAL`
+o recupera el progreso existente sin reiniciarlo ni reemplazar la correlación del último mensaje registrado.
+`updateState(conversationId, correlationId, state, messageId)` registra el estado técnico y el último mensaje,
+correlación y timestamp; ambos métodos participan en la transacción del llamador (propagación REQUIRED).
+La versión optimista existente protege frente a actualizaciones perdidas; el consumidor mantiene el orden
+por conversación. Una carrera al crear la misma conversación se propaga para reintentar la transacción completa.
+Los estados concretos y sus transiciones los define el coordinador de flujo en su tarea correspondiente.
+
+Durante las operaciones de repositorio se instala `correlationId` en MDC y se restaura el valor anterior,
+también ante fallos. El consumidor debe mantener su propio ámbito MDC para el resto del turno.
+Solo se persisten los identificadores técnicos, estado, último messageId, timestamp y versión de la tabla
+existente: no se agregan teléfonos, credenciales, cuerpos de mensajes ni contexto JSON libre.
+
+`ConversationServiceTest` prueba recuperación tras commit, actualización y rollback tras flush;
+`ConversationServiceMdcTest` comprueba propagación/restauración de MDC y validación de entradas.
+`PostgresConversationServiceIntegrationTest` repite los escenarios persistentes con PostgreSQL
+(requiere Docker, etiqueta `integration`, se omite automáticamente sin Docker).
+
 ## Retry y DLQ
 
 Spring Boot conecta el bean `DefaultErrorHandler` con su factory de listeners por defecto.

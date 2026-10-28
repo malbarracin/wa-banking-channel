@@ -52,4 +52,13 @@ public class ConversationState {
         this.correlationId = Objects.requireNonNull(correlationId, "correlationId");
         this.updatedAt = Objects.requireNonNull(updatedAt, "updatedAt");
     }
+
+    public void updateState(String state, String messageId, UUID correlationId, Instant updatedAt) {
+        Objects.requireNonNull(state, "state");
+        Objects.requireNonNull(messageId, "messageId");
+        Objects.requireNonNull(correlationId, "correlationId");
+        Objects.requireNonNull(updatedAt, "updatedAt");
+        this.state = state;
+        recordMessage(messageId, correlationId, updatedAt);
+    }
 }

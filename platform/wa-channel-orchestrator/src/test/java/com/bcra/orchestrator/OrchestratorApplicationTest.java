@@ -19,6 +19,9 @@ class OrchestratorApplicationTest {
             "--spring.main.web-application-type=none"
         };
         SpringApplication application = new SpringApplication(OrchestratorApplication.class);
+        application.addInitializers(context -> context.getBeanFactory().registerSingleton(
+                "conversationStateRepository", org.mockito.Mockito.mock(
+                        com.bcra.orchestrator.conversation.repository.ConversationStateRepository.class)));
         application.setWebApplicationType(WebApplicationType.NONE);
         try (ConfigurableApplicationContext context = application.run(args)) {
             assertThat(context.getBean(OrchestratorApplication.class)).isNotNull();

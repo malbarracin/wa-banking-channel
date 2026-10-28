@@ -23,10 +23,10 @@ public class MessageDedupe {
     @Column(nullable = false)
     private UUID id;
 
-    @Column(name = "message_id", length = 128, nullable = false, unique = true)
+    @Column(name = "message_id", length = 256, nullable = false, unique = true)
     private String messageId;
 
-    @Column(name = "conversation_id", length = 128, nullable = false)
+    @Column(name = "conversation_id", length = 256, nullable = false)
     private String conversationId;
 
     @Column(name = "correlation_id", nullable = false)

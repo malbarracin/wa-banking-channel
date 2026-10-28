@@ -18,10 +18,8 @@ class BootstrapConfigurationTest {
         SpringApplication application = new SpringApplication(OrchestratorApplication.class);
         String[] arguments = {
             "--server.port=0",
-            "--spring.autoconfigure.exclude="
-                + "org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration,"
-                + "org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,"
-                + "org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration",
+            "--spring.profiles.active=test",
+            "--spring.kafka.listener.auto-startup=false",
             "--spring.kafka.bootstrap-servers=localhost:19092",
             "--spring.kafka.security.protocol=SSL"
         };

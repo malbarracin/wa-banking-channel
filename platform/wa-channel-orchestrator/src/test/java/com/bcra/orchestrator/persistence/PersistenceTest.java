@@ -59,7 +59,7 @@ class PersistenceTest {
     @Test
     @DisplayName("Aplica las cinco migraciones Flyway")
     void appliesFiveMigrations() {
-        assertThat(flyway.info().applied()).hasSize(5);
+        assertThat(flyway.info().applied()).hasSize(6);
         assertThat(flyway.info().pending()).isEmpty();
     }
 

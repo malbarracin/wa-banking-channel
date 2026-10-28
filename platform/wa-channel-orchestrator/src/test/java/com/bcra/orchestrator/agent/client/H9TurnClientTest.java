@@ -160,6 +160,55 @@ class H9TurnClientTest {
     }
 
     @Test
+    void configuredClientUsesTimeoutAndDoesNotForwardCredentialsOnRedirect() {
+        var destination = new WireMockServer(0);
+        destination.start();
+        try {
+            server.stubFor(post(PATH).willReturn(aResponse().withStatus(307)
+                    .withHeader("Location", destination.baseUrl() + PATH)));
+            var configured = new H9ClientConfiguration().h9TurnClient(server.baseUrl(),
+                    "test-service-token", 1000, 10000, 0, 10);
+
+            assertFailure(configured, H9TurnException.Reason.REJECTED);
+
+            server.verify(1, postRequestedFor(urlEqualTo(PATH)));
+            assertThat(destination.getAllServeEvents()).isEmpty();
+        } finally {
+            destination.stop();
+        }
+    }
+
+    @Test
+    void configuredClientAppliesAttemptTimeout() {
+        server.stubFor(post(PATH).willReturn(okJson(responseBody()).withFixedDelay(1500)));
+        var configured = new H9ClientConfiguration().h9TurnClient(server.baseUrl(),
+                "test-service-token", 1000, 300, 0, 10);
+
+        assertFailure(configured, H9TurnException.Reason.TIMEOUT);
+
+        server.verify(1, postRequestedFor(urlEqualTo(PATH)));
+    }
+
+    @Test
+    void failureTracesRestoreMdcAndExcludeRemoteSensitiveContent() {
+        server.stubFor(post(PATH).willReturn(aResponse().withStatus(500)
+                .withBody("private customer text whatsapp:+15005550006 test-service-token")));
+        MDC.put("correlationId", "previous");
+        MDC.put("other", "preserved");
+
+        assertFailure(client(10000, 0), H9TurnException.Reason.UNAVAILABLE);
+
+        assertThat(MDC.get("correlationId")).isEqualTo("previous");
+        assertThat(MDC.get("other")).isEqualTo("preserved");
+        assertThat(logs.list).hasSize(2).allSatisfy(event -> {
+            assertThat(event.getMDCPropertyMap()).containsEntry("correlationId", request.correlationId().toString());
+            assertThat(event.getFormattedMessage()).doesNotContain("private", "15005550006", "test-service-token");
+            assertThat(event.getThrowableProxy()).isNull();
+        });
+        assertThat(logs.list.getLast().getFormattedMessage()).contains("outcome=UNAVAILABLE", "elapsedMs=");
+    }
+
+    @Test
     void mapsConnectionFailureWithoutLeakingTransportException() {
         var client = client(10000, 0);
         server.stop();

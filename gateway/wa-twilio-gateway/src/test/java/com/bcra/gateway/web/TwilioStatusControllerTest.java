@@ -43,6 +43,39 @@ class TwilioStatusControllerTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void signedCallbackReachesKafkaThroughRealNormalizerAndSchemaValidator() throws Exception {
+        org.springframework.kafka.core.KafkaTemplate<String, String> kafka =
+                mock(org.springframework.kafka.core.KafkaTemplate.class);
+        when(kafka.send(any(org.apache.kafka.clients.producer.ProducerRecord.class)))
+                .thenReturn(CompletableFuture.completedFuture(null));
+        var mapper = new ObjectMapper();
+        mvc = MockMvcBuilders.standaloneSetup(new TwilioStatusController(TOKEN, URL,
+                new StatusNormalizer(mapper), new StatusEventPublisher(kafka, mapper),
+                new AntiReplayService(300, 100))).build();
+        var sent = form("sent");
+        send(sent, "invalid").andExpect(status().isForbidden());
+        verifyNoInteractions(kafka);
+        send(sent, sign(URL, sent)).andExpect(status().isOk());
+        send(sent, sign(URL, sent)).andExpect(status().isOk());
+        var delivered = form("delivered");
+        send(delivered, sign(URL, delivered)).andExpect(status().isOk());
+        ArgumentCaptor<org.apache.kafka.clients.producer.ProducerRecord<String, String>> records =
+                ArgumentCaptor.forClass(org.apache.kafka.clients.producer.ProducerRecord.class);
+        verify(kafka, times(2)).send(records.capture());
+        var first = records.getAllValues().getFirst();
+        var second = records.getAllValues().getLast();
+        assertThat(first.topic()).isEqualTo("wa.message.status.v1");
+        assertThat(second.key()).isEqualTo(first.key());
+        assertThat(mapper.readTree(first.value()).path("payload").path("status").asText()).isEqualTo("sent");
+        assertThat(mapper.readTree(second.value()).path("payload").path("status").asText()).isEqualTo("delivered");
+        assertThat(mapper.readTree(first.value()).path("correlationId").asText()).isEqualTo(CORRELATION);
+        assertThat(new String(first.headers().lastHeader("correlationId").value(), StandardCharsets.UTF_8))
+                .isEqualTo(CORRELATION);
+        assertThat(first.value()).doesNotContain("whatsapp:", TOKEN);
+    }
+
+    @Test
     void publishesSignedCallbackWithCorrelationAndDeduplicatesEachState() throws Exception {
         var form = form("sent");
         send(form, sign(URL, form)).andExpect(status().isOk()).andExpect(header().string("correlationId", CORRELATION));

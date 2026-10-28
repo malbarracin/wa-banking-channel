@@ -5,8 +5,11 @@ Base de H0 con Java 21 y Spring Boot 3. Paquete `com.bcra.gateway` y puerto
 
 Desde esta carpeta ejecutar `./mvnw spring-boot:run` (Windows:
 `.\mvnw.cmd spring-boot:run`). `SERVER_PORT` permite cambiar el puerto.
-Requiere `TWILIO_AUTH_TOKEN` y `TWILIO_WEBHOOK_PUBLIC_URL` para arrancar.
-No requiere Kafka para arrancar.
+Tras integrar el webhook, el arranque requiere `TWILIO_AUTH_TOKEN` y
+`TWILIO_WEBHOOK_PUBLIC_URL` por entorno. El envío outbound requiere además cuenta,
+emisor WhatsApp, URL pública del callback y Kafka; ver [OUTBOUND.md](OUTBOUND.md)
+para configuración, persistencia de deduplicación, reintentos y reconciliación.
+Con `gateway.outbound.enabled=false`, el arranque no requiere Kafka.
 Kafka debe estar disponible para confirmar webhooks; bootstrap por `KAFKA_BOOTSTRAP_SERVERS`.
 `.env.example` enumera las variables; Spring no carga el archivo .env automáticamente.
 
@@ -21,7 +24,7 @@ Desde la raíz: `python scripts/verify_integracion.py` descubre este componente.
 
 Webhook firmado `POST /webhook/twilio`: ver [WEBHOOK.md](WEBHOOK.md).
 Normalizacion y publicacion Kafka: ver [NORMALIZATION.md](NORMALIZATION.md).
-Los limites HTTP y el flujo outbound corresponden a tareas posteriores.
+Envío outbound: ver [OUTBOUND.md](OUTBOUND.md).
 El webhook integrado en `/webhook/twilio` valida firma y deduplica publicaciones
 confirmadas. Sin un adaptador `InboundWebhookPublisher` responde 503 para permitir
 el reintento. Las pruebas de arranque usan configuración sintética local al test;

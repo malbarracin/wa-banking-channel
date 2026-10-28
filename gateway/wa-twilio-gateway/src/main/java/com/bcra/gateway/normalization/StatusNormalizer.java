@@ -2,6 +2,7 @@ package com.bcra.gateway.normalization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.bcra.gateway.outbound.OutboundStore;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -11,13 +12,23 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 
 @Component
 public class StatusNormalizer {
     private final ObjectMapper mapper;
+    private final java.util.function.Supplier<java.util.Optional<OutboundStore>> outboundStore;
 
     public StatusNormalizer(ObjectMapper mapper) {
         this.mapper = mapper;
+        this.outboundStore = java.util.Optional::empty;
+    }
+
+    @Autowired
+    public StatusNormalizer(ObjectMapper mapper, ObjectProvider<OutboundStore> outboundStore) {
+        this.mapper = mapper;
+        this.outboundStore = () -> java.util.Optional.ofNullable(outboundStore.getIfAvailable());
     }
 
     public ObjectNode normalize(Map<String, String> form, String correlationId) {
@@ -45,6 +56,12 @@ public class StatusNormalizer {
             throw new IllegalStateException(exception);
         }
         event.put("messageId", sid);
+        outboundStore.get().flatMap(store -> store.findBySid(sid))
+                .ifPresent(send -> {
+                    event.put("messageId", send.messageId());
+                    event.put("conversationId", send.conversationId());
+                    event.put("correlationId", send.correlationId());
+                });
         ObjectNode payload = event.putObject("payload");
         payload.put("status", status);
         String error = form.get("ErrorCode");

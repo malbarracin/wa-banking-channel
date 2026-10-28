@@ -97,6 +97,8 @@ Fuera de local quitar perfil local y suministrar TLS/SASL, certificados y secret
 ACL H0.2: consumir received con su grupo, producir ready-to-send/DLQ; soporte con permisos separados.
 
 Reproceso: [DLQ.md](../../../platform/wa-channel-orchestrator/DLQ.md), rutas distintas inbound/outbox.
+Secuencias y contingencias: [FLUJOS.md](../../../platform/wa-channel-orchestrator/FLUJOS.md);
+máquinas de estado: [SAGAS.md](../../../platform/wa-channel-orchestrator/SAGAS.md).
 Arranque y verificación: [README](../../../platform/wa-channel-orchestrator/README.md).
 verify_integracion.py descubre el POM automáticamente, ejecuta wrapper verify y JaCoCo ≥80%.
 Tests integration requieren Docker; su omisión no certifica conectividad real.

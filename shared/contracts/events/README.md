@@ -18,6 +18,28 @@ UUID y fechas RFC 3339 se validan con comprobación de formatos habilitada.
 `body` contiene solo el texto del turno. No incluir documentos, credenciales,
 saldos ni payloads del proveedor. No registrar estos campos en logs.
 `errorCode` de estado es opcional y contiene solo un código, nunca texto de excepción.
+`status` de `MessageStatus` admite `queued`, `sent`, `delivered`, `read` y `failed`.
+
+### Uso por H0.2 (orquestador)
+
+| Topic | Uso actual |
+|---|---|
+| `wa.message.received.v1` | Lo consume con grupo `wa-channel-orchestrator`, valida schema/clave/headers y deduplica por `messageId` antes de cualquier efecto |
+| `wa.message.ready-to-send.v1` | Lo produce desde `outbox` con clave `conversationId` y headers del sobre; H0 deduplica reentregas |
+| `wa.message.status.v1` | Consumidor de H0.2 pendiente; se usa para observabilidad |
+| `wa.message.dlq.v1` | Recibe fallos de inbound y de outbox; cada uno con semántica distinta (abajo) |
+
+`DeadLetter` producido por H0.2:
+
+- **Inbound:** `originalValueBase64` vacío por privacidad; `conversationId` es un UUID derivado de
+  `topic:partition:offset` (no la conversación original) y `messageId` es `topic:partition:offset`.
+  Esas coordenadas permiten releer el registro original.
+- **Outbox:** conserva el `conversationId` y el `correlationId` reales y el `messageId` saliente;
+  `originalPartition`/`originalOffset` valen `0` como valores convencionales del schema y **no son
+  coordenadas de reproceso**. La fila se ubica por `messageId` en `outbox.message_id`.
+- En ambos casos los únicos headers son `correlationId`, `eventType`, `eventVersion` y `errorCode`.
+  El detalle operativo está en
+  [DLQ.md](../../../platform/wa-channel-orchestrator/DLQ.md).
 
 ## Sobre común (EventEnvelope)
 

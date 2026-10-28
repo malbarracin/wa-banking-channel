@@ -1,5 +1,7 @@
 # Sagas persistentes (TASK-95)
 
+Secuencias de punta a punta y contingencias: [FLUJOS.md](FLUJOS.md).
+
 `SagaOrchestrator` se une a la transacción del llamador (REQUIRED). El llamador crea
 la conversación con `ConversationService` y usa un UUID estable para `start`.
 Las tablas de Flyway V2/V3 conservan estado, versión y ejecuciones; no requieren
@@ -10,7 +12,77 @@ recreación ni una migración adicional.
 | ONBOARDING | LINK → ISSUE_CREDENTIAL |
 | REVERIFICATION | VERIFY_IDENTITY → ISSUE_CREDENTIAL |
 
-`start`: PENDING → IN_PROGRESS. `signal` exige el paso actual y un estado activo.
+## Máquina de estados
+
+Los nodos combinan estado (`SagaStatus`) y paso actual (`current_step`). `WAITING` conserva
+el paso y permite continuar tras un reinicio. `PENDING` existe en el esquema, pero `start`
+persiste `IN_PROGRESS` dentro de la misma transacción: no es un estado observable.
+
+### ONBOARDING
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "LINK · IN_PROGRESS" as LINK
+    state "LINK · WAITING" as LINK_WAITING
+    state "ISSUE_CREDENTIAL · IN_PROGRESS" as ISSUE_CREDENTIAL
+    state "ISSUE_CREDENTIAL · WAITING" as CREDENTIAL_WAITING
+    state "COMPLETED" as COMPLETED
+    state "COMPENSATING" as COMPENSATING
+    state "COMPENSATED" as COMPENSATED
+    state "FAILED · SUPPORT_REQUIRED" as FAILED
+
+    [*] --> LINK: start
+    LINK --> LINK_WAITING: WAIT_FOR_INPUT
+    LINK_WAITING --> LINK: SUCCEEDED
+    LINK --> ISSUE_CREDENTIAL: SUCCEEDED
+    ISSUE_CREDENTIAL --> CREDENTIAL_WAITING: WAIT_FOR_INPUT
+    CREDENTIAL_WAITING --> ISSUE_CREDENTIAL: SUCCEEDED
+    ISSUE_CREDENTIAL --> COMPLETED: SUCCEEDED
+    LINK --> COMPENSATING: FAILED o timeout
+    LINK_WAITING --> COMPENSATING: FAILED o timeout
+    ISSUE_CREDENTIAL --> COMPENSATING: FAILED o timeout
+    CREDENTIAL_WAITING --> COMPENSATING: FAILED o timeout
+    COMPENSATING --> COMPENSATED: todas las compensaciones confirmadas
+    COMPENSATING --> FAILED: rechazo o sin adaptador
+    COMPLETED --> [*]
+    COMPENSATED --> [*]
+    FAILED --> [*]
+```
+
+### REVERIFICATION
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "VERIFY_IDENTITY · IN_PROGRESS" as VERIFY
+    state "VERIFY_IDENTITY · WAITING" as VERIFY_WAITING
+    state "ISSUE_CREDENTIAL · IN_PROGRESS" as ISSUE_CREDENTIAL
+    state "ISSUE_CREDENTIAL · WAITING" as CREDENTIAL_WAITING
+    state "COMPLETED" as COMPLETED
+    state "COMPENSATING" as COMPENSATING
+    state "COMPENSATED" as COMPENSATED
+    state "FAILED · SUPPORT_REQUIRED" as FAILED
+
+    [*] --> VERIFY: start
+    VERIFY --> VERIFY_WAITING: WAIT_FOR_INPUT
+    VERIFY_WAITING --> VERIFY: SUCCEEDED
+    VERIFY --> ISSUE_CREDENTIAL: SUCCEEDED
+    ISSUE_CREDENTIAL --> CREDENTIAL_WAITING: WAIT_FOR_INPUT
+    CREDENTIAL_WAITING --> ISSUE_CREDENTIAL: SUCCEEDED
+    ISSUE_CREDENTIAL --> COMPLETED: SUCCEEDED
+    VERIFY --> COMPENSATING: FAILED o timeout
+    VERIFY_WAITING --> COMPENSATING: FAILED o timeout
+    ISSUE_CREDENTIAL --> COMPENSATING: FAILED o timeout
+    CREDENTIAL_WAITING --> COMPENSATING: FAILED o timeout
+    COMPENSATING --> COMPENSATED: todas las compensaciones confirmadas
+    COMPENSATING --> FAILED: rechazo o sin adaptador
+    COMPLETED --> [*]
+    COMPENSATED --> [*]
+    FAILED --> [*]
+```
+
+`start` crea la instancia y la persiste en IN_PROGRESS sobre el primer paso. `signal` exige el paso actual y un estado activo.
 SUCCEEDED completa el paso y crea el siguiente, o termina en COMPLETED.
 WAIT_FOR_INPUT persiste WAITING; SUCCEEDED permite continuar desde ese estado,
 incluso usando una nueva instancia del proceso. FAILED o vencimiento lleva a

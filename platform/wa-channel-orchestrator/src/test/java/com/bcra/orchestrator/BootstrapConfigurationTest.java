@@ -30,6 +30,13 @@ class BootstrapConfigurationTest {
                 org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory.class);
             assertThat(listenerFactory.createContainer("wa.message.received.v1").getCommonErrorHandler())
                 .isSameAs(context.getBean(org.springframework.kafka.listener.DefaultErrorHandler.class));
+            var inboundContainer = listenerFactory.createContainer("wa.message.received.v1");
+            assertThat(inboundContainer.getContainerProperties().getAckMode())
+                .isEqualTo(org.springframework.kafka.listener.ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+            assertThat(inboundContainer).isInstanceOfSatisfying(
+                org.springframework.kafka.listener.ConcurrentMessageListenerContainer.class,
+                concurrent -> assertThat(concurrent.getConcurrency()).isEqualTo(3));
+            assertThat(kafka.getConsumer().getEnableAutoCommit()).isFalse();
             RestClient client = RestClient.create("http://localhost:" + context.getWebServer().getPort());
 
             assertThat(kafka.getBootstrapServers()).containsExactly("localhost:19092");

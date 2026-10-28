@@ -9,11 +9,14 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 @SpringBootTest(properties = "spring.kafka.listener.auto-startup=false")
 @ActiveProfiles("test")
@@ -62,6 +65,27 @@ class InboundTransactionTest {
         String message = UUID.randomUUID() + "m".repeat(220);
         consumer.consume(InboundEventConsumerTest.record(message, "c".repeat(256)), () -> { });
         assertThat(count("message_dedupe", message)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Una falla de ACK tras el commit permite reentrega sin duplicar el efecto")
+    void acknowledgmentFailureAfterCommitDoesNotRepeatEffect() {
+        String message = UUID.randomUUID().toString();
+        var record = InboundEventConsumerTest.record(message, "ack-failure-conversation");
+        assertThatThrownBy(() -> consumer.consume(record, () -> {
+            assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
+            throw new IllegalStateException("Synthetic acknowledgment failure");
+        })).isInstanceOf(IllegalStateException.class)
+                .hasMessage("Synthetic acknowledgment failure");
+        assertThat(count("message_dedupe", message)).isEqualTo(1);
+        assertThat(count("inbound_test_effect", message)).isEqualTo(1);
+
+        var acknowledgment = mock(Acknowledgment.class);
+        consumer.consume(record, acknowledgment);
+
+        verify(acknowledgment).acknowledge();
+        assertThat(count("message_dedupe", message)).isEqualTo(1);
+        assertThat(count("inbound_test_effect", message)).isEqualTo(1);
     }
 
     private int count(String table, String message) {

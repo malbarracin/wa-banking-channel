@@ -133,6 +133,66 @@ public class SagaOrchestratorTest {
         assertThat(sagas.findById(id).orElseThrow().getStatus()).isEqualTo(SagaStatus.IN_PROGRESS);
     }
 
+    @Test
+    void rollsBackStepAndAuditTogetherWithCallerTransaction() {
+        UUID id = start(SagaType.ONBOARDING);
+        new TransactionTemplate(transactions).executeWithoutResult(tx -> {
+            orchestrator.signal(id, SagaStep.LINK, SagaSignal.SUCCEEDED);
+            sagas.flush();
+            executions.flush();
+            tx.setRollbackOnly();
+        });
+        assertThat(sagas.findById(id).orElseThrow().getCurrentStep()).isEqualTo("LINK");
+        assertThat(executions.findBySagaIdOrderByStartedAtAsc(id)).singleElement()
+                .satisfies(step -> {
+                    assertThat(step.getStatus()).isEqualTo(SagaStatus.IN_PROGRESS);
+                    assertThat(step.getCompletedAt()).isNull();
+                });
+    }
+
+    @Test
+    void lateSuccessCompensatesInsteadOfAdvancingExpiredStep() {
+        UUID id = start(SagaType.REVERIFICATION);
+        new TransactionTemplate(transactions).executeWithoutResult(tx -> {
+            var saga = sagas.findById(id).orElseThrow();
+            saga.recordProgress(SagaStatus.IN_PROGRESS, "VERIFY_IDENTITY", "{}", Instant.EPOCH, Instant.now());
+        });
+        new TransactionTemplate(transactions).executeWithoutResult(tx ->
+                engine(true).signal(id, SagaStep.VERIFY_IDENTITY, SagaSignal.SUCCEEDED));
+        assertThat(sagas.findById(id).orElseThrow().getStatus()).isEqualTo(SagaStatus.COMPENSATED);
+        assertThat(executions.findBySagaIdOrderByStartedAtAsc(id)).singleElement()
+                .satisfies(step -> assertThat(step.getResultCode()).isEqualTo("TIMEOUT"));
+    }
+
+    @Test
+    void rejectedCompensationStillAttemptsEarlierStepAndIsNotRepeatedByScheduler() {
+        UUID id = start(SagaType.ONBOARDING);
+        orchestrator.signal(id, SagaStep.LINK, SagaSignal.SUCCEEDED);
+        List<SagaStep> calls = new ArrayList<>();
+        StaticListableBeanFactory factory = new StaticListableBeanFactory();
+        factory.addBean("compensation", (SagaCompensation) (sagaId, step) -> {
+            assertThat(sagaId).isEqualTo(id);
+            calls.add(step);
+            return step == SagaStep.LINK;
+        });
+        SagaOrchestrator compensating = new SagaOrchestrator(sagas, executions,
+                factory.getBeanProvider(SagaCompensation.class), Duration.ofHours(24));
+        new TransactionTemplate(transactions).executeWithoutResult(tx ->
+                compensating.signal(id, SagaStep.ISSUE_CREDENTIAL, SagaSignal.FAILED));
+        new TransactionTemplate(transactions).executeWithoutResult(tx ->
+                compensating.expire(id, Instant.now().plus(Duration.ofDays(2))));
+        assertThat(calls).containsExactly(SagaStep.ISSUE_CREDENTIAL, SagaStep.LINK);
+        assertThat(sagas.findById(id).orElseThrow().getStatus()).isEqualTo(SagaStatus.FAILED);
+        assertThat(executions.findBySagaIdOrderByStartedAtAsc(id)).anySatisfy(step -> {
+            assertThat(step.getStep()).isEqualTo("ISSUE_CREDENTIAL");
+            assertThat(step.getStatus()).isEqualTo(SagaStatus.FAILED);
+            assertThat(step.getResultCode()).isEqualTo("SUPPORT_REQUIRED");
+        }).anySatisfy(step -> {
+            assertThat(step.getStep()).isEqualTo("LINK");
+            assertThat(step.getStatus()).isEqualTo(SagaStatus.COMPENSATED);
+        });
+    }
+
     private UUID start(SagaType type) {
         UUID id = UUID.randomUUID();
         conversations.loadOrCreate(id.toString(), UUID.randomUUID());

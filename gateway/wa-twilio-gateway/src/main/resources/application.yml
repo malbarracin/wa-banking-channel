@@ -5,8 +5,20 @@ server:
     include-stacktrace: never
     include-binding-errors: never
 spring:
+  datasource:
+    url: ${OUTBOUND_DB_URL:jdbc:h2:file:./data/outbound;DB_CLOSE_ON_EXIT=FALSE;WRITE_DELAY=0}
+    username: ${OUTBOUND_DB_USER:sa}
+    password: ${OUTBOUND_DB_PASSWORD:}
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      properties:
+        max.poll.records: 1
+        max.poll.interval.ms: 300000
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -34,6 +46,9 @@ info:
   app:
     name: ${spring.application.name}
 logging:
+  level:
+    org.springframework.kafka.listener.DefaultErrorHandler: OFF
+    com.twilio: OFF
   structured:
     format:
       console: ecs

@@ -6,7 +6,9 @@ Base de H0 con Java 21 y Spring Boot 3. Paquete `com.bcra.gateway` y puerto
 Desde esta carpeta ejecutar `./mvnw spring-boot:run` (Windows:
 `.\mvnw.cmd spring-boot:run`). `SERVER_PORT` permite cambiar el puerto.
 Tras integrar el webhook, el arranque requiere `TWILIO_AUTH_TOKEN` y
-`TWILIO_WEBHOOK_PUBLIC_URL` por entorno. No requiere Kafka para arrancar.
+`TWILIO_WEBHOOK_PUBLIC_URL` por entorno. El envío outbound requiere además cuenta,
+emisor WhatsApp, URL pública del callback y Kafka; ver [OUTBOUND.md](OUTBOUND.md)
+para configuración, persistencia de deduplicación, reintentos y reconciliación.
 `.env.example` enumera las variables; Spring no carga el archivo .env automáticamente.
 
 Endpoints: `/actuator/health`, `/actuator/info`, `/actuator/prometheus`.

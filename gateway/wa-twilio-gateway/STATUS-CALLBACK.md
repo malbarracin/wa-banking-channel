@@ -17,6 +17,9 @@ El header HTTP `correlationId` debe ser UUID; se propaga al evento, headers Kafk
 Si falta, se genera uno y se devuelve en el ACK. Cuando se integre outbound, ese
 componente debe conservar la relación entre el SID de Twilio y su messageId de negocio
 y suministrar la correlación original; este endpoint no inventa esa relación.
+TASK-83 agrega esa relación en `outbound_send`: cuando existe un SID persistido,
+el normalizador recupera el messageId de negocio y la correlación originales.
+Ver [OUTBOUND.md](OUTBOUND.md) para el caso de callback anterior a la persistencia.
 
 Firma inválida: 403. Entrada inválida: 400. Cuerpo >16 KiB: 413.
 Límite global por instancia: 120 callbacks/minuto; excedido: 429.

@@ -85,7 +85,9 @@ public class TwilioStatusController {
         try {
             MDC.put("correlationId", correlationId);
             var event = normalizer.normalize(form, correlationId);
-            key = "status:" + event.path("messageId").asText() + ":" + event.path("payload").path("status").asText();
+            correlationId = event.path("correlationId").asText();
+            MDC.put("correlationId", correlationId);
+            key = "status:" + form.get("MessageSid") + ":" + event.path("payload").path("status").asText();
             var claim = replay.claim(key);
             if (claim == AntiReplayService.Claim.DUPLICATE) {
                 return ResponseEntity.ok().build();

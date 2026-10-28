@@ -12,8 +12,9 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = {"TWILIO_AUTH_TOKEN=test-token", "TWILIO_WEBHOOK_PUBLIC_URL=https://example.test/webhook/twilio"},
-        useMainMethod = SpringBootTest.UseMainMethod.ALWAYS)
+        useMainMethod = SpringBootTest.UseMainMethod.ALWAYS,
+        properties = {"TWILIO_AUTH_TOKEN=synthetic-test-token",
+                "TWILIO_WEBHOOK_PUBLIC_URL=https://bank.example/webhook/twilio"})
 @AutoConfigureObservability
 class GatewayApplicationTest {
 

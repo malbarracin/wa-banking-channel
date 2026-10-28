@@ -9,3 +9,7 @@
 - shared/contracts/events/ (H0.1)
 - shared/contracts/wa-twilio-gateway/handoff.md
 - shared/contracts/wa-channel-orchestrator/handoff.md
+
+| Hito | Fuente Notion | Fecha consulta | Notas |
+|------|---------------|----------------|-------|
+| H0.2 — Orquestador del Canal | https://app.notion.com/p/H0-2-Orquestador-del-Canal-3a675bb08ca7812c9b8bed1723e9206f | 2026-10-28T09:49:46Z | Página del hito leída; roadmap leído previamente. |

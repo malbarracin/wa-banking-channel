@@ -12,8 +12,8 @@
 **/target
 **/helm
 services/
-# gateway/ no se excluye: el build de wa-twilio-gateway usa contexto raíz
-# (Dockerfile copia gateway/wa-twilio-gateway + shared/contracts/events).
+# gateway/ y platform/ no se excluyen: builds de integración usan contexto raíz
+# (Dockerfile copia el componente + shared/contracts/events).
 gateway/**/data/
 ai/
 docs/

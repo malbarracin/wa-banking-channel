@@ -6,17 +6,32 @@ H0 adapta Twilio, H9 interpreta mensajes y usa H7, H1–H6 conservan sus reglas.
 
 ## Arranque y variables
 
-Disponer de JDK 21, PostgreSQL con base `wa_orchestrator` y Kafka con los
-[topics H0.1](../../shared/contracts/events/topics.md). No hay Compose propio del orquestador.
-Exportar las variables de [.env.example](.env.example) en el proceso: Spring Boot no carga
-ese archivo automáticamente. Completar usuario/contraseña PostgreSQL y token H9 desde secretos.
-Desde esta carpeta:
+Stack en `docker-compose.yml` (Kafka KRaft 3.9.1, `kafka-init` con topics H0.1,
+PostgreSQL 17 `orchestrator-db`, app con profile `app`). Puerto **8091**.
+Copiá [.env.example](.env.example) a `.env` (fuera de git) y completá
+`SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` y `H9_SERVICE_TOKEN`.
+Spring Boot no carga `.env` automáticamente; `docker compose` sí lo usa para
+sustituir variables del compose.
+
+```powershell
+# Desde platform/wa-channel-orchestrator
+docker compose up -d --wait                    # broker + kafka-init + postgres
+docker compose --profile app up -d --wait      # + wa-channel-orchestrator
+# O desde la raíz del repo
+docker build -f platform/wa-channel-orchestrator/Dockerfile -t wa-channel-orchestrator:local .
+```
+
+Sin contenedor: JDK 21, PostgreSQL con base `wa_orchestrator` y Kafka con los
+[topics H0.1](../../shared/contracts/events/topics.md). Exportar las variables de
+`.env.example` en el proceso. Desde esta carpeta:
 
 ```powershell
 .\mvnw.cmd -q -B spring-boot:run
 ```
 
 Linux: `./mvnw`. Flyway aplica V1–V7; Hibernate valida el esquema.
+H9 en el host desde el contenedor: `H9_BASE_URL=http://host.docker.internal:8099`.
+Si H9 solo es alcanzable por túnel, usá la URL HTTPS pública en `H9_BASE_URL`.
 El [handoff](../../shared/contracts/wa-channel-orchestrator/handoff.md) detalla variables,
 contratos y operación. Fuera de local quitar el perfil `local` (fuerza PLAINTEXT), configurar
 TLS/SASL y ACL, usar HTTPS para H9 y restringir Actuator a operación.

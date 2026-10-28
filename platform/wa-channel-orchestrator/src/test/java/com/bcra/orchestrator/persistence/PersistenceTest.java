@@ -185,4 +185,34 @@ class PersistenceTest {
                 "message", "MessageReadyToSend", 0, "topic", "{}", NOW))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    @DisplayName("Rollback no deja estado, deduplicación ni outbox parcialmente persistidos")
+    void rollsBackStateDedupeAndOutboxTogether() {
+        String conversationId = UUID.randomUUID().toString();
+        UUID correlationId = UUID.randomUUID();
+        UUID dedupeId = UUID.randomUUID();
+        UUID eventId = UUID.randomUUID();
+        EntityManager writer = entityManagerFactory.createEntityManager();
+        try {
+            writer.getTransaction().begin();
+            writer.persist(new ConversationState(conversationId, correlationId, "ACTIVE", NOW));
+            writer.persist(new MessageDedupe(dedupeId, UUID.randomUUID().toString(), conversationId,
+                    correlationId, "MessageReceived", NOW));
+            writer.persist(new OutboxEvent(eventId, conversationId, correlationId, "outbound-rollback",
+                    "MessageReadyToSend", 1, "wa.message.ready-to-send.v1", "{}", NOW));
+            writer.flush();
+            writer.getTransaction().rollback();
+            writer.clear();
+
+            assertThat(writer.find(ConversationState.class, conversationId)).isNull();
+            assertThat(writer.find(MessageDedupe.class, dedupeId)).isNull();
+            assertThat(writer.find(OutboxEvent.class, eventId)).isNull();
+        } finally {
+            if (writer.getTransaction().isActive()) {
+                writer.getTransaction().rollback();
+            }
+            writer.close();
+        }
+    }
 }

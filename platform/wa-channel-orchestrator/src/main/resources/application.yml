@@ -1,3 +1,10 @@
+h9:
+  base-url: ${H9_BASE_URL:http://localhost:8099}
+  service-token: ${H9_SERVICE_TOKEN:}
+  connect-timeout-ms: ${H9_CONNECT_TIMEOUT_MS:1000}
+  timeout-ms: ${H9_TIMEOUT_MS:5000}
+  max-retries: ${H9_MAX_RETRIES:2}
+  backoff-ms: ${H9_BACKOFF_MS:200}
 spring:
   application:
     name: wa-channel-orchestrator

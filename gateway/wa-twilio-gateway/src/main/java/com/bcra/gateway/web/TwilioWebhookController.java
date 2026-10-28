@@ -62,6 +62,8 @@ public class TwilioWebhookController {
                     .get(PUBLICATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS);
             antiReplay.complete(messageSid);
             return ResponseEntity.ok().build();
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().build();
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             return ResponseEntity.status(503).build();

@@ -28,6 +28,10 @@ class BootstrapConfigurationTest {
 
         try (var context = (ServletWebServerApplicationContext) application.run(arguments)) {
             KafkaProperties kafka = context.getBean(KafkaProperties.class);
+            var listenerFactory = context.getBean("kafkaListenerContainerFactory",
+                org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory.class);
+            assertThat(listenerFactory.createContainer("wa.message.received.v1").getCommonErrorHandler())
+                .isSameAs(context.getBean(org.springframework.kafka.listener.DefaultErrorHandler.class));
             RestClient client = RestClient.create("http://localhost:" + context.getWebServer().getPort());
 
             assertThat(kafka.getBootstrapServers()).containsExactly("localhost:19092");

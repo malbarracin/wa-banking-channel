@@ -1,3 +1,9 @@
+outbox:
+  enabled: ${OUTBOX_ENABLED:true}
+  poll-interval-ms: ${OUTBOX_POLL_INTERVAL_MS:250}
+  max-attempts: ${OUTBOX_MAX_ATTEMPTS:3}
+  backoff-ms: ${OUTBOX_BACKOFF_MS:1000}
+  send-timeout-ms: ${OUTBOX_SEND_TIMEOUT_MS:10000}
 h9:
   base-url: ${H9_BASE_URL:http://localhost:8099}
   service-token: ${H9_SERVICE_TOKEN:}

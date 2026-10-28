@@ -28,9 +28,13 @@ Logs ECS incorporan correlationId cuando está presente en MDC.
 Estructura de paquetes según specs/orquestador-canal/arquitectura.md.
 La configuración prepara productor idempotente, consumidores manuales y Flyway.
 Incluye las migraciones y el modelo de persistencia, además del manejo de retry y DLQ.
-Los listeners, validación de esquemas, publicador de outbox, ejecución de sagas y cliente H9
+Los listeners, validación de esquemas, ejecución de sagas y cliente H9
 corresponden a tareas posteriores. Los esquemas existentes se empaquetan en contracts/events.
 La prueba de arranque excluye infraestructura externa; no verifica conectividad Kafka/PostgreSQL.
+
+TASK-96 incorpora publicación outbound transaccional, despacho de outbox, validación del contrato
+y reintentos/DLQ. El uso desde el turno deduplicado, la configuración y el reproceso se describen
+en [OUTBOUND.md](OUTBOUND.md).
 
 ## Persistencia (TASK-91)
 

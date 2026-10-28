@@ -51,7 +51,8 @@ class TwilioWebhookControllerTest {
         }
         return MockMvcBuilders.standaloneSetup(new TwilioWebhookController(
                 new TwilioSignatureValidator(TOKEN, PUBLIC_URL), new AntiReplayService(300, 100),
-                beans.getBeanProvider(InboundWebhookPublisher.class))).build();
+                beans.getBeanProvider(InboundWebhookPublisher.class)))
+                .addFilters(new com.bcra.gateway.security.WebhookInputFilter()).build();
     }
 
     @Test

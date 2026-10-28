@@ -39,7 +39,8 @@ class TwilioStatusControllerTest {
     void setUp() {
         when(publisher.publish(any())).thenReturn(CompletableFuture.completedFuture(null));
         mvc = MockMvcBuilders.standaloneSetup(new TwilioStatusController(TOKEN, URL,
-                new StatusNormalizer(new ObjectMapper()), publisher, new AntiReplayService(300, 100))).build();
+                new StatusNormalizer(new ObjectMapper()), publisher, new AntiReplayService(300, 100)))
+                .addFilters(new com.bcra.gateway.security.WebhookInputFilter()).build();
     }
 
     @Test

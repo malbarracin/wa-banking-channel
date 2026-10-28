@@ -1,0 +1,10 @@
+name: CD preparation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Template only. Configure cluster, namespace, image SHA and external DB Secret before enabling deployment."

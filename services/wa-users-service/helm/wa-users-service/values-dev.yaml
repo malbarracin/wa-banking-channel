@@ -1,0 +1,4 @@
+replicaCount: 1
+# Perfil prod también en Kubernetes dev: PostgreSQL externo con schema preparado.
+database:
+  existingSecret: wa-users-db-dev

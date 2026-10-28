@@ -1,0 +1,25 @@
+meta {
+  name: Reactivar usuario
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/{{userId}}/status
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "status": "ACTIVE"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  SUSPENDED → ACTIVE.
+}

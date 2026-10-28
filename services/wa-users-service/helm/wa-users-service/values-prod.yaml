@@ -1,0 +1,12 @@
+replicaCount: 2
+image:
+  pullPolicy: Always
+database:
+  existingSecret: wa-users-db-prod
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "2"
+    memory: 1Gi

@@ -1,0 +1,28 @@
+meta {
+  name: Alta sin contacto (400)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/users
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "documentType": "DNI",
+    "documentNumber": "99999001",
+    "displayName": "Sin Contacto",
+    "birthDate": "1990-01-02"
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  VALIDATION_ERROR: falta email y phone.
+}

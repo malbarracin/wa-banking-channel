@@ -1,0 +1,25 @@
+meta {
+  name: Transición inválida (409)
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/{{userId}}/status
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "status": "ACTIVE"
+  }
+}
+
+assert {
+  res.status: eq 409
+}
+
+docs {
+  CONFLICT: reactivar desde LOGICALLY_DELETED no está permitido.
+}

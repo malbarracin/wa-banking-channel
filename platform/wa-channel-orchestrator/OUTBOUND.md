@@ -27,10 +27,13 @@ a wa.message.dlq.v1. No se marca terminal hasta recibir ACK de DLQ; fallos de DL
 reintentándose con backoff, sin perder la fila. No se registran payloads ni excepciones remotas.
 Métricas: orchestrator.outbox.published, failures y dlq; MDC correlationId se restaura al salir.
 
-La DLQ lleva `source=outbox` y `outboxEventId` en headers para ubicar la fila original.
+La DLQ lleva solo los headers `correlationId`, `eventType`, `eventVersion` y `errorCode`,
+según el contrato H0.1. El `messageId` del sobre conserva el identificador saliente único
+para ubicar la fila original en `outbox` por `message_id`, comprobando también
+`conversationId` y `correlationId`.
 `originalValueBase64` queda vacío por privacidad. Al no existir coordenadas Kafka previas al envío,
 originalPartition/originalOffset son 0 como valores convencionales del esquema H0.1: **no son
-coordenadas de reproceso** para source=outbox. Soporte debe buscar por outboxEventId y revisar
+coordenadas de reproceso** de esta outbox. Soporte debe buscar por `message_id` y revisar
 el fallo antes de reactivar la fila en una transacción, limpiando dead_lettered_at/attempts/
 next_attempt_at y conservando eventId/messageId. No republicar desde offset 0 ni copiar contenido a logs.
 Configurar ACL de productor solo para ready-to-send y DLQ, TLS/SASL fuera de local.

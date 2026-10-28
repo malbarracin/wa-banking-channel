@@ -89,8 +89,11 @@ class OutboxDispatcherTest {
         assertThat(sent.value()).doesNotContain("test-address", "test-body", "sensitive exception");
         assertThat(mapper.readTree(sent.value()).path("payload").path("errorCode").asText())
                 .isEqualTo("RETRIES_EXHAUSTED");
-        assertThat(sent.headers().lastHeader("outboxEventId").value())
-                .isEqualTo(row.getEventId().toString().getBytes());
+        assertThat(mapper.readTree(sent.value()).path("messageId").asText()).isEqualTo(row.getMessageId());
+        assertThat(mapper.readTree(sent.value()).path("conversationId").asText())
+                .isEqualTo(row.getConversationId());
+        assertThat(mapper.readTree(sent.value()).path("correlationId").asText())
+                .isEqualTo(row.getCorrelationId().toString());
         assertThat(row.getDeadLetteredAt()).isNotNull();
         assertThat(row.getPublishedAt()).isNull();
         assertThat(MDC.get("correlationId")).isNull();
@@ -153,6 +156,49 @@ class OutboxDispatcherTest {
         verifyNoInteractions(entityManager);
         assertThatThrownBy(() -> new OutboxDispatcher(repository, publisher, kafka, metrics, 0, 1, 1))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void deadLetterHeadersFollowPublishedH01Contract() {
+        row = new OutboxEvent(UUID.randomUUID(), "conversation", UUID.randomUUID(), "m",
+                "MessageReadyToSend", 1, OutboundEventPublisher.TOPIC, "{}", Instant.now());
+        when(repository.findFirstByPublishedAtIsNullAndDeadLetteredAtIsNullOrderByCreatedAtAscEventIdAsc())
+                .thenReturn(Optional.of(row));
+
+        dispatcher.dispatchNext();
+
+        assertThat(sent().topic()).isEqualTo("wa.message.dlq.v1");
+        assertThat(sent().headers()).extracting(org.apache.kafka.common.header.Header::key)
+                .containsOnly("correlationId", "eventType", "eventVersion", "errorCode");
+    }
+
+    @Test
+    void missingAcknowledgmentKeepsPendingAndSchedulesRetry() {
+        when(kafka.send(any(ProducerRecord.class))).thenReturn(new CompletableFuture<>());
+        var boundedDispatcher = new OutboxDispatcher(repository, publisher, kafka, metrics, 3, 1000, 1);
+        Instant before = Instant.now();
+
+        boundedDispatcher.dispatchNext();
+
+        assertThat(row.getPublishedAt()).isNull();
+        assertThat(row.getDeadLetteredAt()).isNull();
+        assertThat(row.getAttempts()).isEqualTo(1);
+        assertThat(row.getNextAttemptAt()).isAfterOrEqualTo(before.plusMillis(1000));
+        assertThat(sent().topic()).isEqualTo(OutboundEventPublisher.TOPIC);
+    }
+
+    @Test
+    void rejectsUnexpectedFieldsAndInvalidFormats() throws Exception {
+        for (String field : java.util.List.of("unexpected", "eventId", "occurredAt")) {
+            var event = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(row.getPayload());
+            event.put(field, "private-invalid-value");
+            assertThatThrownBy(() -> publisher.validate(event.toString()))
+                    .isInstanceOf(IllegalArgumentException.class).hasMessage("Invalid outbound event");
+        }
+        var event = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(row.getPayload());
+        ((com.fasterxml.jackson.databind.node.ObjectNode) event.path("payload")).put("sessionToken", "private");
+        assertThatThrownBy(() -> publisher.validate(event.toString()))
+                .isInstanceOf(IllegalArgumentException.class).hasMessage("Invalid outbound event");
     }
 
     @Test

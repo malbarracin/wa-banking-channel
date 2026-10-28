@@ -105,6 +105,33 @@ class OutboxTransactionTest {
         verify(kafka, times(1)).send(any(ProducerRecord.class));
     }
 
+    @Test
+    @DisplayName("Rollback tras ACK conserva el pendiente y reenvía la misma identidad")
+    void rollbackAfterAcknowledgmentResendsSameEvent() {
+        reset(kafka);
+        when(kafka.send(any(ProducerRecord.class))).thenReturn(CompletableFuture.completedFuture(null));
+        String conversation = UUID.randomUUID().toString();
+        UUID correlation = UUID.randomUUID();
+        var transaction = new TransactionTemplate(transactions);
+        UUID event = transaction.execute(status -> {
+            entityManager.persist(new ConversationState(conversation, correlation, "ACTIVE", Instant.now()));
+            return publisher.publish(conversation, correlation, UUID.randomUUID().toString(), "test", "test");
+        });
+        transaction.executeWithoutResult(status -> {
+            dispatcher.dispatchNext();
+            entityManager.flush();
+            status.setRollbackOnly();
+        });
+        assertThat(repository.findById(event).orElseThrow().getPublishedAt()).isNull();
+
+        dispatcher.dispatchNext();
+
+        var capture = org.mockito.ArgumentCaptor.forClass(ProducerRecord.class);
+        verify(kafka, times(2)).send(capture.capture());
+        assertThat(capture.getAllValues().get(0).value()).isEqualTo(capture.getAllValues().get(1).value());
+        assertThat(repository.findById(event).orElseThrow().getPublishedAt()).isNotNull();
+    }
+
     @TestConfiguration
     static class Infrastructure {
         @Bean

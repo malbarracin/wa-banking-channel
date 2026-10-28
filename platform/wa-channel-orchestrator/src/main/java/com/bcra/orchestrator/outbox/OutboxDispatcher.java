@@ -116,8 +116,6 @@ public class OutboxDispatcher {
         record.headers().add("eventVersion", bytes("1"));
         if (code != null) {
             record.headers().add("errorCode", bytes(code));
-            record.headers().add("source", bytes("outbox"));
-            record.headers().add("outboxEventId", bytes(row.getEventId().toString()));
         }
         kafka.send(record).get(sendTimeoutMs, TimeUnit.MILLISECONDS);
     }

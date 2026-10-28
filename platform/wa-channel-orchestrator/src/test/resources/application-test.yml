@@ -1,3 +1,5 @@
+outbox:
+  enabled: false
 spring:
   datasource:
     url: jdbc:h2:mem:orchestrator;MODE=PostgreSQL;DB_CLOSE_DELAY=-1

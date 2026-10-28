@@ -54,6 +54,15 @@ public class OutboxEvent {
     @Column(name = "published_at")
     private Instant publishedAt;
 
+    @Column(nullable = false)
+    private int attempts;
+
+    @Column(name = "next_attempt_at")
+    private Instant nextAttemptAt;
+
+    @Column(name = "dead_lettered_at")
+    private Instant deadLetteredAt;
+
     public OutboxEvent(UUID eventId, String conversationId, UUID correlationId, String messageId,
             String eventType, int eventVersion, String topic, String payload, Instant createdAt) {
         if (eventVersion < 1) {
@@ -72,5 +81,14 @@ public class OutboxEvent {
 
     public void markPublished(Instant publishedAt) {
         this.publishedAt = Objects.requireNonNull(publishedAt, "publishedAt");
+    }
+
+    public void recordFailure(Instant nextAttemptAt) {
+        attempts++;
+        this.nextAttemptAt = Objects.requireNonNull(nextAttemptAt, "nextAttemptAt");
+    }
+
+    public void markDeadLettered(Instant now) {
+        deadLetteredAt = Objects.requireNonNull(now, "now");
     }
 }

@@ -57,9 +57,9 @@ class PersistenceTest {
     private EntityManagerFactory entityManagerFactory;
 
     @Test
-    @DisplayName("Aplica las cinco migraciones Flyway")
-    void appliesFiveMigrations() {
-        assertThat(flyway.info().applied()).hasSize(6);
+    @DisplayName("Aplica todas las migraciones Flyway incluida entrega de outbox")
+    void appliesAllMigrations() {
+        assertThat(flyway.info().applied()).hasSize(7);
         assertThat(flyway.info().pending()).isEmpty();
     }
 

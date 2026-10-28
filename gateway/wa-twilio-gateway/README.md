@@ -22,6 +22,25 @@ Verificar con `./mvnw -q -B clean verify` (Windows: `.\mvnw.cmd -q -B clean veri
 Incluye pruebas HTTP de Actuator, arranque real desde main y JaCoCo mínimo 80%.
 Desde la raíz: `python scripts/verify_integracion.py` descubre este componente.
 
+## Docker (local)
+
+No hay compose en la raíz del programa; el stack del gateway está en
+`docker-compose.yml` (Kafka KRaft 3.9.1, `kafka-init` según
+`shared/contracts/events/topics.md`, app con profile `app`). Puerto **8090**.
+El gateway usa H2 en volumen para outbound; no necesita PostgreSQL.
+
+```powershell
+# Compose desde gateway/wa-twilio-gateway (copiá .env.example → .env y completá secretos)
+docker compose up -d --wait
+docker compose --profile app up -d --wait
+# Imagen desde la raíz del repo:
+# docker build -f gateway/wa-twilio-gateway/Dockerfile -t wa-twilio-gateway:local .
+```
+
+Webhooks reales: exponé `:8090` con un túnel (ngrok u similar) y poné la URL
+HTTPS pública en `TWILIO_WEBHOOK_PUBLIC_URL` y
+`TWILIO_STATUS_CALLBACK_PUBLIC_URL` (mismas rutas que en Twilio).
+
 Webhook firmado `POST /webhook/twilio`: ver [WEBHOOK.md](WEBHOOK.md).
 Normalizacion y publicacion Kafka: ver [NORMALIZATION.md](NORMALIZATION.md).
 Envío outbound: ver [OUTBOUND.md](OUTBOUND.md).

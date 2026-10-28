@@ -12,7 +12,9 @@
 **/target
 **/helm
 services/
-gateway/
+# gateway/ no se excluye: el build de wa-twilio-gateway usa contexto raíz
+# (Dockerfile copia gateway/wa-twilio-gateway + shared/contracts/events).
+gateway/**/data/
 ai/
 docs/
 specs/

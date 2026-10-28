@@ -57,6 +57,32 @@ jobs:
       - name: Build and verify (JaCoCo ≥ 80%)
         run: ./mvnw -B clean verify
 
+  build-test-gateway:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [wa-twilio-gateway]
+    defaults:
+      run:
+        working-directory: gateway/${{ matrix.component }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: gateway/${{ matrix.component }}/pom.xml
+
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw
+
+      - name: Build and verify (JaCoCo ≥ 80%)
+        run: ./mvnw -B clean verify
+
   verify-integracion-script:
     runs-on: ubuntu-latest
     steps:
@@ -96,6 +122,20 @@ jobs:
 
       - name: Build Docker image
         run: docker build -f platform/${{ matrix.component }}/Dockerfile -t ${{ matrix.component }}:${{ github.sha }} .
+
+  docker-gateway:
+    needs: build-test-gateway
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [wa-twilio-gateway]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -f gateway/${{ matrix.component }}/Dockerfile -t ${{ matrix.component }}:${{ github.sha }} .
 
   helm-lint:
     runs-on: ubuntu-latest

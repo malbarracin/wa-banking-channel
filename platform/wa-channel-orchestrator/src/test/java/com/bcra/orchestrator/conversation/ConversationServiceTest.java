@@ -87,4 +87,37 @@ public class ConversationServiceTest {
         assertThat(persisted.getLastMessageId()).isEqualTo("message-3");
         assertThat(persisted.getCorrelationId()).isEqualTo(correlationId);
     }
+
+    @Test
+    @DisplayName("Revierte también la creación de contexto en la transacción del llamador")
+    void rollsBackConversationCreation() {
+        String conversationId = UUID.randomUUID().toString();
+
+        new TransactionTemplate(transactions).executeWithoutResult(status -> {
+            service.loadOrCreate(conversationId, UUID.randomUUID());
+            entityManager.flush();
+            status.setRollbackOnly();
+        });
+
+        assertThat(conversations.findById(conversationId)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Mantiene independientes dos conversaciones con la misma correlación")
+    void isolatesConversationsSharingCorrelation() {
+        String firstId = UUID.randomUUID().toString();
+        String secondId = UUID.randomUUID().toString();
+        UUID correlationId = UUID.randomUUID();
+        service.loadOrCreate(firstId, correlationId);
+        ConversationState second = service.loadOrCreate(secondId, correlationId);
+
+        service.updateState(firstId, UUID.randomUUID(), "WAITING", "message-isolation");
+
+        ConversationState persisted = conversations.findById(secondId).orElseThrow();
+        assertThat(persisted.getConversationId()).isEqualTo(secondId);
+        assertThat(persisted.getState()).isEqualTo("INITIAL");
+        assertThat(persisted.getLastMessageId()).isNull();
+        assertThat(persisted.getCorrelationId()).isEqualTo(correlationId);
+        assertThat(persisted.getVersion()).isEqualTo(second.getVersion());
+    }
 }

@@ -2,6 +2,8 @@ package com.bcra.orchestrator.messaging.config;
 
 import com.bcra.orchestrator.messaging.consumer.InvalidEventException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.SpecVersion;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletableFuture;
@@ -63,6 +65,11 @@ class KafkaResilienceTest {
         assertThat(sent.partition()).isNull();
         assertThat(sent.value().toString()).doesNotContain("secret", "+15005550006");
         var event = mapper.readTree(sent.value().toString());
+        try (var schema = getClass().getResourceAsStream("/contracts/events/wa.message.dlq.v1.schema.json")) {
+            assertThat(schema).isNotNull();
+            assertThat(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7)
+                    .getSchema(mapper.readTree(schema)).validate(event)).isEmpty();
+        }
         assertThat(event.path("correlationId").asText()).isEqualTo(correlation);
         assertThat(event.path("conversationId").asText()).isEqualTo(sent.key());
         assertThat(event.path("payload").path("originalOffset").asLong()).isEqualTo(42);
@@ -115,6 +122,30 @@ class KafkaResilienceTest {
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> configuration.kafkaErrorHandler(recoverer, 1, 3, 2))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void recoveryLogCarriesCorrelationWithoutPrivateData() {
+        var logger = (ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+                .getLogger(SafeDeadLetterRecoverer.class);
+        var appender = new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+        appender.start();
+        logger.addAppender(appender);
+        String correlation = "11111111-1111-1111-1111-111111111111";
+        var record = record();
+        record.headers().add("correlationId", correlation.getBytes(StandardCharsets.UTF_8));
+        try {
+            recoverer.accept(record, consumer, new InvalidEventException());
+            assertThat(appender.list).hasSize(1);
+            var log = appender.list.getFirst();
+            assertThat(log.getMDCPropertyMap()).containsEntry("correlationId", correlation);
+            assertThat(log.getFormattedMessage()).contains("partition=1", "offset=42")
+                    .doesNotContain("secret", "phone", "payload");
+            assertThat(log.getThrowableProxy()).isNull();
+        } finally {
+            logger.detachAppender(appender);
+            appender.stop();
+        }
     }
 
     private ConsumerRecord<String, String> record() {

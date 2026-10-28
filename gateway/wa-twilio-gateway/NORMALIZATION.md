@@ -47,6 +47,9 @@ mvnw.cmd -q -B clean verify
 Unitarios: contrato, normalizacion, claves/headers, confirmacion asincrona,
 fallo, saturacion, validacion y contexto MDC. La suite existente cubre firma y
 anti-replay. `InboundKafkaIntegrationTest` (`@Tag("integration")`) usa
-`apache/kafka:3.9.0` KRaft y prueba webhook firmado, duplicado, orden y headers.
+`apache/kafka:3.9.1` KRaft y prueba webhook firmado, duplicado, orden y headers.
+Esta version corrige KAFKA-18281: en 3.9.0 el broker rechaza el listener de
+controlador de Testcontainers con `advertised.listeners ... 0.0.0.0` al arrancar
+(https://issues.apache.org/jira/browse/KAFKA-18281).
 Se omite automaticamente si Docker no esta disponible. Para exigir su ejecucion,
 comprobar que Surefire informe cero pruebas omitidas con Docker accesible.

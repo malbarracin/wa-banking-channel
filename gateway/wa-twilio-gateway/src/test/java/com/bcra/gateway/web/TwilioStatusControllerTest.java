@@ -43,6 +43,22 @@ class TwilioStatusControllerTest {
     }
 
     @Test
+    void callbackWithoutHeaderUsesFilterCorrelationInEventAndResponse() throws Exception {
+        mvc = MockMvcBuilders.standaloneSetup(new TwilioStatusController(TOKEN, URL,
+                new StatusNormalizer(new ObjectMapper()), publisher, new AntiReplayService(300, 100)))
+                .addFilters(new com.bcra.gateway.observability.CorrelationIdFilter()).build();
+        var parameters = form("sent");
+        var response = mvc.perform(post("/webhooks/twilio/status")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED).content(encode(parameters))
+                .header("X-Twilio-Signature", sign(URL, parameters)))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        var event = ArgumentCaptor.forClass(ObjectNode.class);
+        verify(publisher).publish(event.capture());
+        assertThat(event.getValue().path("correlationId").asText()).isEqualTo(response.getHeader("correlationId"));
+        assertThat(MDC.get("correlationId")).isNull();
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void signedCallbackReachesKafkaThroughRealNormalizerAndSchemaValidator() throws Exception {
         org.springframework.kafka.core.KafkaTemplate<String, String> kafka =

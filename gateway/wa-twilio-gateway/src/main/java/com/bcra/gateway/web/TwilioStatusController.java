@@ -76,7 +76,9 @@ public class TwilioStatusController {
         }
         String correlationId;
         try {
-            correlationId = correlation == null ? UUID.randomUUID().toString() : UUID.fromString(correlation).toString();
+            correlationId = correlation == null
+                    ? (MDC.get("correlationId") == null ? UUID.randomUUID().toString() : MDC.get("correlationId"))
+                    : UUID.fromString(correlation).toString();
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().build();
         }

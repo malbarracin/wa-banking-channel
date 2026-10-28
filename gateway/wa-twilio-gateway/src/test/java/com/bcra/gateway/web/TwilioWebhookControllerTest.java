@@ -146,6 +146,40 @@ class TwilioWebhookControllerTest {
     }
 
     @Test
+    void rejectsOversizedBodyBeforeSignatureValidation() throws Exception {
+        mvc.perform(post("/webhook/twilio").contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .content("Body=" + "a".repeat(16380)))
+                .andExpect(status().isPayloadTooLarge());
+        mvc.perform(post("/webhook/twilio").contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .content("Body=" + "a".repeat(16379)))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(publisher);
+    }
+
+    @Test
+    void rateLimitsByRemoteAddressBeforeSignatureValidationAndIgnoresForwardedHeaders() throws Exception {
+        for (int index = 0; index < 120; index++) {
+            send("invalid").andExpect(status().isForbidden());
+        }
+        mvc.perform(post("/webhook/twilio").contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .content(body()).header("X-Twilio-Signature", signature(PUBLIC_URL, FORM))
+                .header("X-Forwarded-For", "192.0.2.2"))
+                .andExpect(status().isTooManyRequests());
+        mvc.perform(post("/webhook/twilio").contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .content(body()).header("X-Twilio-Signature", "invalid")
+                .with(request -> { request.setRemoteAddr("192.0.2.3"); return request; }))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(publisher);
+    }
+
+    @Test
+    void rejectsMalformedEncodingWithoutPublishing() throws Exception {
+        mvc.perform(post("/webhook/twilio").contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .content("Body=%ZZ")).andExpect(status().isBadRequest());
+        verifyNoInteractions(publisher);
+    }
+
+    @Test
     void configurationRequiresSecretAndPublicUrl() {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> new TwilioSignatureValidator("", PUBLIC_URL))
                 .isInstanceOf(IllegalArgumentException.class);

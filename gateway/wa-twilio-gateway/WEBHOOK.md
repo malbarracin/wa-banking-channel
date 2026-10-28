@@ -25,7 +25,7 @@
 - Para múltiples réplicas reemplazar por store compartido.
 
 ## Límites y observabilidad
-- El controller inbound **no** aplica límite global de bytes/tasa en esta implementación. Configurar límites en el borde antes de exposición pública.
+- El controller inbound rechaza formularios mayores de 16384 bytes con 413 y aplica 120 solicitudes por IP remota por ventana de un minuto e instancia con 429, antes de validar firma o publicar. Incluye solicitudes con firma inválida y no toma la IP de `X-Forwarded-For`. La tabla está acotada a 10000 IP por ventana; nuevas IP reciben 429 si se alcanza la capacidad. Detrás de un proxy el cupo corresponde a su IP. Configurar además límites de transporte en el borde para acotar la lectura HTTP y coordinar cuotas entre réplicas.
 - Trazabilidad con `correlationId` (ver [OBSERVABILITY.md](OBSERVABILITY.md)).
 
 ## Verificación

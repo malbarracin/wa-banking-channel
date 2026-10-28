@@ -40,7 +40,7 @@ El callback outbound exige URL HTTPS sin query ni fragmento.
 | 200 vacío | Kafka confirmó la publicación o el duplicado ya estaba confirmado. No implica respuesta del agente ni entrega al cliente. |
 | 400 | Formulario, identificadores, contenido o estado inválidos. Callback con `correlationId` no interpretable como UUID también se rechaza. |
 | 403 | Firma ausente/incorrecta o URL de callback sin configurar; no publica. |
-| 413 / 429 | Callback mayor que 16384 bytes / más de 120 solicitudes por minuto e instancia. |
+| 413 / 429 | Formulario mayor que 16384 bytes / más de 120 solicitudes por minuto e instancia (por IP remota en inbound, global en callback). |
 | 503 vacío | Publicación fallida, timeout, saturación, reserva pendiente o capacidad anti-replay agotada; permite reintento de Twilio. |
 | 500 vacío | Error inesperado, sin detalles técnicos. |
 
@@ -49,10 +49,12 @@ procesamiento de negocio, sin invocar servicios ni al agente. El objetivo de ACK
 menor a 1 s se prueba localmente; debe medirse bajo carga y con la red real.
 Inbound valida `MessageSid` como `SM` + 32 dígitos hexadecimales, direcciones
 `whatsapp:+E164` y texto de 1 a 4096 caracteres. No admite mensajes exclusivamente
-multimedia. El límite de texto no equivale a un límite del formulario completo:
-el controller inbound no implementa el límite global de bytes/tasa del callback.
-Configurar esos límites en el borde antes de exposición pública; no asumir que
-TASK-84 añadió controles inbound de tamaño o tasa.
+multimedia. Inbound limita el formulario completo a 16384 bytes y aplica una
+ventana de un minuto con 120 solicitudes por IP remota, antes de validar firma
+o publicar. No confía en `X-Forwarded-For`; detrás de un proxy comparte su cupo.
+La tabla admite hasta 10000 IP por ventana; nuevas IP reciben 429 al llenarse.
+Los contadores son locales a cada instancia. Configurar también límites de
+transporte en el borde para acotar la lectura HTTP y coordinar cuotas entre réplicas.
 
 ## Contratos para H0.2
 

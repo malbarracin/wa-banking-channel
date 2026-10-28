@@ -5,7 +5,8 @@ Base de H0 con Java 21 y Spring Boot 3. Paquete `com.bcra.gateway` y puerto
 
 Desde esta carpeta ejecutar `./mvnw spring-boot:run` (Windows:
 `.\mvnw.cmd spring-boot:run`). `SERVER_PORT` permite cambiar el puerto.
-No requiere Kafka ni credenciales de Twilio para arrancar esta base.
+Tras integrar el webhook, el arranque requiere `TWILIO_AUTH_TOKEN` y
+`TWILIO_WEBHOOK_PUBLIC_URL` por entorno. No requiere Kafka para arrancar.
 `.env.example` enumera las variables; Spring no carga el archivo .env automáticamente.
 
 Endpoints: `/actuator/health`, `/actuator/info`, `/actuator/prometheus`.
@@ -17,6 +18,8 @@ Verificar con `./mvnw -q -B clean verify` (Windows: `.\mvnw.cmd -q -B clean veri
 Incluye pruebas HTTP de Actuator, arranque real desde main y JaCoCo mínimo 80%.
 Desde la raíz: `python scripts/verify_integracion.py` descubre este componente.
 
-El bootstrap no implementa webhooks ni productores/consumidores. Las tareas posteriores
-agregarán firma, límites, idempotencia y contratos antes de habilitar esos endpoints.
+El webhook integrado en `/webhook/twilio` valida firma y deduplica publicaciones
+confirmadas. Sin un adaptador `InboundWebhookPublisher` responde 503 para permitir
+el reintento. Las pruebas de arranque usan configuración sintética local al test;
+no se incluyen credenciales por defecto en producción.
 Credenciales solo por entorno; Kafka fuera de local requiere TLS, SASL y ACL por topic.

@@ -253,6 +253,22 @@ class OutboundFlowTest {
         verifyNoInteractions(http, kafka, acknowledgment);
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"correlationId", "eventType", "eventVersion"})
+    @DisplayName("Rechaza cada header inconsistente antes de reservar o enviar")
+    void rejectsMismatchedTransportHeader(String header) {
+        var event = event("mismatched-header");
+        var record = record(event);
+        record.headers().remove(header);
+        record.headers().add(header, "incorrect".getBytes(StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> consumer.consume(record, acknowledgment))
+                .hasMessage("INVALID_EVENT_HEADERS");
+
+        assertThat(store.find("mismatched-header")).isEmpty();
+        verifyNoInteractions(http, kafka, acknowledgment);
+    }
+
     @Test
     @DisplayName("Un callback recupera la identidad y correlación guardadas por outbound")
     void callbackResolvesOriginalIdentity() {

@@ -1,5 +1,15 @@
 # ADR-008 — Límite entre orquestación de proceso (H0.2) y conversación (H9)
 
+## Evidencia de implementación — TASK-98
+
+H9TurnClient.turn es síncrono, usa X-Idempotency-Key=messageId y reintenta timeout/transporte/5xx;
+4xx incluido 409 deriva REJECTED. No interpreta texto ni ejecuta herramientas.
+El contrato compartido H9 está pendiente; [H9.md](../../platform/wa-channel-orchestrator/H9.md)
+documenta la definición provisional y deduplicación requerida por siete días.
+Faltan handler de turno, señales H9/H7 y adaptadores de compensación; el cliente no genera contingencia.
+El estado Propuesto se conserva hasta aprobación de arquitectura.
+Ver [handoff](../../shared/contracts/wa-channel-orchestrator/handoff.md).
+
 **Estado:** Propuesto  
 **Fecha:** 2026-10-28  
 **Contexto:** Necesario separar coordinación técnica (estado, timeouts, sagas) de razonamiento conversacional e intención.  

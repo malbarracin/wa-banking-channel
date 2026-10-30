@@ -5,6 +5,7 @@ description = "Capa MCP del canal bancario"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "pydantic-settings>=2.6,<3",
+    "httpx>=0.28,<1",
 ]
 
 [build-system]

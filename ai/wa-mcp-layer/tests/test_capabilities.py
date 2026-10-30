@@ -15,6 +15,16 @@ from wa_mcp_layer.envelope import ContextoSesion, Resultado
 from wa_mcp_layer.settings import Settings
 
 PHONE = "+5491100000000"
+EXPECTED_SUPPORT = {"identidad.consultar_cliente", "identidad.consultar_estado_cliente", "vinculo.consultar_historial"}
+EXPECTED_CHANNEL = {
+    "vinculo.aceptar_terminos",
+    "vinculo.verificar_identidad",
+    "vinculo.consultar_estado",
+    "vinculo.consultar_perfil",
+    "vinculo.actualizar_preferencias",
+    "vinculo.bloquear",
+    "vinculo.desvincular",
+}
 PARAMS = {
     "identidad.consultar_cliente": {"tipo": "DNI", "numero": "00000001"},
     "identidad.consultar_estado_cliente": {"tipo": "DNI", "numero": "00000001"},
@@ -133,6 +143,29 @@ async def test_disabled_capability(ctx, backend, monkeypatch):
     result = await catalog.invoke("vinculo.consultar_estado", ctx, {})
     assert isinstance(result, Fallo) and result.error.codigo == "CAPACIDAD_NO_DISPONIBLE"
     assert calls == []
+
+
+def test_required_h1_h3_operations_and_support_policy():
+    # Lista independiente: parametrizar solo sobre CATALOG no detectaría una operación omitida.
+    assert EXPECTED_SUPPORT | EXPECTED_CHANNEL <= CATALOG.keys()
+    for name in EXPECTED_SUPPORT | EXPECTED_CHANNEL:
+        entry = CATALOG[name]
+        assert entry.actor == ("soporte" if name in EXPECTED_SUPPORT else "agente")
+        assert entry.servicio == ("H1" if name.startswith("identidad.") else "H3")
+        assert entry.tool_name == name.replace(".", "_") + "_v1"
+
+
+@pytest.mark.parametrize("name", sorted(EXPECTED_SUPPORT | EXPECTED_CHANNEL))
+async def test_wrong_actor_is_rejected_and_audited_before_transport(name, ctx, backend, capfd):
+    catalog, calls, _ = backend
+    actor = "agente" if name in EXPECTED_SUPPORT else "soporte"
+    result = await catalog.invoke(name, ctx, PARAMS.get(name, {}), actor=actor)
+    assert isinstance(result, Fallo)
+    assert result.error.codigo == "CAPACIDAD_NO_DISPONIBLE"
+    assert calls == []
+    event = json.loads(capfd.readouterr().out)
+    assert event["capacidad"] == name
+    assert event["resultado"] == "CAPACIDAD_NO_DISPONIBLE"
 
 
 @pytest.mark.parametrize(

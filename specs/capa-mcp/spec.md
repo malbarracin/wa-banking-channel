@@ -1,8 +1,8 @@
 ---
 title: Capa MCP (H7) — especificación
-status: borrador
+status: aprobada
 source: null
-updated: 2026-10-30T18:05:51.771Z
+updated: 2026-10-30T18:06:32.403Z
 ---
 
 # Capa MCP (H7) — especificación

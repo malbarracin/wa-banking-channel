@@ -1,8 +1,8 @@
 ---
 title: Trazabilidad de fuentes
-status: borrador
+status: aprobada
 source: null
-updated: 2026-10-30T18:06:02.550Z
+updated: 2026-10-30T18:06:32.415Z
 ---
 
 # Trazabilidad de fuentes — H0 Gateway WhatsApp (Twilio)

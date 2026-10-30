@@ -12,4 +12,4 @@
 
 | Hito | Fuente Notion | Fecha consulta | Notas |
 |------|---------------|----------------|-------|
-| H0.2 — Orquestador del Canal | https://app.notion.com/p/H0-2-Orquestador-del-Canal-3a675bb08ca7812c9b8bed1723e9206f | 2026-10-28T09:49:46Z | Página del hito leída; roadmap leído previamente. |
+| H5 — Servicio de Tarjetas | https://app.notion.com/p/H5-Servicio-de-Tarjetas-36875bb08ca781bea9c8cb37c2ccdbbf | 2026-10-30T15:40:02Z | Página del hito leída; roadmap leído previamente. |

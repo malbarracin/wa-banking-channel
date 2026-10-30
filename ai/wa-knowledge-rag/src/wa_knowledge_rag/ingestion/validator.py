@@ -30,7 +30,7 @@ _PII = re.compile(
     r"|\b(?:nombre|titular|cliente)\s*[:=].{1,120}\b(?:saldo|cuenta|tarjeta|dni|documento)\b"
     r"|(?-i:\b[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+\s+[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+).{0,80}"
     r"\b(?:saldo|cuenta|tarjeta|dni|documento)\s*[:=]?\s*\$?\d",
-    re.IGNORECASE,
+    re.IGNORECASE | re.DOTALL,
 )
 _INJECTION = re.compile(
     r"(?:ignor[aáe]|olvid[aáe]|ignore|disregard).{0,50}(?:instrucciones|instructions|prompt|reglas)"

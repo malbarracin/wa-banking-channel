@@ -45,6 +45,16 @@ def test_overlap_preserves_order_and_section_boundaries():
     + [
         ({"content": "Documento 12.345.678"}, "PII_DETECTED"),
         ({"owner_area": "Teléfono +54 11 5555 1234"}, "PII_DETECTED"),
+        *[
+            ({"content": content}, "PII_DETECTED")
+            for content in (
+                "Nombre: Persona Prueba\nSaldo: 200",
+                "Nombre: Persona Prueba\r\nSaldo: 200",
+                "Nombre: Persona Prueba\n\nCuenta: 200",
+                "Persona Prueba\nSaldo: 200",
+                "Persona Prueba\r\nTarjeta: 200",
+            )
+        ],
         ({"approved_by": None}, "APPROVAL_TRACE_REQUIRED"),
     ],
 )

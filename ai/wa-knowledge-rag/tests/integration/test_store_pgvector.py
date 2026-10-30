@@ -38,6 +38,16 @@ def test_schema_filters_ranking_and_trigger(database_url):
             "idx_kb_chunk_source_version",
             "idx_kb_source_audience_status",
         }
+        columns = db.execute(
+            """SELECT attname, format_type(atttypid, atttypmod) AS type
+            FROM pg_attribute WHERE attrelid = 'kb_chunk'::regclass
+            AND attname IN ('embedding', 'tsv')"""
+        ).fetchall()
+        assert {row["attname"]: row["type"] for row in columns} == {"embedding": "vector(768)", "tsv": "tsvector"}
+        definitions = db.execute("SELECT indexname, indexdef FROM pg_indexes WHERE tablename = 'kb_chunk'").fetchall()
+        definitions = {row["indexname"]: row["indexdef"] for row in definitions}
+        assert "USING hnsw (embedding vector_cosine_ops)" in definitions["idx_kb_chunk_embedding_hnsw"]
+        assert "USING gin (tsv)" in definitions["idx_kb_chunk_tsv_gin"]
         chunks = []
         for title, audience, status, version, chunk_version in [
             ("Guía", "public", "approved", 1, 1),
@@ -64,6 +74,11 @@ def test_schema_filters_ranking_and_trigger(database_url):
         assert repo.search("horarios", VECTOR, audience="public", version=1) == []
         assert [hit.id for hit in repo.search("horarios", VECTOR, audience="internal")] == [chunks[4]]
         assert repo.search("horarios", VECTOR, audience="public", version=2)[0].score > 1 / 61
+        # La rama textual debe recuperar contenido sin vector; la vectorial, sin coincidencia textual.
+        assert [hit.id for hit in repo.search("inexistente", VECTOR, audience="public")] == [chunks[1]]
+        db.execute("UPDATE kb_chunk SET embedding=NULL WHERE id=%s", (chunks[1],))
+        assert [hit.id for hit in repo.search("horarios", VECTOR, audience="public")] == [chunks[1]]
+        assert repo.search("inexistente", VECTOR, audience="public") == []
         db.execute("UPDATE kb_chunk SET content='Tarjetas bloqueadas' WHERE id=%s", (chunks[1],))
         row = db.execute(
             "SELECT tsv = to_tsvector('spanish', content) AS matches FROM kb_chunk WHERE id=%s", (chunks[1],)

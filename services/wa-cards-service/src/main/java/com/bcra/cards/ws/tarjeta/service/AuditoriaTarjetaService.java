@@ -6,17 +6,32 @@ import com.bcra.cards.ws.tarjeta.entity.AuditoriaResultado;
 import com.bcra.cards.ws.tarjeta.entity.AuditoriaTarjeta;
 import com.bcra.cards.ws.tarjeta.repository.AuditoriaTarjetaRepository;
 import java.time.Instant;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Persiste la auditoría en una transacción independiente de la operación. */
+/** Persiste la auditoría de consultas y operaciones sobre tarjetas. */
 @Service
 @RequiredArgsConstructor
 public class AuditoriaTarjetaService {
 
     private final AuditoriaTarjetaRepository auditoriaRepository;
+
+    /** Registra el desbloqueo en la misma transacción que la reactivación de la tarjeta. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void registrarDesbloqueo(ValidarCredencialResponse identidad, UUID tarjetaId) {
+        var auditoria = new AuditoriaTarjeta();
+        auditoria.setAccion(AuditoriaAccion.DESBLOQUEAR_TEMPORAL);
+        auditoria.setResultado(AuditoriaResultado.EXITOSO);
+        auditoria.setNumeroWhatsapp(identidad.numeroWhatsapp());
+        auditoria.setDocumentoTipo(identidad.documentoTipo());
+        auditoria.setDocumentoNumero(identidad.documentoNumero());
+        auditoria.setTarjetaId(tarjetaId);
+        auditoria.setFecha(Instant.now());
+        auditoriaRepository.save(auditoria);
+    }
 
     /** Registra un listado autorizado sin guardar la credencial ni datos de tarjeta. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)

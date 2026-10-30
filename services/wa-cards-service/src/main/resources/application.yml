@@ -46,6 +46,7 @@ cards:
 springdoc:
   api-docs.path: /v3/api-docs
   swagger-ui.path: /swagger-ui.html
+  default-produces-media-type: application/json
 
 ---
 spring:
@@ -78,3 +79,5 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+springdoc:
+  swagger-ui.enabled: false

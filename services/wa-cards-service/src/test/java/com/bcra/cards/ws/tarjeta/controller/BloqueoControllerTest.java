@@ -155,6 +155,52 @@ class BloqueoControllerTest {
                 .andExpect(status().isConflict());
     }
 
+    @Test
+    @DisplayName("El definitivo es irreversible incluso con validación adicional desactivada")
+    void rechazaDefinitivoSinValidacionRequerida() throws Exception {
+        tarjeta.setEstado(EstadoTarjeta.BLOQUEO_DEFINITIVO);
+        tarjetas.flush();
+        ReflectionTestUtils.setField(servicio, "validacionAdicionalRequerida", false);
+        try {
+            mvc.perform(post(ruta()).header("X-Credencial-Sesion", "sesion")
+                            .contentType(MediaType.APPLICATION_JSON).content(cuerpo("null")))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("CONFLICT"))
+                    .andExpect(jsonPath("$.details").isArray())
+                    .andExpect(jsonPath("$.message")
+                            .value(org.hamcrest.Matchers.containsString("canales formales")));
+            entityManager.clear();
+            Tarjeta persistida = tarjetas.findById(tarjeta.getId()).orElseThrow();
+            assertThat(persistida.getEstado()).isEqualTo(EstadoTarjeta.BLOQUEO_DEFINITIVO);
+            assertThat(persistida.isActiva()).isFalse();
+            assertThat(auditorias.count()).isZero();
+        } finally {
+            ReflectionTestUtils.setField(servicio, "validacionAdicionalRequerida", true);
+        }
+    }
+
+    @Test
+    @DisplayName("El desbloqueo conserva la fecha de los bloqueos históricos ya cerrados")
+    void conservaHistorialCerrado() throws Exception {
+        Instant cierreAnterior = Instant.parse("2026-01-02T00:00:00Z");
+        Bloqueo historico = new Bloqueo();
+        historico.setTarjetaId(tarjeta.getId());
+        historico.setTipo(TipoBloqueo.TEMPORAL);
+        historico.setFechaBloqueo(cierreAnterior.minusSeconds(60));
+        historico.setFechaDesbloqueo(cierreAnterior);
+        historico.setUsuarioEjecutor("sintetico");
+        bloqueos.saveAndFlush(historico);
+
+        mvc.perform(post(ruta()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON).content(cuerpo("true")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("ACTIVA"));
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(bloqueos.findById(historico.getId()).orElseThrow().getFechaDesbloqueo())
+                .isEqualTo(cierreAnterior);
+    }
+
     private String ruta() {
         return "/api/v1/tarjetas/" + tarjeta.getId() + "/desbloquear/temporal";
     }

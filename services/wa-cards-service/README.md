@@ -21,5 +21,15 @@ Para producción definir `SPRING_PROFILES_ACTIVE=prod`: valida un esquema
 previamente provisionado. El perfil `test` usa H2, disponible solo en pruebas.
 Salud: `/actuator/health`; información: `/actuator/info`.
 
-Las futuras funcionalidades se ubican en `tarjeta/{controller,service,repository,mapper,entity,dto}`.
-Este bootstrap incluye el contrato común de errores, sin endpoints de negocio.
+Las funcionalidades se ubican en `tarjeta/{controller,service,repository,mapper,entity,dto}`.
+
+## Consumos recientes
+
+`GET /api/v1/tarjetas/{tarjetaId}/consumos` requiere `X-Credencial-Sesion`, validada con H2
+antes de consultar productos. Una tarjeta inexistente o ajena devuelve 404; una sesión inválida, 401.
+Los parámetros opcionales `dias` y `limit` deben ser positivos y se acotan a
+`cards.consumos.ventana-dias` (90) y `cards.consumos.tope-por-mensaje` (10).
+Se pueden configurar con `CARDS_CONSUMOS_VENTANA_DIAS` y `CARDS_CONSUMOS_TOPE_POR_MENSAJE`.
+La respuesta contiene `consumos`, `tieneMas` y `cursor`. Para continuar, reenviar el cursor
+con la misma tarjeta y ventana solicitada; el cursor final es nulo. El orden es fecha e ID descendentes.
+Cada página excluye fechas futuras y consumos fuera de la ventana reciente, sin PAN, CVV ni vencimiento.

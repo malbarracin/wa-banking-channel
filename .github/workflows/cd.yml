@@ -16,6 +16,7 @@ on:
           - wa-credentials-service
           - wa-accounts-service
           - wa-insurance-service
+          - wa-cards-service
       environment:
         description: "Entorno de destino (dev|prod)"
         required: true

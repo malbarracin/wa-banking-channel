@@ -1,4 +1,4 @@
-# DevOps local — wa-users-service, wa-channel-service, wa-credentials-service, wa-accounts-service y wa-insurance-service
+# DevOps local — wa-users-service, wa-channel-service, wa-credentials-service, wa-accounts-service, wa-insurance-service y wa-cards-service
 
 Runbook copy/paste para los servicios en `services/`.
 
@@ -18,6 +18,7 @@ Runbook copy/paste para los servicios en `services/`.
 | wa-credentials-service | 8082 | 5434 | `wa_credentials` |
 | wa-accounts-service | 8084 | 5435 | `wa_accounts` |
 | wa-insurance-service | 8085 | 5436 | `wa_insurance` |
+| wa-cards-service | 8086 | 5437 | `wa_cards` |
 
 ## wa-users-service
 
@@ -352,23 +353,93 @@ helm upgrade --install wa-insurance services/wa-insurance-service/helm/wa-insura
   -n dev --create-namespace
 ```
 
+## wa-cards-service
+
+### Variables de entorno
+
+```powershell
+cd services/wa-cards-service
+copy .env.example .env
+# Editar .env con valores locales (no commitear .env)
+```
+
+Defaults del `.env.example`: app host `8086`, Postgres host `5437`, base `wa_cards` (no chocan con H1/H2/H3/H4/H6). `DB_USERNAME`/`DB_PASSWORD` son obligatorios en el YAML base (sin default); en compose y perfil `dev` van por `.env` / env.
+
+### Docker Compose (app + Postgres)
+
+```powershell
+cd services/wa-cards-service
+docker compose up -d --build
+docker compose ps
+curl http://localhost:8086/actuator/health
+docker compose logs -f app
+docker compose down
+```
+
+Perfil Spring activo en compose: `docker` (`application-docker.yml` → host JDBC `postgres`, `ddl-auto=update` para levantar sin migraciones Flyway).
+
+Para correr la app en la máquina contra Postgres del compose:
+
+```powershell
+docker compose up -d postgres
+# DB_URL p.ej. jdbc:postgresql://localhost:5437/wa_cards (DB_HOST_PORT por defecto 5437)
+$env:SPRING_PROFILES_ACTIVE="dev"
+$env:DB_URL="jdbc:postgresql://localhost:5437/wa_cards"
+$env:DB_USERNAME="app"
+$env:DB_PASSWORD="cambiar"
+$env:CREDENTIALS_SERVICE_BASE_URL="http://localhost:8082"
+./mvnw spring-boot:run
+```
+
+### Build y tests (JaCoCo ≥ 80%)
+
+```powershell
+cd services/wa-cards-service
+./mvnw -B clean verify
+```
+
+En PowerShell con sandbox `.m2` restringido:
+
+```powershell
+./mvnw.cmd -q -B "-Dmaven.repo.local=../../.maven-cache" clean verify
+```
+
+### Helm (sin cluster)
+
+```powershell
+helm lint services/wa-cards-service/helm/wa-cards-service --set-string env.DB_PASSWORD=lint-only-placeholder
+helm template wa-cards services/wa-cards-service/helm/wa-cards-service `
+  -f services/wa-cards-service/helm/wa-cards-service/values-dev.yaml `
+  --set-string env.DB_PASSWORD=render-only-placeholder
+```
+
+Con cluster local:
+
+```powershell
+helm upgrade --install wa-cards services/wa-cards-service/helm/wa-cards-service `
+  -f services/wa-cards-service/helm/wa-cards-service/values-dev.yaml `
+  --set-string "env.DB_PASSWORD=$env:DB_PASSWORD" `
+  -n dev --create-namespace
+```
+
 ## CI / CD
 
 Los charts exigen `env.DB_PASSWORD` explícito; wa-credentials-service también exige `env.CREDENTIAL_JWT_SECRET`. No tienen contraseña/JWT por defecto.
 Los valores `lint-only-placeholder` / `render-only-*` son solo para validación sin despliegue.
 
-- CI: `.github/workflows/ci.yml` — matriz `wa-users-service` + `wa-channel-service` + `wa-credentials-service` + `wa-accounts-service` + `wa-insurance-service` con `./mvnw -B clean verify`; build de imagen en `main`; `helm lint` de los cinco charts.
+- CI: `.github/workflows/ci.yml` — matriz `wa-users-service` + `wa-channel-service` + `wa-credentials-service` + `wa-accounts-service` + `wa-insurance-service` + `wa-cards-service` con `./mvnw -B clean verify`; build de imagen en `main`; `helm lint` de los seis charts.
 - CD: `.github/workflows/cd.yml` — template con `workflow_dispatch` (elige servicio + entorno; deploy comentado hasta tener cluster/credenciales).
 
 ## Decisiones
 
 - Registry por defecto: `ghcr.io/example/<servicio>` (configurable en cada `values.yaml`).
-- Ingress deshabilitado por defecto; hosts de ejemplo `wa-users.example.local` / `wa-channel.example.local` / `wa-credentials.example.local` / `wa-accounts.example.local` / `wa-insurance.example.local`.
+- Ingress deshabilitado por defecto; hosts de ejemplo `wa-users.example.local` / `wa-channel.example.local` / `wa-credentials.example.local` / `wa-accounts.example.local` / `wa-insurance.example.local` / `wa-cards.example.local`.
 - Credenciales DB y JWT solo por `.env` / K8s Secret / `--set`; nunca en YAML commiteado.
-- Puertos host: H1 `8080`/`5432`, H3 `8081`/`5433`, H2 `8082`/`5434`, H4 `8084`/`5435`, H6 `8085`/`5436` para convivir en local.
+- Puertos host: H1 `8080`/`5432`, H3 `8081`/`5433`, H2 `8082`/`5434`, H4 `8084`/`5435`, H6 `8085`/`5436`, H5 `8086`/`5437` para convivir en local.
 - H2 en Docker llama a H1 vía `WA_USERS_SERVICE_BASE_URL` (default `host.docker.internal:8080`).
-- H4 y H6 en Docker llaman a H2 vía `CREDENTIALS_SERVICE_BASE_URL` (default `host.docker.internal:8082`).
-- Perfil `docker` de H4/H6 usa `ddl-auto=update` (sin Flyway); prod mantiene `validate`.
+- H4, H5 y H6 en Docker llaman a H2 vía `CREDENTIALS_SERVICE_BASE_URL` (default `host.docker.internal:8082`).
+- Perfil `docker` de H4/H5/H6 usa `ddl-auto=update` (sin Flyway); prod mantiene `validate`.
+- Postgres host de H5 es `5437` (no `5436`) para no chocar con H6 ni con `ORCHESTRATOR_DB_HOST_PORT` del orquestador.
 
 ## Pendiente de verificar
 
@@ -388,3 +459,7 @@ Los valores `lint-only-placeholder` / `render-only-*` son solo para validación 
 | `docker compose config` insurance | `cd services/wa-insurance-service && docker compose --env-file .env.example config` | Verificado |
 | `./mvnw clean verify` insurance | `cd services/wa-insurance-service && ./mvnw -B clean verify` | Verificado (JaCoCo OK, BUILD SUCCESS) |
 | Helm lint / template insurance | `helm lint services/wa-insurance-service/helm/wa-insurance-service --set-string env.DB_PASSWORD=lint-only-placeholder` | Pendiente: Helm no instalado en el entorno de entrega (no se instala ni descarga) |
+| Compose cards healthy + health | `cd services/wa-cards-service && copy .env.example .env && docker compose up -d --build && curl http://localhost:8086/actuator/health` | Pendiente: Docker Desktop/daemon no disponible en el entorno de entrega |
+| `docker compose config` cards | `cd services/wa-cards-service && docker compose --env-file .env.example config` | Verificado (compose config OK, puertos 8086/5437) |
+| `./mvnw clean verify` cards | `cd services/wa-cards-service && ./mvnw -B clean verify` | Verificado (JaCoCo OK, BUILD SUCCESS) |
+| Helm lint / template cards | `helm lint services/wa-cards-service/helm/wa-cards-service --set-string env.DB_PASSWORD=lint-only-placeholder` | Pendiente: Helm no instalado en el entorno de entrega (no se instala ni descarga) |

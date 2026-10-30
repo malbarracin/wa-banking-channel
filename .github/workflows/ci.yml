@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [wa-users-service, wa-channel-service, wa-credentials-service, wa-accounts-service, wa-insurance-service]
+        service: [wa-users-service, wa-channel-service, wa-credentials-service, wa-accounts-service, wa-insurance-service, wa-cards-service]
     defaults:
       run:
         working-directory: services/${{ matrix.service }}
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [wa-users-service, wa-channel-service, wa-credentials-service, wa-accounts-service, wa-insurance-service]
+        service: [wa-users-service, wa-channel-service, wa-credentials-service, wa-accounts-service, wa-insurance-service, wa-cards-service]
     defaults:
       run:
         working-directory: services/${{ matrix.service }}
@@ -156,6 +156,9 @@ jobs:
             extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"
           - service: wa-insurance-service
             chart: services/wa-insurance-service/helm/wa-insurance-service
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"
+          - service: wa-cards-service
+            chart: services/wa-cards-service/helm/wa-cards-service
             extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"
     steps:
       - name: Checkout

@@ -201,6 +201,95 @@ class BloqueoControllerTest {
                 .isEqualTo(cierreAnterior);
     }
 
+    @Test
+    @DisplayName("Bloquea definitivamente por robo o extravío y registra motivo y auditoría")
+    void bloqueaDefinitivo() throws Exception {
+        for (String motivo : new String[] {"ROBO", "EXTRAVIO"}) {
+            tarjeta.setEstado(EstadoTarjeta.ACTIVA);
+            tarjeta.setActiva(true);
+            mvc.perform(post(rutaDefinitiva()).header("X-Credencial-Sesion", "sesion")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(cuerpoDefinitivo(motivo, "CONFIRMAR", "CONFIRMAR")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.tarjeta.estado").value("BLOQUEO_DEFINITIVO"))
+                    .andExpect(jsonPath("$.mensaje")
+                            .value(org.hamcrest.Matchers.containsString("canales oficiales")));
+            entityManager.flush();
+            entityManager.clear();
+            tarjeta = tarjetas.findById(tarjeta.getId()).orElseThrow();
+            assertThat(tarjeta.isActiva()).isFalse();
+            assertThat(bloqueos.findByTarjetaIdOrderByFechaBloqueoDesc(tarjeta.getId()))
+                    .anySatisfy(bloqueo -> {
+                        assertThat(bloqueo.getTipo()).isEqualTo(TipoBloqueo.DEFINITIVO);
+                        assertThat(bloqueo.getMotivo()).isEqualTo(motivo);
+                        assertThat(bloqueo.isDobleConfirmacionCompleta()).isTrue();
+                    });
+            assertThat(auditorias.findAll()).anySatisfy(auditoria -> {
+                assertThat(auditoria.getAccion()).isEqualTo(AuditoriaAccion.BLOQUEAR_DEFINITIVO);
+                assertThat(auditoria.getTarjetaId()).isEqualTo(tarjeta.getId());
+            });
+        }
+    }
+
+    @Test
+    @DisplayName("Advierte irreversibilidad antes de solicitar confirmaciones y no modifica datos")
+    void advierteSinConfirmaciones() throws Exception {
+        for (String[] confirmaciones : new String[][] {
+                {null, null}, {"CONFIRMAR", null}, {null, "CONFIRMAR"}, {"confirmar", "CONFIRMAR"}}) {
+            mvc.perform(post(rutaDefinitiva()).header("X-Credencial-Sesion", "sesion")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(cuerpoDefinitivo("ROBO", confirmaciones[0], confirmaciones[1])))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("CONFLICT"))
+                    .andExpect(jsonPath("$.message")
+                            .value(org.hamcrest.Matchers.startsWith(
+                                    "El bloqueo definitivo es irreversible por WhatsApp.")));
+        }
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(tarjetas.findById(tarjeta.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoTarjeta.BLOQUEO_TEMPORAL);
+        assertThat(bloqueos.count()).isZero();
+        assertThat(auditorias.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Rechaza motivo inválido, tarjeta ajena, credencial ausente y repetición del bloqueo")
+    void rechazaDefinitivoInvalido() throws Exception {
+        String cuerpo = cuerpoDefinitivo("ROBO", "CONFIRMAR", "CONFIRMAR");
+        mvc.perform(post(rutaDefinitiva()).contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post(rutaDefinitiva()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpoDefinitivo("OTRO", "CONFIRMAR", "CONFIRMAR")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(post(rutaDefinitiva()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpo.replace(tarjeta.getId().toString(), UUID.randomUUID().toString())))
+                .andExpect(status().isBadRequest());
+        tarjeta.setTitularDocumentoNumero("20000002");
+        mvc.perform(post(rutaDefinitiva()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(status().isNotFound());
+        tarjeta.setTitularDocumentoNumero("10000001");
+        tarjeta.setEstado(EstadoTarjeta.BLOQUEO_DEFINITIVO);
+        mvc.perform(post(rutaDefinitiva()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON).content(cuerpo))
+                .andExpect(status().isConflict());
+        assertThat(bloqueos.count()).isZero();
+        assertThat(auditorias.count()).isZero();
+    }
+
+    private String rutaDefinitiva() {
+        return "/api/v1/tarjetas/" + tarjeta.getId() + "/bloquear/definitivo";
+    }
+
+    private String cuerpoDefinitivo(String motivo, String primero, String segundo) {
+        return "{\"tarjetaId\":\"" + tarjeta.getId() + "\",\"motivo\":\"" + motivo
+                + "\",\"confirmarPrimero\":" + (primero == null ? "null" : "\"" + primero + "\"")
+                + ",\"confirmarSegundo\":" + (segundo == null ? "null" : "\"" + segundo + "\"") + "}";
+    }
+
     private String ruta() {
         return "/api/v1/tarjetas/" + tarjeta.getId() + "/desbloquear/temporal";
     }

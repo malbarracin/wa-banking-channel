@@ -3,14 +3,41 @@
 import json
 from datetime import datetime
 
+import httpx
 import pytest
 import structlog
 from pydantic import SecretStr
 
 from wa_mcp_layer.audit.logger import log_invocation
+from wa_mcp_layer.clients.users_client import UsersClient
 from wa_mcp_layer.envelope import ContextoSesion
 from wa_mcp_layer.errors import map_error
-from wa_mcp_layer.security.session_context import REVERIFY
+from wa_mcp_layer.security.session_context import REVERIFY, BusinessError
+from wa_mcp_layer.settings import Settings
+
+
+@pytest.mark.parametrize("failure", [httpx.ConnectTimeout, httpx.ReadTimeout, httpx.ConnectError])
+async def test_unavailable_transport_hides_technical_details(failure, capsys: pytest.CaptureFixture[str]) -> None:
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        raise failure("synthetic-secret SQL internal-host private-body", request=request)
+
+    context = ContextoSesion(numero_whatsapp="+5491100001234", correlation_id="transport-test")
+    async with UsersClient(Settings(), transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(BusinessError) as caught:
+            await client.request("GET", "/api/v1/usuarios", context)
+    error = caught.value.error
+    assert error.codigo == "SERVICIO_NO_DISPONIBLE"
+    assert error.reintentable is True
+    assert "soporte" in error.mensaje
+    assert calls == 1
+    assert caught.value.__suppress_context__ is True
+    output = str(caught.value) + error.model_dump_json() + capsys.readouterr().out
+    for secret in ("synthetic-secret", "SQL", "internal-host", "private-body"):
+        assert secret not in output
 
 
 @pytest.mark.parametrize(

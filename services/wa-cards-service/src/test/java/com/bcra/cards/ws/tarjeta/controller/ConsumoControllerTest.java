@@ -142,6 +142,46 @@ class ConsumoControllerTest {
         }
     }
 
+    @Test
+    @DisplayName("Conserva el límite temporal del cursor ante consumos nuevos entre páginas")
+    void excluyeConsumosPosterioresAlInicioDePaginacion() throws Exception {
+        Instant fecha = Instant.now().minus(1, ChronoUnit.DAYS).truncatedTo(ChronoUnit.MILLIS);
+        guardar(fecha, "Primero", tarjetaId);
+        guardar(fecha.minusSeconds(1), "Segundo", tarjetaId);
+        String primera = mvc.perform(get(ruta()).header("X-Credencial-Sesion", "sesion").param("limit", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.consumos[0].comercio").value("Primero"))
+                .andExpect(jsonPath("$.consumos[0].fecha").value(fecha.toString()))
+                .andExpect(jsonPath("$.tieneMas").value(true))
+                .andReturn().getResponse().getContentAsString();
+        String cursor = json.readTree(primera).get("cursor").asText();
+        guardar(Instant.now(), "Nuevo", tarjetaId);
+        mvc.perform(get(ruta()).header("X-Credencial-Sesion", "sesion")
+                        .param("limit", "1").param("cursor", cursor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.consumos.length()").value(1))
+                .andExpect(jsonPath("$.consumos[0].comercio").value("Segundo"))
+                .andExpect(jsonPath("$.tieneMas").value(false))
+                .andExpect(jsonPath("$.cursor").isEmpty());
+    }
+
+    @Test
+    @DisplayName("Rechaza reutilizar un cursor con otra ventana y conserva el contrato de error")
+    void rechazaCursorDeOtraVentana() throws Exception {
+        guardar(Instant.now().minus(1, ChronoUnit.DAYS), "Primero", tarjetaId);
+        guardar(Instant.now().minus(2, ChronoUnit.DAYS), "Segundo", tarjetaId);
+        String primera = mvc.perform(get(ruta()).header("X-Credencial-Sesion", "sesion").param("limit", "1"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String cursor = json.readTree(primera).get("cursor").asText();
+        mvc.perform(get(ruta()).header("X-Credencial-Sesion", "sesion")
+                        .param("dias", "3").param("cursor", cursor))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+    }
+
     private String codificar(String valor) {
         return Base64.getUrlEncoder().encodeToString(valor.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }

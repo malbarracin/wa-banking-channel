@@ -1,0 +1,23 @@
+meta {
+  name: Tarjeta inexistente o ajena — 404
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tarjetas/99999999-9999-4999-8999-999999999999/consumos
+  body: none
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+}
+
+assert {
+  res.status: eq 404
+}
+
+docs {
+  UUID inexistente o de otro titular → 404 NOT_FOUND genérico, sin PII.
+}

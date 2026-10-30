@@ -1,0 +1,31 @@
+meta {
+  name: Desbloqueo sin validación adicional — 400
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tarjetas/33333333-3333-4333-8333-333333333333/desbloquear/temporal
+  body: json
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "tarjetaId": "33333333-3333-4333-8333-333333333333",
+    "validacionAdicional": false
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  Con validacion-adicional-requerida=true, false → 400. Usa la tarjeta en BLOQUEO_TEMPORAL del seed.
+}

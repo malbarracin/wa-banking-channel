@@ -1,0 +1,32 @@
+meta {
+  name: Aviso de viaje sin país — 400 VALIDATION_ERROR
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/aviso-viaje
+  body: json
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "tarjetaId": "{{tarjetaId}}",
+    "fechaDesde": "2026-12-01",
+    "fechaHasta": "2026-12-15"
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  pais es obligatorio (@NotBlank) → 400 VALIDATION_ERROR con details.
+}

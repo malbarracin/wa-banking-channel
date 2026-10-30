@@ -735,67 +735,67 @@ components:
   examples:
     BAD_REQUEST:
       value:
-        timestamp: 2026-10-30T12:00:00Z
-        message: La solicitud no es válida
         details: []
+        message: La solicitud no es válida
+        timestamp: 2026-10-30T12:00:00Z
         code: BAD_REQUEST
     UNAUTHORIZED:
       value:
-        timestamp: 2026-10-30T12:00:00Z
-        message: Credencial no válida
         details: []
+        message: Credencial no válida
+        timestamp: 2026-10-30T12:00:00Z
         code: UNAUTHORIZED
     FORBIDDEN:
       value:
-        timestamp: 2026-10-30T12:00:00Z
-        message: Acceso no permitido
         details: []
+        message: Acceso no permitido
+        timestamp: 2026-10-30T12:00:00Z
         code: FORBIDDEN
     NOT_FOUND:
       value:
-        timestamp: 2026-10-30T12:00:00Z
-        message: No se encontró la tarjeta
         details: []
+        message: No se encontró la tarjeta
+        timestamp: 2026-10-30T12:00:00Z
         code: NOT_FOUND
     CONFLICT:
       value:
-        timestamp: 2026-10-30T12:00:00Z
-        message: El estado de la tarjeta no permite aplicar el bloqueo
         details: []
+        message: El estado de la tarjeta no permite aplicar el bloqueo
+        timestamp: 2026-10-30T12:00:00Z
         code: CONFLICT
     INTERNAL_ERROR:
       value:
-        timestamp: 2026-10-30T12:00:00Z
-        message: Error interno
         details: []
+        message: Error interno
+        timestamp: 2026-10-30T12:00:00Z
         code: INTERNAL_ERROR
     Irreversible:
       value:
-        timestamp: 2026-10-30T12:00:00Z
+        details: []
         message: El bloqueo definitivo no se puede revertir por chat. Contactá los
           canales formales del banco
-        details: []
+        timestamp: 2026-10-30T12:00:00Z
         code: CONFLICT
     DobleConfirmacion:
       value:
-        timestamp: 2026-10-30T12:00:00Z
+        details: []
         message: "El bloqueo definitivo es irreversible por WhatsApp. Para continuar,\
           \ confirme dos veces con CONFIRMAR e indique ROBO o EXTRAVIO."
-        details: []
+        timestamp: 2026-10-30T12:00:00Z
         code: CONFLICT
     Confirmacion:
       value:
-        timestamp: 2026-10-30T12:00:00Z
-        message: Se requiere confirmación explícita para continuar
         details: []
+        message: Se requiere confirmación explícita para continuar
+        timestamp: 2026-10-30T12:00:00Z
         code: CONFLICT
     ValidationError:
       value:
-        timestamp: 2026-10-30T12:00:00Z
-        message: La solicitud tiene datos inválidos
         details:
         - message: no debe ser nulo
           field: tarjetaId
+        message: La solicitud tiene datos inválidos
+        timestamp: 2026-10-30T12:00:00Z
         code: VALIDATION_ERROR
   securitySchemes:
     credencialSesion:

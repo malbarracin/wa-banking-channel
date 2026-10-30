@@ -1,0 +1,19 @@
+meta {
+  name: Sin credencial — 401
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tarjetas
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+}
+
+docs {
+  Sin header X-Credencial-Sesion → 401 UNAUTHORIZED.
+}

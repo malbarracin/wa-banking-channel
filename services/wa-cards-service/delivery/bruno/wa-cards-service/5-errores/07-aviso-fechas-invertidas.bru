@@ -1,0 +1,33 @@
+meta {
+  name: Aviso de viaje con fechas invertidas — 400
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/aviso-viaje
+  body: json
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "tarjetaId": "{{tarjetaId}}",
+    "pais": "España",
+    "fechaDesde": "2026-12-15",
+    "fechaHasta": "2026-12-01"
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  fechaHasta anterior a fechaDesde → 400 BAD_REQUEST.
+}

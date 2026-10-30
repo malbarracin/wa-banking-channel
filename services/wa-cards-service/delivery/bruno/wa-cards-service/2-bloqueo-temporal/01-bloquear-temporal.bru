@@ -1,0 +1,31 @@
+meta {
+  name: Bloquear temporalmente
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/bloquear/temporal
+  body: json
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "tarjetaId": "{{tarjetaId}}",
+    "confirmar": "CONFIRMAR"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Exige tarjetaId coincidente y confirmación exacta CONFIRMAR; solo tarjeta activa. Respuestas: 200, 400, 401, 403, 404, 409.
+}

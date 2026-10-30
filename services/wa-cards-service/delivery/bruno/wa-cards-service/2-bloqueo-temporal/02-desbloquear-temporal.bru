@@ -1,0 +1,31 @@
+meta {
+  name: Desbloquear temporalmente
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/desbloquear/temporal
+  body: json
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "tarjetaId": "{{tarjetaId}}",
+    "validacionAdicional": true
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Solo desde BLOQUEO_TEMPORAL; exige validacionAdicional=true si está configurada. Respuestas: 200, 400, 401, 403, 404, 409.
+}

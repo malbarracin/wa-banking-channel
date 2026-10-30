@@ -1,0 +1,6 @@
+{
+  "version": "1",
+  "name": "wa-cards-service",
+  "type": "collection",
+  "ignore": ["node_modules", ".git"]
+}

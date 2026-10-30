@@ -1,0 +1,945 @@
+{
+  "info": {
+    "name": "wa-cards-service",
+    "description": "API H5 de tarjetas del canal bancario. Orden sugerido: 1. Consultas → 2. Bloqueo temporal → 3. Aviso de viaje → 4. Bloqueo definitivo → 5. Errores → 6. Salud. Requiere X-Credencial-Sesion válida de H2 y `tarjetaId` (el listado lo actualiza).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8086" },
+    { "key": "credencial", "value": "" },
+    { "key": "tarjetaId", "value": "11111111-1111-4111-8111-111111111111" }
+  ],
+  "item": [
+    {
+      "name": "1. Consultas",
+      "description": "Listado de tarjetas del titular y consumos recientes.",
+      "item": [
+        {
+          "name": "Listar tarjetas",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('es un array', () => pm.expect(body).to.be.an('array'));",
+                  "if (Array.isArray(body) && body.length > 0 && body[0].id) { pm.collectionVariables.set('tarjetaId', body[0].id); }",
+                  "if (Array.isArray(body) && body.length > 0) {",
+                  "  pm.test('sin datos sensibles', () => pm.expect(body[0]).to.not.have.property('numeroTarjetaHash'));",
+                  "  pm.test('últimos cuatro', () => pm.expect(body[0].ultimosCuatro).to.match(/^\\d{4}$/));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas"]
+            },
+            "description": "Devuelve solo las tarjetas del titular autenticado. Lista vacía es válido. Respuestas: 200, 401, 403, 500."
+          },
+          "response": [
+            {
+              "name": "200 - listado",
+              "originalRequest": {
+                "method": "GET",
+                "header": [{ "key": "X-Credencial-Sesion", "value": "{{credencial}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "[\n  {\n    \"id\": \"11111111-1111-4111-8111-111111111111\",\n    \"ultimosCuatro\": \"1234\",\n    \"marca\": \"VISA\",\n    \"tipo\": \"CREDITO\",\n    \"estado\": \"ACTIVA\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Consumos recientes",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('consumos es array', () => pm.expect(body.consumos).to.be.an('array'));",
+                  "pm.test('tieneMas booleano', () => pm.expect(body.tieneMas).to.be.a('boolean'));",
+                  "pm.test('sin PAN ni CVV', () => {",
+                  "  const texto = JSON.stringify(body);",
+                  "  pm.expect(texto).to.not.include('numeroTarjetaHash');",
+                  "  pm.expect(texto).to.not.include('cvv');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/consumos?dias=30&limit=5",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "{{tarjetaId}}", "consumos"],
+              "query": [
+                { "key": "dias", "value": "30", "description": "Ventana en días; máximo configurado (90)" },
+                { "key": "limit", "value": "5", "description": "Consumos por página; máximo configurado (10)" }
+              ]
+            },
+            "description": "Página de consumos ordenada por fecha e id descendentes. Vacío los parámetros para usar los máximos. Respuestas: 200, 400, 401, 403, 404, 500."
+          },
+          "response": [
+            {
+              "name": "200 - página",
+              "originalRequest": {
+                "method": "GET",
+                "header": [{ "key": "X-Credencial-Sesion", "value": "{{credencial}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/11111111-1111-4111-8111-111111111111/consumos?dias=30&limit=5",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "11111111-1111-4111-8111-111111111111", "consumos"],
+                  "query": [
+                    { "key": "dias", "value": "30" },
+                    { "key": "limit", "value": "5" }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"consumos\": [\n    {\n      \"fecha\": \"2026-10-30T12:00:00Z\",\n      \"comercio\": \"Comercio de prueba\",\n      \"monto\": 1250.5,\n      \"moneda\": \"ARS\",\n      \"descripcion\": \"Compra\",\n      \"referencia\": \"COMPRA-001\"\n    }\n  ],\n  \"tieneMas\": false,\n  \"cursor\": null\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Bloqueo temporal",
+      "description": "Bloqueo reversible y reactivación con validación adicional.",
+      "item": [
+        {
+          "name": "Bloquear temporalmente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('estado BLOQUEO_TEMPORAL', () => pm.expect(body.estado).to.eql('BLOQUEO_TEMPORAL'));",
+                  "pm.test('mensaje con cómo desbloquear', () => pm.expect(body.mensaje).to.include('DESBLOQUEAR'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tarjetaId\": \"{{tarjetaId}}\",\n  \"confirmar\": \"CONFIRMAR\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/bloquear/temporal",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "{{tarjetaId}}", "bloquear", "temporal"]
+            },
+            "description": "Exige tarjetaId coincidente y confirmación exacta CONFIRMAR; solo tarjeta activa. Respuestas: 200, 400, 401, 403, 404, 409, 500."
+          },
+          "response": [
+            {
+              "name": "200 - bloqueo temporal",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "X-Credencial-Sesion", "value": "{{credencial}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tarjetaId\": \"11111111-1111-4111-8111-111111111111\",\n  \"confirmar\": \"CONFIRMAR\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/11111111-1111-4111-8111-111111111111/bloquear/temporal",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "11111111-1111-4111-8111-111111111111", "bloquear", "temporal"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"tarjetaId\": \"11111111-1111-4111-8111-111111111111\",\n  \"estado\": \"BLOQUEO_TEMPORAL\",\n  \"mensaje\": \"Tarjeta bloqueada temporalmente. Para desbloquearla, indicá DESBLOQUEAR.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Desbloquear temporalmente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('estado ACTIVA', () => pm.expect(body.estado).to.eql('ACTIVA'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tarjetaId\": \"{{tarjetaId}}\",\n  \"validacionAdicional\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/desbloquear/temporal",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "{{tarjetaId}}", "desbloquear", "temporal"]
+            },
+            "description": "Solo desde BLOQUEO_TEMPORAL; exige validacionAdicional=true si cards.bloqueo.validacion-adicional-requerida. Respuestas: 200, 400, 401, 403, 404, 409, 500."
+          },
+          "response": [
+            {
+              "name": "200 - desbloqueado",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "X-Credencial-Sesion", "value": "{{credencial}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tarjetaId\": \"11111111-1111-4111-8111-111111111111\",\n  \"validacionAdicional\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/11111111-1111-4111-8111-111111111111/desbloquear/temporal",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "11111111-1111-4111-8111-111111111111", "desbloquear", "temporal"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"id\": \"11111111-1111-4111-8111-111111111111\",\n  \"ultimosCuatro\": \"1234\",\n  \"marca\": \"VISA\",\n  \"tipo\": \"CREDITO\",\n  \"estado\": \"ACTIVA\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Aviso de viaje",
+      "description": "Registro del aviso confirmado con recomendaciones.",
+      "item": [
+        {
+          "name": "Registrar aviso de viaje",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('país', () => pm.expect(body.pais).to.eql('España'));",
+                  "pm.test('mensaje de confirmación', () => pm.expect(body.mensajeConfirmacion).to.include('políticas internacionales'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tarjetaId\": \"{{tarjetaId}}\",\n  \"pais\": \"España\",\n  \"region\": \"Madrid\",\n  \"fechaDesde\": \"2026-12-01\",\n  \"fechaHasta\": \"2026-12-15\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/aviso-viaje",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "{{tarjetaId}}", "aviso-viaje"]
+            },
+            "description": "Registra país, región opcional y fechas; no cambia límites ni políticas de la tarjeta. Respuestas: 201, 400, 401, 403, 404, 500."
+          },
+          "response": [
+            {
+              "name": "201 - aviso registrado",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "X-Credencial-Sesion", "value": "{{credencial}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tarjetaId\": \"11111111-1111-4111-8111-111111111111\",\n  \"pais\": \"España\",\n  \"region\": \"Madrid\",\n  \"fechaDesde\": \"2026-12-01\",\n  \"fechaHasta\": \"2026-12-15\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/11111111-1111-4111-8111-111111111111/aviso-viaje",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "11111111-1111-4111-8111-111111111111", "aviso-viaje"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"tarjetaId\": \"11111111-1111-4111-8111-111111111111\",\n  \"pais\": \"España\",\n  \"region\": \"Madrid\",\n  \"fechaDesde\": \"2026-12-01\",\n  \"fechaHasta\": \"2026-12-15\",\n  \"mensajeConfirmacion\": \"Aviso de viaje registrado y confirmado para España / Madrid, desde 2026-12-01 hasta 2026-12-15. Usá canales oficiales y no compartas tus claves. Siguen aplicando las políticas internacionales del emisor y los límites del banco.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Bloqueo definitivo",
+      "description": "Advertencia de irreversibilidad y bloqueo definitivo. Correr al final: deja la tarjeta bloqueada sin retorno por el canal.",
+      "item": [
+        {
+          "name": "Advertencia sin confirmaciones — 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 CONFLICT', () => pm.response.to.have.status(409));",
+                  "const body = pm.response.json();",
+                  "pm.test('code CONFLICT', () => pm.expect(body.code).to.eql('CONFLICT'));",
+                  "pm.test('advierte irreversibilidad', () => pm.expect(body.message).to.include('irreversible'));",
+                  "pm.test('details vacío', () => pm.expect(body.details).to.eql([]));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tarjetaId\": \"{{tarjetaId}}\",\n  \"motivo\": \"ROBO\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/bloquear/definitivo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "{{tarjetaId}}", "bloquear", "definitivo"]
+            },
+            "description": "Sin las dos confirmaciones no cambia la tarjeta y devuelve el texto de irreversibilidad para mostrar en el canal."
+          },
+          "response": [
+            {
+              "name": "409 - doble confirmación requerida",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "X-Credencial-Sesion", "value": "{{credencial}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tarjetaId\": \"11111111-1111-4111-8111-111111111111\",\n  \"motivo\": \"ROBO\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/11111111-1111-4111-8111-111111111111/bloquear/definitivo",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "11111111-1111-4111-8111-111111111111", "bloquear", "definitivo"]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"El bloqueo definitivo es irreversible por WhatsApp. Para continuar, confirme dos veces con CONFIRMAR e indique ROBO o EXTRAVIO.\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-30T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Bloquear definitivamente (ROBO)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('estado BLOQUEO_DEFINITIVO', () => pm.expect(body.tarjeta.estado).to.eql('BLOQUEO_DEFINITIVO'));",
+                  "pm.test('sugiere reposición', () => pm.expect(body.mensaje).to.include('reposición'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tarjetaId\": \"{{tarjetaId}}\",\n  \"motivo\": \"ROBO\",\n  \"confirmarPrimero\": \"CONFIRMAR\",\n  \"confirmarSegundo\": \"CONFIRMAR\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/bloquear/definitivo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "{{tarjetaId}}", "bloquear", "definitivo"]
+            },
+            "description": "Motivo ROBO o EXTRAVIO y dos CONFIRMAR. Irreversible por el canal; repetirlo devuelve 409. Respuestas: 200, 400, 401, 403, 404, 409, 500."
+          },
+          "response": [
+            {
+              "name": "200 - bloqueo definitivo",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "X-Credencial-Sesion", "value": "{{credencial}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tarjetaId\": \"11111111-1111-4111-8111-111111111111\",\n  \"motivo\": \"ROBO\",\n  \"confirmarPrimero\": \"CONFIRMAR\",\n  \"confirmarSegundo\": \"CONFIRMAR\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/11111111-1111-4111-8111-111111111111/bloquear/definitivo",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "11111111-1111-4111-8111-111111111111", "bloquear", "definitivo"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"tarjeta\": {\n    \"id\": \"11111111-1111-4111-8111-111111111111\",\n    \"ultimosCuatro\": \"1234\",\n    \"marca\": \"VISA\",\n    \"tipo\": \"CREDITO\",\n    \"estado\": \"BLOQUEO_DEFINITIVO\"\n  },\n  \"mensaje\": \"Bloqueo definitivo aplicado, irreversible por WhatsApp. Solicite la reposición por los canales oficiales del banco.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Errores",
+      "description": "Casos de error reales del contrato.",
+      "item": [
+        {
+          "name": "Sin credencial — 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 UNAUTHORIZED', () => pm.response.to.have.status(401));",
+                  "const body = pm.response.json();",
+                  "pm.test('code', () => pm.expect(body.code).to.eql('UNAUTHORIZED'));",
+                  "pm.test('message sin internals', () => pm.expect(body.message).to.eql('Credencial no válida'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas"]
+            },
+            "description": "Sin header X-Credencial-Sesion → 401 UNAUTHORIZED."
+          },
+          "response": [
+            {
+              "name": "401 - unauthorized",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas"]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"Credencial no válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-30T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Tarjeta inexistente o ajena — 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 NOT_FOUND', () => pm.response.to.have.status(404));",
+                  "const body = pm.response.json();",
+                  "pm.test('code', () => pm.expect(body.code).to.eql('NOT_FOUND'));",
+                  "pm.test('mensaje genérico', () => pm.expect(body.message).to.eql('No se encontró la tarjeta'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/99999999-9999-4999-8999-999999999999/consumos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "99999999-9999-4999-8999-999999999999", "consumos"]
+            },
+            "description": "UUID inexistente o de otro titular → mismo 404 genérico (sin PII)."
+          },
+          "response": [
+            {
+              "name": "404 - no encontrada",
+              "originalRequest": {
+                "method": "GET",
+                "header": [{ "key": "X-Credencial-Sesion", "value": "{{credencial}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/99999999-9999-4999-8999-999999999999/consumos",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "99999999-9999-4999-8999-999999999999", "consumos"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"NOT_FOUND\",\n  \"message\": \"No se encontró la tarjeta\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-30T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Consumos con dias=0 — 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 BAD_REQUEST', () => pm.response.to.have.status(400));",
+                  "pm.test('code', () => pm.expect(pm.response.json().code).to.eql('BAD_REQUEST'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/consumos?dias=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "{{tarjetaId}}", "consumos"],
+              "query": [{ "key": "dias", "value": "0" }]
+            },
+            "description": "dias y limit deben ser positivos → 400 BAD_REQUEST."
+          },
+          "response": [
+            {
+              "name": "400 - valor inválido",
+              "originalRequest": {
+                "method": "GET",
+                "header": [{ "key": "X-Credencial-Sesion", "value": "{{credencial}}" }],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/11111111-1111-4111-8111-111111111111/consumos?dias=0",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "11111111-1111-4111-8111-111111111111", "consumos"],
+                  "query": [{ "key": "dias", "value": "0" }]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"La solicitud no es válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-30T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Bloqueo temporal sin CONFIRMAR — 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 BAD_REQUEST', () => pm.response.to.have.status(400));",
+                  "pm.test('code', () => pm.expect(pm.response.json().code).to.eql('BAD_REQUEST'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tarjetaId\": \"{{tarjetaId}}\",\n  \"confirmar\": \"NO\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/bloquear/temporal",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "{{tarjetaId}}", "bloquear", "temporal"]
+            },
+            "description": "Confirmación distinta de CONFIRMAR → 400 y la tarjeta no cambia."
+          },
+          "response": [
+            {
+              "name": "400 - sin confirmación",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "X-Credencial-Sesion", "value": "{{credencial}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tarjetaId\": \"11111111-1111-4111-8111-111111111111\",\n  \"confirmar\": \"NO\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/11111111-1111-4111-8111-111111111111/bloquear/temporal",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "11111111-1111-4111-8111-111111111111", "bloquear", "temporal"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"La solicitud no es válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-30T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Desbloqueo sin validación adicional — 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 BAD_REQUEST', () => pm.response.to.have.status(400));",
+                  "pm.test('code', () => pm.expect(pm.response.json().code).to.eql('BAD_REQUEST'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tarjetaId\": \"33333333-3333-4333-8333-333333333333\",\n  \"validacionAdicional\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/33333333-3333-4333-8333-333333333333/desbloquear/temporal",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "33333333-3333-4333-8333-333333333333", "desbloquear", "temporal"]
+            },
+            "description": "Con validacion-adicional-requerida=true, false → 400. Usa la tarjeta en BLOQUEO_TEMPORAL del seed."
+          },
+          "response": [
+            {
+              "name": "400 - validación requerida",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "X-Credencial-Sesion", "value": "{{credencial}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tarjetaId\": \"33333333-3333-4333-8333-333333333333\",\n  \"validacionAdicional\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/33333333-3333-4333-8333-333333333333/desbloquear/temporal",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "33333333-3333-4333-8333-333333333333", "desbloquear", "temporal"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"La solicitud no es válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-30T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Desbloqueo de tarjeta con bloqueo definitivo — 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 CONFLICT', () => pm.response.to.have.status(409));",
+                  "const body = pm.response.json();",
+                  "pm.test('code', () => pm.expect(body.code).to.eql('CONFLICT'));",
+                  "pm.test('deriva a canales formales', () => pm.expect(body.message).to.include('canales formales'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tarjetaId\": \"44444444-4444-4444-8444-444444444444\",\n  \"validacionAdicional\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/44444444-4444-4444-8444-444444444444/desbloquear/temporal",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "44444444-4444-4444-8444-444444444444", "desbloquear", "temporal"]
+            },
+            "description": "El bloqueo definitivo no se revierte por chat → 409. Usa la tarjeta con BLOQUEO_DEFINITIVO del seed."
+          },
+          "response": [
+            {
+              "name": "409 - irreversible",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "X-Credencial-Sesion", "value": "{{credencial}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tarjetaId\": \"44444444-4444-4444-8444-444444444444\",\n  \"validacionAdicional\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/44444444-4444-4444-8444-444444444444/desbloquear/temporal",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "44444444-4444-4444-8444-444444444444", "desbloquear", "temporal"]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"El bloqueo definitivo no se puede revertir por chat. Contactá los canales formales del banco\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-30T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Aviso de viaje con fechas invertidas — 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 BAD_REQUEST', () => pm.response.to.have.status(400));",
+                  "pm.test('code', () => pm.expect(pm.response.json().code).to.eql('BAD_REQUEST'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tarjetaId\": \"{{tarjetaId}}\",\n  \"pais\": \"España\",\n  \"fechaDesde\": \"2026-12-15\",\n  \"fechaHasta\": \"2026-12-01\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/aviso-viaje",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "{{tarjetaId}}", "aviso-viaje"]
+            },
+            "description": "fechaHasta anterior a fechaDesde → 400 BAD_REQUEST."
+          },
+          "response": [
+            {
+              "name": "400 - fechas incoherentes",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "X-Credencial-Sesion", "value": "{{credencial}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tarjetaId\": \"11111111-1111-4111-8111-111111111111\",\n  \"pais\": \"España\",\n  \"fechaDesde\": \"2026-12-15\",\n  \"fechaHasta\": \"2026-12-01\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/11111111-1111-4111-8111-111111111111/aviso-viaje",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "11111111-1111-4111-8111-111111111111", "aviso-viaje"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"La solicitud no es válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-30T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Aviso de viaje sin país — 400 VALIDATION_ERROR",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('VALIDATION_ERROR', () => pm.expect(body.code).to.eql('VALIDATION_ERROR'));",
+                  "pm.test('details con campo', () => pm.expect(body.details.length).to.be.above(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Credencial-Sesion", "value": "{{credencial}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tarjetaId\": \"{{tarjetaId}}\",\n  \"fechaDesde\": \"2026-12-01\",\n  \"fechaHasta\": \"2026-12-15\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/aviso-viaje",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "tarjetas", "{{tarjetaId}}", "aviso-viaje"]
+            },
+            "description": "pais es obligatorio (@NotBlank) → 400 VALIDATION_ERROR con details."
+          },
+          "response": [
+            {
+              "name": "400 - validación",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  { "key": "X-Credencial-Sesion", "value": "{{credencial}}" },
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"tarjetaId\": \"11111111-1111-4111-8111-111111111111\",\n  \"fechaDesde\": \"2026-12-01\",\n  \"fechaHasta\": \"2026-12-15\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/tarjetas/11111111-1111-4111-8111-111111111111/aviso-viaje",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "tarjetas", "11111111-1111-4111-8111-111111111111", "aviso-viaje"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"La solicitud tiene datos inválidos\",\n  \"details\": [\n    { \"field\": \"pais\", \"message\": \"no debe estar vacío\" }\n  ],\n  \"timestamp\": \"2026-10-30T12:00:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Salud",
+      "description": "Healthcheck del servicio.",
+      "item": [
+        {
+          "name": "Actuator health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200', () => pm.response.to.have.status(200));",
+                  "pm.test('UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Healthcheck con probes habilitados."
+          },
+          "response": [
+            {
+              "name": "200 - UP",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/actuator/health",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["actuator", "health"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"status\": \"UP\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

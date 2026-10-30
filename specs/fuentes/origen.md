@@ -34,3 +34,12 @@ updated: 2026-10-30T18:06:32.415Z
 - shared/contracts/wa-insurance-service/ (H6)
 - shared/contracts/wa-mcp-layer/ (publicado por H7)
 - specs/capa-mcp/spec.md
+
+| Hito | Fuente Notion | Fecha consulta | Notas |
+|------|---------------|----------------|-------|
+| H8 — Base de conocimiento RAG | https://app.notion.com/p/H8-Base-de-conocimiento-RAG-38375bb08ca781e2accfdd9eff1722a4 | 2026-07-24T14:14:49.820Z | Página del hito leída; roadmap leído (reglas transversales, límites entre componentes). |
+
+## Contratos referenciados (H8)
+- shared/contracts/wa-knowledge-rag/ (a publicar por H8)
+- shared/contracts/wa-conversation-agent/ (consume retrieval de H8)
+- specs/conocimiento-rag/spec.md

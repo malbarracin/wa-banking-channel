@@ -140,3 +140,16 @@ H9, pero no se afirma que su integración esté implementada.
 Los ejemplos son sintéticos. Esta publicación mantiene v1; no agrega campos al intercambio.
 No se publica un esquema JSON separado: los tipos, límites y variantes se definen aquí
 y se contrastan con los modelos y pruebas de la API de H8.
+
+## Verificación
+
+- Los cuatro ejemplos de este documento se validan contra los modelos de H8 en
+  `ai/wa-knowledge-rag/tests/unit/api/test_published_contract.py`: entrada → `RetrievalRequest`,
+  éxito → `RetrievalResponse`, sin evidencia → `InsufficientResponse`, y el error 400 se contrasta
+  con la respuesta HTTP real de `POST /retrieval`.
+- Referencia de implementación y operación: `ai/wa-knowledge-rag/README.md` y
+  `ai/wa-knowledge-rag/docs/arquitectura.md`.
+- Superficie pública de H8 para H9: `POST /retrieval` y `GET /health`. La ingesta de contenido no
+  forma parte de este contrato (ver `ai/wa-knowledge-rag/docs/guia-contenido.md`).
+- `GET /health` responde `{"status":"ok"}` sin consultar la base ni el proveedor de embeddings; no
+  sirve para anticipar si retrieval podrá responder.

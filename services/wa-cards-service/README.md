@@ -33,3 +33,15 @@ Se pueden configurar con `CARDS_CONSUMOS_VENTANA_DIAS` y `CARDS_CONSUMOS_TOPE_PO
 La respuesta contiene `consumos`, `tieneMas` y `cursor`. Para continuar, reenviar el cursor
 con la misma tarjeta y ventana solicitada; el cursor final es nulo. El orden es fecha e ID descendentes.
 Cada página excluye fechas futuras y consumos fuera de la ventana reciente, sin PAN, CVV ni vencimiento.
+
+## Bloqueo definitivo
+
+`POST /api/v1/tarjetas/{tarjetaId}/bloquear/definitivo` requiere `X-Credencial-Sesion`
+y un cuerpo con `tarjetaId`, `motivo` (`ROBO` o `EXTRAVIO`), `confirmarPrimero`
+y `confirmarSegundo` (ambos exactamente `CONFIRMAR`). Path y cuerpo deben coincidir.
+Al iniciar el flujo, enviar las confirmaciones omitidas: devuelve 409 `CONFLICT`
+con la advertencia de irreversibilidad por WhatsApp antes de solicitar las dos confirmaciones,
+sin modificar la tarjeta. El canal debe mostrar esa advertencia antes de recogerlas.
+Con ambas confirmaciones devuelve 200 con `tarjeta` y `mensaje`, que sugiere reposición
+por canales oficiales. Persiste bloqueo, desactivación y auditoría en una sola transacción.
+No se permite repetir el bloqueo definitivo ni desbloquearlo por chat (409).

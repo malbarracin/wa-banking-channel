@@ -1,5 +1,7 @@
 package com.bcra.cards.ws.tarjeta.controller;
 
+import com.bcra.cards.ws.tarjeta.dto.BloqueoDefinitivoRequest;
+import com.bcra.cards.ws.tarjeta.dto.BloqueoDefinitivoResponse;
 import com.bcra.cards.ws.tarjeta.dto.BloqueoTemporalRequest;
 import com.bcra.cards.ws.tarjeta.dto.BloqueoTemporalResponse;
 import com.bcra.cards.ws.tarjeta.dto.DesbloqueoRequest;
@@ -22,6 +24,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class BloqueoController {
 
     private final BloqueoService bloqueoService;
+
+    /** Bloquea definitivamente tras recibir las dos confirmaciones del cliente. */
+    @PostMapping("/{tarjetaId}/bloquear/definitivo")
+    public BloqueoDefinitivoResponse bloquearDefinitivo(@PathVariable UUID tarjetaId,
+            @RequestHeader(value = "X-Credencial-Sesion", required = false) String credencial,
+            @Valid @RequestBody BloqueoDefinitivoRequest solicitud) {
+        return bloqueoService.bloquearDefinitivo(tarjetaId, credencial, solicitud);
+    }
 
     /** Bloquea temporalmente tras recibir confirmación explícita. */
     @PostMapping("/{tarjetaId}/bloquear/temporal")

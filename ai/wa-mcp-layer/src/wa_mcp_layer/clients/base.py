@@ -5,25 +5,10 @@ from typing import Self
 import httpx
 from pydantic import JsonValue
 
-from wa_mcp_layer.envelope import ContextoSesion, ErrorNegocio
-from wa_mcp_layer.security.session_context import REVERIFY, BusinessError, require_credential
+from wa_mcp_layer.envelope import ContextoSesion
+from wa_mcp_layer.errors import map_error as map_error
+from wa_mcp_layer.security.session_context import BusinessError, require_credential
 from wa_mcp_layer.settings import Settings
-
-
-def map_error(status: int) -> ErrorNegocio:
-    codes = {
-        400: ("SOLICITUD_INVALIDA", "Revisá los datos de la solicitud e intentá nuevamente."),
-        401: ("CREDENCIAL_INVALIDA", REVERIFY),
-        403: ("VINCULO_INACTIVO", REVERIFY),
-        404: ("NO_ENCONTRADO", "No encontramos ese dato."),
-        409: ("CONFLICTO", "No podemos completar la operación en su estado actual. Consultá a soporte."),
-        423: ("CONFLICTO", "No podemos completar la operación en su estado actual. Consultá a soporte."),
-    }
-    code, message = codes.get(
-        status,
-        ("SERVICIO_NO_DISPONIBLE", "No podemos atender la solicitud ahora. Intentá más tarde o contactá a soporte."),
-    )
-    return ErrorNegocio(codigo=code, mensaje=message, reintentable=code == "SERVICIO_NO_DISPONIBLE")
 
 
 class BaseClient:
@@ -63,7 +48,7 @@ class BaseClient:
         try:
             response = await self._http.request(method, path, headers=headers, json=body)
         except httpx.RequestError:
-            raise BusinessError(map_error(503)) from None
+            raise BusinessError(map_error(None)) from None
         if not 200 <= response.status_code < 300:
             raise BusinessError(map_error(response.status_code))
         if response.status_code == 204:

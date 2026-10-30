@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.bcra.cards.ws.exception.ForbiddenException;
 import com.bcra.cards.ws.exception.UnauthorizedException;
 import com.bcra.cards.ws.tarjeta.client.CredencialesServiceClient;
 import com.bcra.cards.ws.tarjeta.client.dto.ValidarCredencialResponse;
@@ -16,6 +17,8 @@ import com.bcra.cards.ws.tarjeta.entity.Tarjeta;
 import com.bcra.cards.ws.tarjeta.entity.TipoTarjeta;
 import com.bcra.cards.ws.tarjeta.repository.AvisoViajeRepository;
 import com.bcra.cards.ws.tarjeta.repository.TarjetaRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -23,6 +26,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -38,6 +43,8 @@ class AvisoViajeControllerTest {
 
     @Autowired
     private MockMvc mvc;
+    @Autowired
+    private ObjectMapper objectMapper;
     @Autowired
     private TarjetaRepository tarjetas;
     @Autowired
@@ -162,6 +169,60 @@ class AvisoViajeControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"tarjetaId\":\"" + tarjetaId + "\",\"pais\":\" \"}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        assertThat(avisos.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Registra un destino sin la propiedad región en el JSON")
+    void permiteRegionOmitidaDelJson() throws Exception {
+        ObjectNode solicitud = (ObjectNode) objectMapper.readTree(
+                cuerpo(tarjetaId, "null", "2027-01-10", "2027-01-20"));
+        solicitud.remove("region");
+        mvc.perform(post(ruta()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON).content(solicitud.toString()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.pais").value("España"))
+                .andExpect(jsonPath("$.mensajeConfirmacion").isNotEmpty());
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(avisos.findByTarjetaIdOrderByFechaRegistroDesc(tarjetaId)).singleElement()
+                .satisfies(aviso -> {
+                    assertThat(aviso.getRegion()).isNull();
+                    assertThat(aviso.isConfirmado()).isTrue();
+                });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"tarjetaId", "pais", "fechaDesde", "fechaHasta"})
+    @DisplayName("Cada campo obligatorio ausente devuelve su detalle y no persiste")
+    void rechazaCampoObligatorioOmitido(String campo) throws Exception {
+        ObjectNode solicitud = (ObjectNode) objectMapper.readTree(
+                cuerpo(tarjetaId, "null", "2027-01-10", "2027-01-20"));
+        solicitud.remove(campo);
+        mvc.perform(post(ruta()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON).content(solicitud.toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.details[0].field").value(campo))
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+        verifyNoInteractions(credenciales);
+        assertThat(avisos.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Vínculo inactivo devuelve 403 con contrato de error y no persiste")
+    void rechazaVinculoInactivo() throws Exception {
+        when(credenciales.validar("sesion")).thenThrow(new ForbiddenException("Vínculo inactivo"));
+        mvc.perform(post(ruta()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpo(tarjetaId, "null", "2027-01-10", "2027-01-20")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").value("Acceso no permitido"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
         assertThat(avisos.count()).isZero();
     }
 

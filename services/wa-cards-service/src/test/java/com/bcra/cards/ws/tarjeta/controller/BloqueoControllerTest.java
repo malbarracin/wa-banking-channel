@@ -25,6 +25,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -278,6 +281,88 @@ class BloqueoControllerTest {
                 .andExpect(status().isConflict());
         assertThat(bloqueos.count()).isZero();
         assertThat(auditorias.count()).isZero();
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = {"NULL,CONFIRMAR", "CONFIRMAR,NULL", "CONFIRMAR,confirmar",
+            "confirmar,CONFIRMAR", "CONFIRMAR,' CONFIRMAR'", "'CONFIRMAR ',CONFIRMAR",
+            "'',CONFIRMAR", "CONFIRMAR,''"}, nullValues = "NULL")
+    @DisplayName("Una confirmación incompleta o no exacta conserva la tarjeta activa sin registros")
+    void conservaActivaSinDobleConfirmacion(String primero, String segundo) throws Exception {
+        tarjeta.setEstado(EstadoTarjeta.ACTIVA);
+        tarjeta.setActiva(true);
+        tarjetas.flush();
+
+        mvc.perform(post(rutaDefinitiva()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpoDefinitivo("ROBO", primero, segundo)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.message")
+                        .value(org.hamcrest.Matchers.containsString("irreversible por WhatsApp")));
+
+        entityManager.flush();
+        entityManager.clear();
+        Tarjeta persistida = tarjetas.findById(tarjeta.getId()).orElseThrow();
+        assertThat(persistida.getEstado()).isEqualTo(EstadoTarjeta.ACTIVA);
+        assertThat(persistida.isActiva()).isTrue();
+        assertThat(bloqueos.count()).isZero();
+        assertThat(auditorias.count()).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "robo", "EXTRAVÍO", "OTRO", " ROBO"})
+    @DisplayName("Un motivo fuera del catálogo no aplica bloqueo ni auditoría")
+    void rechazaMotivoFueraDelCatalogo(String motivo) throws Exception {
+        mvc.perform(post(rutaDefinitiva()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpoDefinitivo(motivo, "CONFIRMAR", "CONFIRMAR")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.details").isArray());
+
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(tarjetas.findById(tarjeta.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoTarjeta.BLOQUEO_TEMPORAL);
+        assertThat(bloqueos.count()).isZero();
+        assertThat(auditorias.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Tras bloquear definitivamente rechaza repetición y desbloqueo sin duplicar registros")
+    void mantieneIrreversibilidadTrasBloquear() throws Exception {
+        String solicitud = cuerpoDefinitivo("ROBO", "CONFIRMAR", "CONFIRMAR");
+        mvc.perform(post(rutaDefinitiva()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isOk());
+        entityManager.flush();
+        entityManager.clear();
+
+        mvc.perform(post(rutaDefinitiva()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details").isArray());
+        mvc.perform(post(ruta()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON).content(cuerpo("true")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details").isArray());
+
+        entityManager.flush();
+        entityManager.clear();
+        Tarjeta persistida = tarjetas.findById(tarjeta.getId()).orElseThrow();
+        assertThat(persistida.getEstado()).isEqualTo(EstadoTarjeta.BLOQUEO_DEFINITIVO);
+        assertThat(persistida.isActiva()).isFalse();
+        assertThat(bloqueos.findByTarjetaIdOrderByFechaBloqueoDesc(tarjeta.getId()))
+                .singleElement().satisfies(bloqueo -> {
+                    assertThat(bloqueo.getTipo()).isEqualTo(TipoBloqueo.DEFINITIVO);
+                    assertThat(bloqueo.getFechaDesbloqueo()).isNull();
+                });
+        assertThat(auditorias.findAll()).singleElement().satisfies(auditoria ->
+                assertThat(auditoria.getAccion()).isEqualTo(AuditoriaAccion.BLOQUEAR_DEFINITIVO));
     }
 
     private String rutaDefinitiva() {

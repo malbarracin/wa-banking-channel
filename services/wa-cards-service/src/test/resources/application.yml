@@ -1,3 +1,9 @@
+clients:
+  wa-credentials-service:
+    base-url: http://localhost:8082
+    connect-timeout: 2s
+    read-timeout: 5s
+
 spring:
   profiles:
     active: test

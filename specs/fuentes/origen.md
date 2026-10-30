@@ -43,3 +43,14 @@ updated: 2026-10-30T18:06:32.415Z
 - shared/contracts/wa-knowledge-rag/ (a publicar por H8)
 - shared/contracts/wa-conversation-agent/ (consume retrieval de H8)
 - specs/conocimiento-rag/spec.md
+
+| Hito | Fuente Notion | Fecha consulta | Notas |
+|------|---------------|----------------|-------|
+| H9 — Agente conversacional WhatsApp | https://app.notion.com/p/H9-Agente-conversacional-WhatsApp-38375bb08ca7813499c9d738fad34ebe | 2026-10-30T23:51:51Z | Página del hito leída; roadmap leído (reglas transversales, límites entre componentes). |
+
+## Contratos referenciados (H9)
+- shared/contracts/wa-mcp-layer/ (consume capacidades de H7)
+- shared/contracts/wa-knowledge-rag/ (consume retrieval de H8)
+- shared/contracts/wa-conversation-agent/ (publica contrato de turno/respuesta H9)
+- shared/contracts/events/ (H0.1 — contrato de turno con H0.2)
+- specs/agente-conversacional/spec.md

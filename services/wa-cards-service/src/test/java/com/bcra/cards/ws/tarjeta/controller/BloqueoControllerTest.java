@@ -359,6 +359,43 @@ class BloqueoControllerTest {
                 assertThat(auditoria.getAccion()).isEqualTo(AuditoriaAccion.BLOQUEAR_DEFINITIVO));
     }
 
+    @Test
+    @DisplayName("Un bloqueo temporal puede pasar a definitivo y ya no admite operaciones temporales")
+    void convierteTemporalEnDefinitivoSinPermitirReactivacion() throws Exception {
+        solicitar(tarjeta.getId(), "\"CONFIRMAR\"").andExpect(status().isOk());
+
+        mockMvc.perform(post(rutaDefinitiva()).header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(cuerpoDefinitivo("EXTRAVIO", "CONFIRMAR", "CONFIRMAR")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tarjeta.estado").value("BLOQUEO_DEFINITIVO"));
+
+        solicitar(tarjeta.getId(), "\"CONFIRMAR\"")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details").isArray());
+        mockMvc.perform(post("/api/v1/tarjetas/" + tarjeta.getId() + "/desbloquear/temporal")
+                        .header("X-Credencial-Sesion", "sesion")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"tarjetaId\":\"" + tarjeta.getId() + "\",\"validacionAdicional\":true}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details").isArray());
+
+        assertThat(tarjetaRepository.findById(tarjeta.getId()).orElseThrow()).satisfies(persistida -> {
+            assertThat(persistida.getEstado()).isEqualTo(EstadoTarjeta.BLOQUEO_DEFINITIVO);
+            assertThat(persistida.isActiva()).isFalse();
+        });
+        assertThat(bloqueoRepository.findAll()).hasSize(2)
+                .extracting(bloqueo -> bloqueo.getTipo())
+                .containsExactlyInAnyOrder(TipoBloqueo.TEMPORAL, TipoBloqueo.DEFINITIVO);
+        assertThat(bloqueoRepository.findAll()).allSatisfy(bloqueo ->
+                assertThat(bloqueo.getFechaDesbloqueo()).isNull());
+        assertThat(auditoriaRepository.findAll()).hasSize(2)
+                .extracting(auditoria -> auditoria.getAccion())
+                .containsExactlyInAnyOrder(AuditoriaAccion.BLOQUEAR_TEMPORAL, AuditoriaAccion.BLOQUEAR_DEFINITIVO);
+    }
+
     private String rutaDefinitiva() {
         return "/api/v1/tarjetas/" + tarjeta.getId() + "/bloquear/definitivo";
     }

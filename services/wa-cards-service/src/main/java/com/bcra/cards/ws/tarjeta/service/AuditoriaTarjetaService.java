@@ -19,6 +19,20 @@ public class AuditoriaTarjetaService {
 
     private final AuditoriaTarjetaRepository auditoriaRepository;
 
+    /** Registra el bloqueo autorizado sin persistir la credencial de sesión. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarBloqueoTemporal(ValidarCredencialResponse identidad, UUID tarjetaId) {
+        var auditoria = new AuditoriaTarjeta();
+        auditoria.setAccion(AuditoriaAccion.BLOQUEAR_TEMPORAL);
+        auditoria.setResultado(AuditoriaResultado.EXITOSO);
+        auditoria.setNumeroWhatsapp(identidad.numeroWhatsapp());
+        auditoria.setDocumentoTipo(identidad.documentoTipo());
+        auditoria.setDocumentoNumero(identidad.documentoNumero());
+        auditoria.setTarjetaId(tarjetaId);
+        auditoria.setFecha(Instant.now());
+        auditoriaRepository.save(auditoria);
+    }
+
     /** Registra el desbloqueo en la misma transacción que la reactivación de la tarjeta. */
     @Transactional(propagation = Propagation.MANDATORY)
     public void registrarDesbloqueo(ValidarCredencialResponse identidad, UUID tarjetaId) {

@@ -1,5 +1,7 @@
 package com.bcra.cards.ws.tarjeta.controller;
 
+import com.bcra.cards.ws.tarjeta.dto.BloqueoTemporalRequest;
+import com.bcra.cards.ws.tarjeta.dto.BloqueoTemporalResponse;
 import com.bcra.cards.ws.tarjeta.dto.DesbloqueoRequest;
 import com.bcra.cards.ws.tarjeta.dto.TarjetaResponse;
 import com.bcra.cards.ws.tarjeta.service.BloqueoService;
@@ -13,16 +15,24 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Operaciones de bloqueo de tarjetas del titular autenticado. */
+/** Operaciones de bloqueo de las tarjetas del titular autenticado. */
 @RestController
-@RequestMapping("/api/v1/tarjetas/{tarjetaId}")
+@RequestMapping("/api/v1/tarjetas")
 @RequiredArgsConstructor
 public class BloqueoController {
 
     private final BloqueoService bloqueoService;
 
+    /** Bloquea temporalmente tras recibir confirmación explícita. */
+    @PostMapping("/{tarjetaId}/bloquear/temporal")
+    public BloqueoTemporalResponse bloquearTemporal(@PathVariable UUID tarjetaId,
+            @RequestHeader(value = "X-Credencial-Sesion", required = false) String credencial,
+            @Valid @RequestBody BloqueoTemporalRequest request) {
+        return bloqueoService.bloquearTemporal(credencial, tarjetaId, request);
+    }
+
     /** Reactiva una tarjeta con bloqueo temporal tras la validación requerida. */
-    @PostMapping("/desbloquear/temporal")
+    @PostMapping("/{tarjetaId}/desbloquear/temporal")
     public TarjetaResponse desbloquearTemporal(@PathVariable UUID tarjetaId,
             @RequestHeader(value = "X-Credencial-Sesion", required = false) String credencial,
             @Valid @RequestBody DesbloqueoRequest solicitud) {

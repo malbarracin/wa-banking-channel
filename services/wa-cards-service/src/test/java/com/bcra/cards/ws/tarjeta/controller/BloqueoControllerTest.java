@@ -95,6 +95,7 @@ class BloqueoControllerTest {
     void rechazaConfirmacionInvalida(String confirmar) throws Exception {
         solicitar(tarjeta.getId(), confirmar).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.details").isArray())
                 .andExpect(jsonPath("$.timestamp").isString());
         verificarSinCambios();
     }
@@ -105,7 +106,9 @@ class BloqueoControllerTest {
         mockMvc.perform(post(ruta()).header("X-Credencial-Sesion", "sesion")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"tarjetaId\":\"" + tarjeta.getId() + "\"}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.details").isArray());
         verificarSinCambios();
     }
 
@@ -142,6 +145,28 @@ class BloqueoControllerTest {
                 .content("{\"tarjetaId\":\"" + tarjeta.getId() + "\",\"confirmar\":\"CONFIRMAR\"}"))
                 .andExpect(status().isUnauthorized());
         verificarSinCambios();
+    }
+
+    @Test
+    @DisplayName("Repetir un bloqueo temporal confirmado no duplica el bloqueo ni su auditoría")
+    void rechazaBloqueoTemporalRepetido() throws Exception {
+        solicitar(tarjeta.getId(), "\"CONFIRMAR\"").andExpect(status().isOk());
+        var bloqueoOriginal = bloqueoRepository.findAll().getFirst();
+        var auditoriaOriginal = auditoriaRepository.findAll().getFirst();
+
+        solicitar(tarjeta.getId(), "\"CONFIRMAR\"")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details").isArray());
+
+        assertThat(tarjetaRepository.findById(tarjeta.getId()).orElseThrow().getEstado())
+                .isEqualTo(EstadoTarjeta.BLOQUEO_TEMPORAL);
+        assertThat(bloqueoRepository.findAll()).singleElement().satisfies(bloqueo -> {
+            assertThat(bloqueo.getId()).isEqualTo(bloqueoOriginal.getId());
+            assertThat(bloqueo.getFechaBloqueo()).isEqualTo(bloqueoOriginal.getFechaBloqueo());
+        });
+        assertThat(auditoriaRepository.findAll()).singleElement().satisfies(auditoria ->
+                assertThat(auditoria.getId()).isEqualTo(auditoriaOriginal.getId()));
     }
 
     private org.springframework.test.web.servlet.ResultActions solicitar(UUID bodyId, String confirmar)

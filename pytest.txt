@@ -1,0 +1,38 @@
+﻿........................................................................ [ 21%]
+........................................................................ [ 43%]
+........................................................................ [ 65%]
+........................................................................ [ 87%]
+........................................                                 [100%]
+=============================== tests coverage ================================
+______________ coverage: platform win32, python 3.12.16-final-0 _______________
+
+Name                                             Stmts   Miss  Cover
+--------------------------------------------------------------------
+src\wa_mcp_layer\__init__.py                         0      0   100%
+src\wa_mcp_layer\audit\__init__.py                   0      0   100%
+src\wa_mcp_layer\audit\logger.py                    14      0   100%
+src\wa_mcp_layer\capabilities\__init__.py            0      0   100%
+src\wa_mcp_layer\capabilities\acceso.py             80      0   100%
+src\wa_mcp_layer\capabilities\cuentas.py            75      0   100%
+src\wa_mcp_layer\capabilities\identidad.py          11      0   100%
+src\wa_mcp_layer\capabilities\seguros.py            61      0   100%
+src\wa_mcp_layer\capabilities\vinculo.py            36      0   100%
+src\wa_mcp_layer\catalog.py                         61      1    98%
+src\wa_mcp_layer\clients\__init__.py                 0      0   100%
+src\wa_mcp_layer\clients\accounts_client.py          3      0   100%
+src\wa_mcp_layer\clients\base.py                    40      0   100%
+src\wa_mcp_layer\clients\cards_client.py             3      0   100%
+src\wa_mcp_layer\clients\channel_client.py          14      0   100%
+src\wa_mcp_layer\clients\credentials_client.py      14      0   100%
+src\wa_mcp_layer\clients\insurance_client.py         3      0   100%
+src\wa_mcp_layer\clients\users_client.py             3      0   100%
+src\wa_mcp_layer\envelope.py                        19      0   100%
+src\wa_mcp_layer\errors.py                           6      0   100%
+src\wa_mcp_layer\security\__init__.py                0      0   100%
+src\wa_mcp_layer\security\pii.py                     6      0   100%
+src\wa_mcp_layer\security\session_context.py        26      0   100%
+src\wa_mcp_layer\settings.py                        14      0   100%
+--------------------------------------------------------------------
+TOTAL                                              489      1    99%
+Required test coverage of 80% reached. Total coverage: 99.80%
+328 passed in 10.51s

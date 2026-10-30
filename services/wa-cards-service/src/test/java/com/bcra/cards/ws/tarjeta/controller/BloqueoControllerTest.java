@@ -169,6 +169,34 @@ class BloqueoControllerTest {
                 assertThat(auditoria.getId()).isEqualTo(auditoriaOriginal.getId()));
     }
 
+    @Test
+    @DisplayName("El bloqueo temporal permite desbloquear después y conserva ambas auditorías")
+    void permiteDesbloquearTrasBloquear() throws Exception {
+        solicitar(tarjeta.getId(), "\"CONFIRMAR\"").andExpect(status().isOk());
+        var bloqueoOriginal = bloqueoRepository.findAll().getFirst();
+
+        mockMvc.perform(post("/api/v1/tarjetas/" + tarjeta.getId() + "/desbloquear/temporal")
+                .header("X-Credencial-Sesion", "sesion")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tarjetaId\":\"" + tarjeta.getId() + "\",\"validacionAdicional\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.estado").value("ACTIVA"));
+
+        assertThat(tarjetaRepository.findById(tarjeta.getId()).orElseThrow()).satisfies(actual -> {
+            assertThat(actual.getEstado()).isEqualTo(EstadoTarjeta.ACTIVA);
+            assertThat(actual.isActiva()).isTrue();
+        });
+        assertThat(bloqueoRepository.findAll()).singleElement().satisfies(bloqueo -> {
+            assertThat(bloqueo.getId()).isEqualTo(bloqueoOriginal.getId());
+            assertThat(bloqueo.getFechaBloqueo()).isEqualTo(bloqueoOriginal.getFechaBloqueo());
+            assertThat(bloqueo.getFechaDesbloqueo()).isNotNull();
+        });
+        assertThat(auditoriaRepository.findAll()).extracting(auditoria -> auditoria.getAccion())
+                .containsExactlyInAnyOrder(AuditoriaAccion.BLOQUEAR_TEMPORAL, AuditoriaAccion.DESBLOQUEAR_TEMPORAL);
+        assertThat(auditoriaRepository.findAll()).allSatisfy(auditoria ->
+                assertThat(auditoria.getTarjetaId()).isEqualTo(tarjeta.getId()));
+    }
+
     private org.springframework.test.web.servlet.ResultActions solicitar(UUID bodyId, String confirmar)
             throws Exception {
         return mockMvc.perform(post(ruta()).header("X-Credencial-Sesion", "sesion")

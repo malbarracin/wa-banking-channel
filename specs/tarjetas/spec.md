@@ -1,8 +1,8 @@
 ---
 title: Tarjetas — especificación
-status: borrador
+status: aprobada
 source: https://app.notion.com/p/H5-Servicio-de-Tarjetas-36875bb08ca781bea9c8cb37c2ccdbbf
-updated: 2026-10-30T15:40:54.647Z
+updated: 2026-10-30T15:42:40.404Z
 ---
 
 # Tarjetas — especificación

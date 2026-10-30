@@ -76,6 +76,17 @@ def test_recall_at_five(repository, record_property):
     assert recall >= 0.8
 
 
+def test_rrf_combines_disagreeing_vector_and_spanish_text_rankings(repository):
+    # Vector: tarjetas primero, seguros tercero por desempate de UUID.
+    # Texto español: «seguro» recupera «seguros» como primer y único resultado.
+    hits = repository.search("seguro", vector(1), audience="public")
+    assert hits[0].id == UUID(int=3)
+    assert hits[0].score == pytest.approx(1 / 63 + 1 / 61)
+    assert hits[1].id == UUID(int=1)
+    assert hits[1].score == pytest.approx(1 / 61)
+    assert {hit.id for hit in hits} == {UUID(int=key) for key in range(1, 6)}
+
+
 @pytest.mark.parametrize("query", CORPUS["outside"])
 def test_outside_and_internal_never_answer_client(repository, query):
     result = retriever(repository).retrieve(

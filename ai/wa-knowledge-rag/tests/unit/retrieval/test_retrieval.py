@@ -99,6 +99,20 @@ def test_medium_response(hit, settings):
     assert result.confidence == "medium"
 
 
+def test_uncalibrated_retrieval_suppresses_even_top_ranked_content(hit):
+    repo = Mock(spec=KnowledgeRepository)
+    repo.search.return_value = [hit]
+    result = HybridRetriever(repo, Settings()).retrieve(
+        "consulta", [1], audience="public", correlation_id="trace", kb_version="kb-3"
+    )
+    assert result.model_dump(by_alias=True) == {
+        "results": [],
+        "confidence": "low",
+        "reason": "sin_respuesta_suficiente",
+        "correlationId": "trace",
+    }
+
+
 @pytest.mark.parametrize("raw", [None, 0, 1 / 61])
 def test_no_answer_drops_content(hit, settings, raw):
     hits = [] if raw is None else [hit.model_copy(update={"score": raw})]

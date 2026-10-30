@@ -1,0 +1,805 @@
+openapi: 3.1.0
+info:
+  title: WA Cards Service
+  description: "Servicio de tarjetas del canal bancario: consultas, bloqueos y avisos\
+    \ de viaje."
+  version: 0.1.0-SNAPSHOT
+servers:
+- url: http://localhost:8086
+  description: Local
+security:
+- credencialSesion: []
+tags:
+- name: Tarjetas
+  description: Consultas y gestión de tarjetas del titular autenticado
+paths:
+  /api/v1/tarjetas/{tarjetaId}/desbloquear/temporal:
+    post:
+      tags:
+      - Tarjetas
+      summary: Desbloquear temporalmente
+      description: Exige validación adicional según configuración. Un bloqueo definitivo
+        no se revierte por chat.
+      operationId: desbloquearTemporal
+      parameters:
+      - name: tarjetaId
+        in: path
+        description: Identificador de la tarjeta del titular
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      - name: X-Credencial-Sesion
+        in: header
+        description: Credencial JWT de sesión validada con H2; requiere vínculo activo
+        required: true
+        schema:
+          type: string
+        example: jwt-de-sesion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DesbloqueoRequest"
+            examples:
+              Solicitud:
+                description: Solicitud
+                value:
+                  tarjetaId: 11111111-1111-4111-8111-111111111111
+                  validacionAdicional: true
+        required: true
+      responses:
+        "200":
+          description: Operación exitosa
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/TarjetaResponse"
+              examples:
+                Exito:
+                  value:
+                    id: 11111111-1111-4111-8111-111111111111
+                    ultimosCuatro: "1234"
+                    marca: VISA
+                    tipo: CREDITO
+                    estado: ACTIVA
+        "400":
+          $ref: "#/components/responses/400"
+        "401":
+          $ref: "#/components/responses/401"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
+          $ref: "#/components/responses/404"
+        "409":
+          $ref: "#/components/responses/409"
+        "500":
+          $ref: "#/components/responses/500"
+  /api/v1/tarjetas/{tarjetaId}/bloquear/temporal:
+    post:
+      tags:
+      - Tarjetas
+      summary: Bloquear temporalmente
+      description: Exige tarjetaId coincidente y confirmación exacta CONFIRMAR. Solo
+        admite tarjeta activa.
+      operationId: bloquearTemporal
+      parameters:
+      - name: tarjetaId
+        in: path
+        description: Identificador de la tarjeta del titular
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      - name: X-Credencial-Sesion
+        in: header
+        description: Credencial JWT de sesión validada con H2; requiere vínculo activo
+        required: true
+        schema:
+          type: string
+        example: jwt-de-sesion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BloqueoTemporalRequest"
+            examples:
+              Solicitud:
+                description: Solicitud
+                value:
+                  tarjetaId: 11111111-1111-4111-8111-111111111111
+                  confirmar: CONFIRMAR
+        required: true
+      responses:
+        "200":
+          description: Operación exitosa
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BloqueoTemporalResponse"
+              examples:
+                Exito:
+                  value:
+                    tarjetaId: 11111111-1111-4111-8111-111111111111
+                    estado: BLOQUEO_TEMPORAL
+                    mensaje: "Tarjeta bloqueada temporalmente. Para desbloquearla,\
+                      \ indicá DESBLOQUEAR."
+        "400":
+          $ref: "#/components/responses/400"
+        "401":
+          $ref: "#/components/responses/401"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
+          $ref: "#/components/responses/404"
+        "409":
+          $ref: "#/components/responses/409"
+        "500":
+          $ref: "#/components/responses/500"
+  /api/v1/tarjetas/{tarjetaId}/bloquear/definitivo:
+    post:
+      tags:
+      - Tarjetas
+      summary: Bloquear definitivamente
+      description: Exige motivo ROBO/EXTRAVIO y dos CONFIRMAR. Advertir irreversibilidad
+        por WhatsApp antes de confirmar.
+      operationId: bloquearDefinitivo
+      parameters:
+      - name: tarjetaId
+        in: path
+        description: Identificador de la tarjeta del titular
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      - name: X-Credencial-Sesion
+        in: header
+        description: Credencial JWT de sesión validada con H2; requiere vínculo activo
+        required: true
+        schema:
+          type: string
+        example: jwt-de-sesion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BloqueoDefinitivoRequest"
+            examples:
+              Robo:
+                description: Robo
+                value:
+                  tarjetaId: 11111111-1111-4111-8111-111111111111
+                  motivo: ROBO
+                  confirmarPrimero: CONFIRMAR
+                  confirmarSegundo: CONFIRMAR
+              Extravio:
+                description: Extravio
+                value:
+                  tarjetaId: 11111111-1111-4111-8111-111111111111
+                  motivo: EXTRAVIO
+                  confirmarPrimero: CONFIRMAR
+                  confirmarSegundo: CONFIRMAR
+        required: true
+      responses:
+        "200":
+          description: Operación exitosa
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/BloqueoDefinitivoResponse"
+              examples:
+                Exito:
+                  value:
+                    tarjeta:
+                      id: 11111111-1111-4111-8111-111111111111
+                      ultimosCuatro: "1234"
+                      marca: VISA
+                      tipo: CREDITO
+                      estado: BLOQUEO_DEFINITIVO
+                    mensaje: "Bloqueo definitivo aplicado, irreversible por WhatsApp.\
+                      \ Solicite la   reposición por los canales oficiales del banco."
+        "400":
+          $ref: "#/components/responses/400"
+        "401":
+          $ref: "#/components/responses/401"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
+          $ref: "#/components/responses/404"
+        "409":
+          $ref: "#/components/responses/409"
+        "500":
+          $ref: "#/components/responses/500"
+  /api/v1/tarjetas/{tarjetaId}/aviso-viaje:
+    post:
+      tags:
+      - Tarjetas
+      summary: Registrar aviso de viaje
+      description: Registra el aviso confirmado; no reemplaza políticas internacionales
+        del emisor ni límites del banco.
+      operationId: registrar
+      parameters:
+      - name: tarjetaId
+        in: path
+        description: Identificador de la tarjeta del titular
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      - name: X-Credencial-Sesion
+        in: header
+        description: Credencial JWT de sesión validada con H2; requiere vínculo activo
+        required: true
+        schema:
+          type: string
+        example: jwt-de-sesion
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AvisoViajeRequest"
+            examples:
+              Solicitud:
+                description: Solicitud
+                value:
+                  tarjetaId: 11111111-1111-4111-8111-111111111111
+                  pais: España
+                  region: Madrid
+                  fechaDesde: 2026-12-01
+                  fechaHasta: 2026-12-15
+        required: true
+      responses:
+        "201":
+          description: Operación exitosa
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AvisoViajeResponse"
+              examples:
+                Exito:
+                  value:
+                    tarjetaId: 11111111-1111-4111-8111-111111111111
+                    pais: España
+                    region: Madrid
+                    fechaDesde: 2026-12-01
+                    fechaHasta: 2026-12-15
+                    mensajeConfirmacion: "Aviso de viaje registrado y confirmado para\
+                      \ España / Madrid,   desde 2026-12-01 hasta 2026-12-15. Usá\
+                      \ canales oficiales y no compartas tus claves.   Siguen aplicando\
+                      \ las políticas internacionales del emisor y los límites del\
+                      \ banco."
+        "400":
+          $ref: "#/components/responses/400"
+        "401":
+          $ref: "#/components/responses/401"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+  /api/v1/tarjetas:
+    get:
+      tags:
+      - Tarjetas
+      summary: Listar tarjetas
+      description: Devuelve únicamente tarjetas del titular; una lista vacía es un
+        resultado válido.
+      operationId: listar
+      parameters:
+      - name: X-Credencial-Sesion
+        in: header
+        description: Credencial JWT de sesión validada con H2; requiere vínculo activo
+        required: true
+        schema:
+          type: string
+        example: jwt-de-sesion
+      responses:
+        "200":
+          description: Operación exitosa
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TarjetaResponse"
+              examples:
+                Exito:
+                  value:
+                  - id: 11111111-1111-4111-8111-111111111111
+                    ultimosCuatro: "1234"
+                    marca: VISA
+                    tipo: CREDITO
+                    estado: ACTIVA
+        "400":
+          $ref: "#/components/responses/400"
+        "401":
+          $ref: "#/components/responses/401"
+        "403":
+          $ref: "#/components/responses/403"
+        "500":
+          $ref: "#/components/responses/500"
+  /api/v1/tarjetas/{tarjetaId}/consumos:
+    get:
+      tags:
+      - Tarjetas
+      summary: Consultar consumos recientes
+      description: Pagina por fecha e identificador descendentes con ventana congelada;
+        sin datos sensibles.
+      operationId: listar_1
+      parameters:
+      - name: tarjetaId
+        in: path
+        description: Identificador de la tarjeta del titular
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 11111111-1111-4111-8111-111111111111
+      - name: X-Credencial-Sesion
+        in: header
+        description: Credencial JWT de sesión validada con H2; requiere vínculo activo
+        required: true
+        schema:
+          type: string
+        example: jwt-de-sesion
+      - name: dias
+        in: query
+        description: Ventana en días; se limita al máximo configurado (90 por defecto)
+        required: false
+        schema:
+          type: integer
+          format: int32
+        example: 30
+      - name: limit
+        in: query
+        description: Cantidad por página; se limita al tope configurado (10 por defecto)
+        required: false
+        schema:
+          type: integer
+          format: int32
+        example: 5
+      - name: cursor
+        in: query
+        description: Cursor opaco devuelto por la página anterior; omitir en la primera
+          consulta
+        required: false
+        schema:
+          type: string
+        example: MTExMTExMTEtMTExMS00MTExLTgxMTEtMTExMTExMTExMTExfDMwfDIwMjYtMTAtMzBUMTI6MDA6MDBafDIwMjYtMTAtMjlUMTI6MDA6MDBafDE
+      responses:
+        "200":
+          description: Operación exitosa
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ConsumosPageResponse"
+              examples:
+                Exito:
+                  value:
+                    consumos:
+                    - fecha: 2026-10-30T12:00:00Z
+                      comercio: Comercio de prueba
+                      monto: 1250.5
+                      moneda: ARS
+                      descripcion: Compra
+                      referencia: COMPRA-001
+                    tieneMas: false
+                    cursor: null
+        "400":
+          $ref: "#/components/responses/400"
+        "401":
+          $ref: "#/components/responses/401"
+        "403":
+          $ref: "#/components/responses/403"
+        "404":
+          $ref: "#/components/responses/404"
+        "500":
+          $ref: "#/components/responses/500"
+components:
+  schemas:
+    ErrorResponse:
+      description: "Error uniforme de la API (code, message, details, timestamp)"
+      properties:
+        code:
+          type: string
+          description: Código estable
+          enum:
+          - VALIDATION_ERROR
+          - BAD_REQUEST
+          - NOT_FOUND
+          - CONFLICT
+          - INTERNAL_ERROR
+          - UNAUTHORIZED
+          - FORBIDDEN
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Mensaje legible sin datos sensibles
+          example: La solicitud tiene datos inválidos
+        details:
+          type: array
+          description: Detalles de validación; nunca null (lista vacía si no aplica)
+          items:
+            $ref: "#/components/schemas/FieldError"
+        timestamp:
+          type: string
+          format: date-time
+          description: Instante UTC ISO-8601
+          example: 2026-10-26T12:00:00Z
+    FieldError:
+      description: Detalle de un campo inválido (sin el valor rechazado)
+      properties:
+        field:
+          type: string
+          description: Nombre del campo
+          example: nombre
+        message:
+          type: string
+          description: Motivo del rechazo
+          example: El nombre es obligatorio
+    DesbloqueoRequest:
+      type: object
+      properties:
+        tarjetaId:
+          type: string
+          format: uuid
+          description: Identificador de tarjeta; debe coincidir con el path
+          example: 11111111-1111-4111-8111-111111111111
+        validacionAdicional:
+          type: boolean
+          description: Resultado de la validación adicional exigida por el banco
+          example: true
+      required:
+      - tarjetaId
+    TarjetaResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador de la tarjeta
+          example: 11111111-1111-4111-8111-111111111111
+        ultimosCuatro:
+          type: string
+          description: Últimos cuatro dígitos; nunca se expone el PAN
+          example: 1234
+        marca:
+          type: string
+          description: Marca de la tarjeta
+          enum:
+          - VISA
+          - MASTERCARD
+          - AMEX
+          example: VISA
+        tipo:
+          type: string
+          description: Tipo de tarjeta
+          enum:
+          - DEBITO
+          - CREDITO
+          example: CREDITO
+        estado:
+          type: string
+          description: Estado actual de la tarjeta
+          enum:
+          - ACTIVA
+          - BLOQUEO_TEMPORAL
+          - BLOQUEO_DEFINITIVO
+          example: ACTIVA
+    BloqueoTemporalRequest:
+      type: object
+      properties:
+        tarjetaId:
+          type: string
+          format: uuid
+          description: Identificador de tarjeta; debe coincidir con el path
+          example: 11111111-1111-4111-8111-111111111111
+        confirmar:
+          type: string
+          description: Confirmación exacta CONFIRMAR
+          example: CONFIRMAR
+      required:
+      - tarjetaId
+    BloqueoTemporalResponse:
+      type: object
+      properties:
+        tarjetaId:
+          type: string
+          format: uuid
+          description: Identificador de tarjeta; debe coincidir con el path
+          example: 11111111-1111-4111-8111-111111111111
+        estado:
+          type: string
+          description: Estado actual de la tarjeta
+          enum:
+          - ACTIVA
+          - BLOQUEO_TEMPORAL
+          - BLOQUEO_DEFINITIVO
+          example: BLOQUEO_TEMPORAL
+        mensaje:
+          type: string
+          description: Orientación al cliente
+          example: "Tarjeta bloqueada temporalmente. Para desbloquearla, indicá DESBLOQUEAR."
+    BloqueoDefinitivoRequest:
+      type: object
+      properties:
+        tarjetaId:
+          type: string
+          format: uuid
+          description: Identificador de tarjeta; debe coincidir con el path
+          example: 11111111-1111-4111-8111-111111111111
+        motivo:
+          type: string
+          description: "Motivo: ROBO o EXTRAVIO"
+          example: ROBO
+        confirmarPrimero:
+          type: string
+          description: Primera confirmación exacta CONFIRMAR
+          example: CONFIRMAR
+        confirmarSegundo:
+          type: string
+          description: Segunda confirmación exacta CONFIRMAR
+          example: CONFIRMAR
+      required:
+      - tarjetaId
+    BloqueoDefinitivoResponse:
+      type: object
+      properties:
+        tarjeta:
+          $ref: "#/components/schemas/TarjetaResponse"
+          description: Tarjeta con su estado actualizado
+        mensaje:
+          type: string
+          description: Orientación al cliente
+          example: "Bloqueo definitivo aplicado, irreversible por WhatsApp. Solicite\
+            \ la reposición por los canales oficiales del banco."
+    AvisoViajeRequest:
+      type: object
+      properties:
+        tarjetaId:
+          type: string
+          format: uuid
+          description: Identificador de tarjeta; debe coincidir con el path
+          example: 11111111-1111-4111-8111-111111111111
+        pais:
+          type: string
+          description: País de destino
+          example: España
+          maxLength: 255
+          minLength: 0
+        region:
+          type: string
+          description: Región de destino opcional
+          example: Madrid
+          maxLength: 255
+          minLength: 0
+        fechaDesde:
+          type: string
+          format: date
+          description: "Inicio del viaje, fecha ISO-8601"
+          example: 2026-12-01
+        fechaHasta:
+          type: string
+          format: date
+          description: "Fin del viaje, fecha ISO-8601 igual o posterior al inicio"
+          example: 2026-12-15
+      required:
+      - fechaDesde
+      - fechaHasta
+      - pais
+      - tarjetaId
+    AvisoViajeResponse:
+      type: object
+      properties:
+        tarjetaId:
+          type: string
+          format: uuid
+          description: Identificador de tarjeta; debe coincidir con el path
+          example: 11111111-1111-4111-8111-111111111111
+        pais:
+          type: string
+          description: País de destino
+          example: España
+        region:
+          type: string
+          description: Región de destino opcional
+          example: Madrid
+        fechaDesde:
+          type: string
+          format: date
+          description: "Inicio del viaje, fecha ISO-8601"
+          example: 2026-12-01
+        fechaHasta:
+          type: string
+          format: date
+          description: "Fin del viaje, fecha ISO-8601 igual o posterior al inicio"
+          example: 2026-12-15
+        mensajeConfirmacion:
+          type: string
+          description: "Confirmación, recomendaciones y políticas aplicables"
+          example: "Aviso de viaje registrado y confirmado para España / Madrid, desde\
+            \ 2026-12-01 hasta 2026-12-15. Usá canales oficiales y no compartas tus\
+            \ claves. Siguen aplicando las políticas internacionales del emisor y\
+            \ los límites del banco."
+    ConsumoResponse:
+      type: object
+      properties:
+        fecha:
+          type: string
+          format: date-time
+          description: Instante UTC ISO-8601
+          example: 2026-10-30T12:00:00Z
+        comercio:
+          type: string
+          description: Nombre del comercio
+          example: Comercio de prueba
+        monto:
+          type: number
+          description: Importe del consumo
+          example: 1250.5
+        moneda:
+          type: string
+          description: Código de moneda
+          example: ARS
+        descripcion:
+          type: string
+          description: Descripción del consumo
+          example: Compra
+        referencia:
+          type: string
+          description: Referencia del consumo
+          example: COMPRA-001
+    ConsumosPageResponse:
+      type: object
+      properties:
+        consumos:
+          type: array
+          description: Consumos ordenados por fecha e identificador descendentes
+          items:
+            $ref: "#/components/schemas/ConsumoResponse"
+        tieneMas:
+          type: boolean
+          description: Indica si hay otra página
+          example: false
+        cursor:
+          type: string
+          description: Cursor opaco de la página siguiente; null al finalizar
+  responses:
+    "400":
+      description: "BAD_REQUEST: La solicitud no es válida"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            BAD_REQUEST:
+              $ref: "#/components/examples/BAD_REQUEST"
+            ValidationError:
+              $ref: "#/components/examples/ValidationError"
+    "401":
+      description: "UNAUTHORIZED: Credencial no válida"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            UNAUTHORIZED:
+              $ref: "#/components/examples/UNAUTHORIZED"
+    "403":
+      description: "FORBIDDEN: Acceso no permitido"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            FORBIDDEN:
+              $ref: "#/components/examples/FORBIDDEN"
+    "404":
+      description: "NOT_FOUND: No se encontró la tarjeta"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            NOT_FOUND:
+              $ref: "#/components/examples/NOT_FOUND"
+    "409":
+      description: "CONFLICT: El estado de la tarjeta no permite aplicar el bloqueo"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            CONFLICT:
+              $ref: "#/components/examples/CONFLICT"
+            Irreversible:
+              $ref: "#/components/examples/Irreversible"
+            DobleConfirmacion:
+              $ref: "#/components/examples/DobleConfirmacion"
+            Confirmacion:
+              $ref: "#/components/examples/Confirmacion"
+    "500":
+      description: "INTERNAL_ERROR: Error interno"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          examples:
+            INTERNAL_ERROR:
+              $ref: "#/components/examples/INTERNAL_ERROR"
+  examples:
+    BAD_REQUEST:
+      value:
+        timestamp: 2026-10-30T12:00:00Z
+        message: La solicitud no es válida
+        details: []
+        code: BAD_REQUEST
+    UNAUTHORIZED:
+      value:
+        timestamp: 2026-10-30T12:00:00Z
+        message: Credencial no válida
+        details: []
+        code: UNAUTHORIZED
+    FORBIDDEN:
+      value:
+        timestamp: 2026-10-30T12:00:00Z
+        message: Acceso no permitido
+        details: []
+        code: FORBIDDEN
+    NOT_FOUND:
+      value:
+        timestamp: 2026-10-30T12:00:00Z
+        message: No se encontró la tarjeta
+        details: []
+        code: NOT_FOUND
+    CONFLICT:
+      value:
+        timestamp: 2026-10-30T12:00:00Z
+        message: El estado de la tarjeta no permite aplicar el bloqueo
+        details: []
+        code: CONFLICT
+    INTERNAL_ERROR:
+      value:
+        timestamp: 2026-10-30T12:00:00Z
+        message: Error interno
+        details: []
+        code: INTERNAL_ERROR
+    Irreversible:
+      value:
+        timestamp: 2026-10-30T12:00:00Z
+        message: El bloqueo definitivo no se puede revertir por chat. Contactá los
+          canales formales del banco
+        details: []
+        code: CONFLICT
+    DobleConfirmacion:
+      value:
+        timestamp: 2026-10-30T12:00:00Z
+        message: "El bloqueo definitivo es irreversible por WhatsApp. Para continuar,\
+          \ confirme dos veces con CONFIRMAR e indique ROBO o EXTRAVIO."
+        details: []
+        code: CONFLICT
+    Confirmacion:
+      value:
+        timestamp: 2026-10-30T12:00:00Z
+        message: Se requiere confirmación explícita para continuar
+        details: []
+        code: CONFLICT
+    ValidationError:
+      value:
+        timestamp: 2026-10-30T12:00:00Z
+        message: La solicitud tiene datos inválidos
+        details:
+        - message: no debe ser nulo
+          field: tarjetaId
+        code: VALIDATION_ERROR
+  securitySchemes:
+    credencialSesion:
+      type: apiKey
+      description: JWT de sesión validado con H2; vínculo activo requerido
+      name: X-Credencial-Sesion
+      in: header

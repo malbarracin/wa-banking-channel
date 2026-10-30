@@ -57,11 +57,19 @@ async def test_capabilities(action, method, path, params, response, status, caps
         assert json.loads(route.calls[0].request.content) == {**EMISSION, "numeroWhatsapp": PHONE}
     if action == "validar_credencial":
         assert json.loads(route.calls[0].request.content) == {"credencial": TOKEN}
+    if action == "revocar_credencial":
+        assert json.loads(route.calls[0].request.content) == {"motivo": "BLOQUEO", "solicitadoPor": "CANAL"}
+    if action == "revocar_credenciales_masivo":
+        assert json.loads(route.calls[0].request.content) == {"criterio": "TODAS"}
+    if action == "consultar_historial_credencial":
+        assert route.calls[0].request.content == b""
     event = json.loads(capsys.readouterr().out)
     assert event["capacidad"] == f"acceso.{action}"
     assert event["correlation_id"] == result.auditoria.correlation_id == "task-125"
     assert event["resultado"] == ("EXITO" if status == 200 else result.error.codigo)
     assert event["duracion_ms"] >= 0
+    assert event["servicio_origen"] == "H2"
+    assert result.auditoria.version == 1
     assert TOKEN not in json.dumps(event) and PHONE not in json.dumps(event)
 
 
@@ -74,6 +82,7 @@ async def test_validation_without_credential(token, code, capsys):
     async with CredentialsClient(Settings()) as client:
         result = await AccesoCapabilities(client, Settings()).validar_credencial(context)
     assert isinstance(result, Rechazo) and result.error.codigo == code
+    assert len(respx.calls) == 0
     assert json.loads(capsys.readouterr().out)["resultado"] == code
 
 
@@ -85,6 +94,7 @@ async def test_disabled_mass_revocation(capsys):
             context, {"criterio": "TODAS"}
         )
     assert isinstance(result, Rechazo) and result.error.codigo == "CAPACIDAD_NO_DISPONIBLE"
+    assert len(respx.calls) == 0
     assert json.loads(capsys.readouterr().out)["resultado"] == "CAPACIDAD_NO_DISPONIBLE"
 
 

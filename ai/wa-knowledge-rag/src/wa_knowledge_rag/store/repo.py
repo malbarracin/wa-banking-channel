@@ -12,14 +12,14 @@ from wa_knowledge_rag.store.models import Audience, SearchHit
 # La versión solicitada restringe la vigente; nunca permite recuperar una retirada.
 HYBRID_SQL = """
 WITH eligible AS NOT MATERIALIZED (
-    SELECT c.*, s.title, s.source_uri
+    SELECT c.*, s.title, s.source_uri, s.source_id AS logical_source_id
     FROM kb_chunk c JOIN kb_source s ON s.id = c.source_id
     WHERE s.status = 'approved' AND s.audience = %(audience)s
       AND c.version = s.version
       AND (%(version)s::integer IS NULL OR s.version = %(version)s)
       AND NOT EXISTS (
           SELECT 1 FROM kb_source newer
-          WHERE newer.title = s.title AND newer.status = 'approved' AND newer.version > s.version
+          WHERE newer.source_id = s.source_id AND newer.status = 'approved' AND newer.version > s.version
       )
 ), vector_candidates AS (
     SELECT id, embedding <=> %(embedding)s::vector AS distance
@@ -38,7 +38,7 @@ WITH eligible AS NOT MATERIALIZED (
            COALESCE(1.0 / (60 + v.rank), 0) + COALESCE(1.0 / (60 + t.rank), 0) AS score
     FROM vector_rank v FULL JOIN text_rank t ON v.id = t.id
 )
-SELECT e.id, COALESCE(e.metadata->>'source_id', e.source_id::text)::uuid AS source_id,
+SELECT e.id, e.logical_source_id AS source_id,
        e.title, e.version, e.content, e.section, e.source_uri, f.score::float8
 FROM fused f JOIN eligible e ON e.id = f.id
 ORDER BY f.score DESC, e.id LIMIT %(top_k)s

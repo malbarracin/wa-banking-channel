@@ -84,8 +84,8 @@ curl.exe http://localhost:8102/health
 ```
 
 El servicio publica `${RAG_HOST_PORT:-8102}:8102`, espera a que `kb-postgres` esté healthy y su
-entrypoint aplica las migraciones empaquetadas antes de arrancar la API (si fallan, solo advierte y
-sigue). `kb-postgres` publica `${KB_DB_HOST_PORT:-5438}:5432`.
+entrypoint aplica las migraciones empaquetadas antes de arrancar la API y detiene el arranque si fallan.
+`kb-postgres` publica `${KB_DB_HOST_PORT:-5438}:5432`.
 
 ### Con el stack completo de IA
 
@@ -185,10 +185,8 @@ Fuente de verdad para H9: [`shared/contracts/wa-knowledge-rag/retrieval.md`](../
 
 ## Limitaciones conocidas (documentadas, no implementadas)
 
-- **Dos esquemas SQL distintos**: `migrations/001_ingestion.sql` (manual, el que usa la ingesta, con
-  `kb_source.source_id` e índice único de revisión vigente) y `store/migrations/001_knowledge.sql`
-  (empaquetado, el que aplica `connect(apply_migrations=True)` y usan los tests de retrieval/golden).
-  No son idénticos: la ingesta necesita el primero. Unificar ambos queda pendiente.
+- Ingesta y retrieval usan las migraciones empaquetadas de `store/migrations/`.
+  `002_logical_source.sql` actualiza instalaciones del esquema 001 conservando las revisiones.
 - **Sin baja explícita**: una fuente se retira solo al publicar una versión nueva (la anterior pasa a
   `retired`). No hay operación para retirar sin reemplazo ni para rollback a una versión anterior.
 - **Sin reindexación masiva**: se republica cada fuente con una versión nueva.

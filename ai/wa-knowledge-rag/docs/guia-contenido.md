@@ -55,9 +55,9 @@ No hay endpoint ni CLI de ingesta: se publica llamando a `ingest(...)` desde un 
 
 1. **Preparar la fuente** con los campos de la tabla anterior. Usar un `source_id` nuevo para una fuente
    nueva y el mismo para una revisión.
-2. **Aplicar el esquema de ingesta** una vez (si no está aplicado):
-   `psql -v ON_ERROR_STOP=1 -f migrations/001_ingestion.sql` (es el esquema que espera `ingest`; el
-   empaquetado de `store/migrations/` es el que usan retrieval y los tests).
+2. **Aplicar las migraciones compartidas con retrieval**:
+   `with connect(Settings(), apply_migrations=True): pass` desde Python
+   (`connect` se importa de `wa_knowledge_rag.store.db`). Docker también las aplica al iniciar.
 3. **Publicar** con una conexión psycopg exclusiva, sin transacción exterior y preferentemente
    `autocommit=True` (la función abre su propia transacción):
 

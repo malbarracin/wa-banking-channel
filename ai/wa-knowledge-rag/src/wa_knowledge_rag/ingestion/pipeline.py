@@ -28,9 +28,13 @@ async def ingest(
     with connection.transaction():
         with connection.cursor() as cursor:
             cursor.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (str(source.source_id),))
-            cursor.execute("SELECT max(version) FROM kb_source WHERE source_id = %s", (source.source_id,))
+            cursor.execute("SELECT max(version) AS version FROM kb_source WHERE source_id = %s", (source.source_id,))
             previous = cursor.fetchone()
-            if previous and previous[0] is not None and source.version <= int(str(previous[0])):
+            if isinstance(previous, dict):
+                previous_version = previous.get("version")
+            else:
+                previous_version = previous[0] if previous else None
+            if previous_version is not None and source.version <= int(str(previous_version)):
                 raise IngestionError("VERSION_MUST_INCREASE")
             cursor.execute(
                 "UPDATE kb_source SET status = 'retired' WHERE source_id = %s AND status = 'approved'",

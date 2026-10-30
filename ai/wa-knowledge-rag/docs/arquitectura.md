@@ -36,7 +36,6 @@ ai/wa-knowledge-rag/
 │   ├── hybrid.py                  # HybridRetriever
 │   ├── scorer.py                  # RRF normalizado y confianza
 │   └── formatter.py               # RetrievalResponse, InsufficientResponse, Citation
-├── migrations/001_ingestion.sql   # esquema que usa la ingesta (aplicación manual)
 └── tests/{unit,integration,golden}/
 ```
 
@@ -47,7 +46,7 @@ ai/wa-knowledge-rag/
 | Columna | Notas |
 |---|---|
 | `id` | UUID de la revisión (PK) |
-| `source_id` | UUID lógico de la fuente; estable entre versiones (solo en `migrations/001_ingestion.sql`) |
+| `source_id` | UUID lógico de la fuente; estable entre versiones, agregado por `002_logical_source.sql` |
 | `title`, `owner_area` | Metadatos de la fuente |
 | `audience` | `public` o `internal` (`CHECK`) |
 | `version` | Entero > 0; debe crecer por fuente |
@@ -77,11 +76,9 @@ ai/wa-knowledge-rag/
   `migrate()` toma un advisory lock (`810200136`), crea `kb_migration` y aplica cada `.sql` una sola vez
   dentro de una transacción; un fallo revierte todo. El entrypoint de Docker la ejecuta al arrancar y la
   API **no** migra en cada request.
-- `migrations/001_ingestion.sql` se aplica a mano con `psql -v ON_ERROR_STOP=1 -f` y es el esquema que
-  espera `ingest()` (incluye `kb_source.source_id` y el índice único de revisión vigente).
-
-**Pendiente:** ambos esquemas no son idénticos; unificarlos queda fuera de esta entrega. Ver
-[Limitaciones conocidas](../README.md#limitaciones-conocidas-documentadas-no-implementadas).
+- `002_logical_source.sql` agrega la identidad lógica y el índice único de revisión vigente.
+  Las revisiones heredadas se agrupan por título, como en el esquema 001; desde entonces se usa
+  `source_id`. Ingesta y retrieval comparten estas migraciones empaquetadas.
 
 ## Flujo de ingesta
 
@@ -134,7 +131,7 @@ ai/wa-knowledge-rag/
 4. **Búsqueda** (`store/repo.py`): el SQL filtra **antes** del ranking:
    - `s.status='approved'`, audiencia exacta, `c.version = s.version`;
    - `version` opcional restringe la selección a la vigente (nunca habilita retiradas);
-   - excluye fuentes con una versión aprobada más nueva del mismo título.
+   - excluye fuentes con una versión aprobada más nueva del mismo `source_id` lógico.
    Genera candidatos por KNN coseno (`embedding <=> query`) y por texto español
    (`ts_rank(tsv, plainto_tsquery('spanish', query))`), con `max(20, top_k*4)` candidatos por rama.
 5. **Fusión RRF** (`repo.py`): `1/(60 + rank)` por rama y suma; un fragmento presente en ambas ramas

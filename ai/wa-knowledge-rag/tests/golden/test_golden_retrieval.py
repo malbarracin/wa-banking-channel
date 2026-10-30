@@ -39,9 +39,10 @@ def repository():
             for source in CORPUS["sources"]:
                 revision = UUID(int=source["key"] + 100)
                 db.execute(
-                    """INSERT INTO kb_source(id,title,owner_area,audience,version,approved_by,approved_at,status)
-                    VALUES (%s,%s,'Banco',%s,1,'Compliance','2026-01-01','approved')""",
-                    (revision, source["title"], source["audience"]),
+                    """INSERT INTO kb_source
+                    (id,source_id,title,owner_area,audience,version,approved_by,approved_at,status)
+                    VALUES (%s,%s,%s,'Banco',%s,1,'Compliance','2026-01-01','approved')""",
+                    (revision, UUID(int=source["key"] + 1000), source["title"], source["audience"]),
                 )
                 db.execute(
                     """INSERT INTO kb_chunk(id,source_id,version,ordinal,content,embedding,metadata)

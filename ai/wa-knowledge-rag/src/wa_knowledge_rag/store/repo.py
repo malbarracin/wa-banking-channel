@@ -38,7 +38,8 @@ WITH eligible AS NOT MATERIALIZED (
            COALESCE(1.0 / (60 + v.rank), 0) + COALESCE(1.0 / (60 + t.rank), 0) AS score
     FROM vector_rank v FULL JOIN text_rank t ON v.id = t.id
 )
-SELECT e.id, e.source_id, e.title, e.version, e.content, e.section, e.source_uri, f.score::float8
+SELECT e.id, COALESCE(e.metadata->>'source_id', e.source_id::text)::uuid AS source_id,
+       e.title, e.version, e.content, e.section, e.source_uri, f.score::float8
 FROM fused f JOIN eligible e ON e.id = f.id
 ORDER BY f.score DESC, e.id LIMIT %(top_k)s
 """

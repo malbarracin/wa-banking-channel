@@ -80,6 +80,17 @@ async def test_capabilities(action, method, path, params, response, status, caps
         assert isinstance(result, Resultado) and result.resultado == response
     else:
         assert isinstance(result, Rechazo)
+        expected_codes = {
+            400: "SOLICITUD_INVALIDA",
+            401: "CREDENCIAL_INVALIDA",
+            403: "VINCULO_INACTIVO",
+            404: "NO_ENCONTRADO",
+            409: "CONFLICTO",
+            500: "SERVICIO_NO_DISPONIBLE",
+            503: "SERVICIO_NO_DISPONIBLE",
+        }
+        assert result.error.codigo == expected_codes[status]
+        assert result.error.reintentable == (status in {500, 503})
         assert "SQL" not in result.model_dump_json() and TOKEN not in result.model_dump_json()
     if action == "preparar_transferencia":
         assert json.loads(request.content) == params
@@ -124,6 +135,24 @@ async def test_double_confirmation_passes_unchanged():
         result = await capabilities.confirmar_transferencia(context(), {**params, "confirmacion": "CANCELAR"})
         assert isinstance(result, Rechazo) and result.error.codigo == "CONFLICTO"
         assert json.loads(route.calls[2].request.content) == {"confirmacion": "CANCELAR"}
+
+
+@pytest.mark.parametrize("action,method,path,params,response", CASES)
+@pytest.mark.parametrize("status,code", [(401, "CREDENCIAL_INVALIDA"), (403, "VINCULO_INACTIVO")])
+@respx.mock
+async def test_product_rechecks_credential_after_success(action, method, path, params, response, status, code):
+    route = respx.route(method=method, path=f"/api/v1{path}").mock(
+        side_effect=[httpx.Response(200, json=response), httpx.Response(status)]
+    )
+    async with AccountsClient(Settings()) as client:
+        capabilities = CuentasCapabilities(client)
+        ctx = context()
+        first = await invoke(capabilities, action, params, ctx)
+        assert isinstance(first, Resultado) and first.resultado == response
+        second = await invoke(capabilities, action, params, ctx)
+    assert isinstance(second, Rechazo) and second.error.codigo == code
+    assert route.call_count == 2
+    assert all(call.request.headers["X-Credencial-Sesion"] == TOKEN for call in route.calls)
 
 
 @pytest.mark.parametrize(

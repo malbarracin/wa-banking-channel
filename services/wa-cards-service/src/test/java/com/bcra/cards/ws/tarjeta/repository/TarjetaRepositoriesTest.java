@@ -23,6 +23,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.data.domain.PageRequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 class TarjetaRepositoriesTest {
@@ -121,6 +122,53 @@ class TarjetaRepositoriesTest {
         assertThat(bloqueos.findByTarjetaIdOrderByFechaBloqueoDesc(UUID.randomUUID())).isEmpty();
         assertThat(avisos.findByTarjetaIdOrderByFechaRegistroDesc(UUID.randomUUID())).isEmpty();
         assertThat(auditorias.findByNumeroWhatsappOrderByFechaDesc("inexistente")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Aísla titulares con igual número y distinto tipo de documento")
+    void distingueTipoDeDocumentoDelTitular() {
+        Tarjeta dni = guardarTarjeta("10000001");
+        Tarjeta pasaporte = guardarTarjeta("10000001");
+        pasaporte.setTitularDocumentoTipo("PASAPORTE");
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(tarjetas.findByTitularDocumentoTipoAndTitularDocumentoNumero("DNI", "10000001"))
+                .extracting(Tarjeta::getId).containsExactly(dni.getId());
+        assertThat(tarjetas.findByTitularDocumentoTipoAndTitularDocumentoNumero("PASAPORTE", "10000001"))
+                .extracting(Tarjeta::getId).containsExactly(pasaporte.getId());
+        assertThat(tarjetas.findByIdAndTitularDocumentoTipoAndTitularDocumentoNumero(
+                pasaporte.getId(), "DNI", "10000001")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Incluye ambos extremos del intervalo de consumos y excluye fechas externas")
+    void consultaConsumosEnLimitesDelIntervalo() {
+        UUID tarjetaId = guardarTarjeta("10000001").getId();
+        Instant hasta = FECHA.plusSeconds(60);
+        guardarConsumo(tarjetaId, FECHA.minusSeconds(1));
+        Consumo desdeInclusivo = guardarConsumo(tarjetaId, FECHA);
+        Consumo hastaInclusivo = guardarConsumo(tarjetaId, hasta);
+        guardarConsumo(tarjetaId, hasta.plusSeconds(1));
+        entityManager.flush();
+        entityManager.clear();
+
+        var pagina = consumos.findByTarjetaIdAndFechaBetweenOrderByFechaDesc(
+                tarjetaId, FECHA, hasta, PageRequest.of(0, 10));
+
+        assertThat(pagina.getTotalElements()).isEqualTo(2);
+        assertThat(pagina).extracting(Consumo::getId)
+                .containsExactly(hastaInclusivo.getId(), desdeInclusivo.getId());
+    }
+
+    @Test
+    @DisplayName("Rechaza persistir una tarjeta sin el hash obligatorio")
+    void rechazaTarjetaSinHash() {
+        Tarjeta tarjeta = guardarTarjeta("10000001");
+        tarjeta.setNumeroTarjetaHash(null);
+
+        assertThatThrownBy(() -> tarjetas.saveAndFlush(tarjeta))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
     private Tarjeta guardarTarjeta(String documento) {

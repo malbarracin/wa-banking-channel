@@ -1,0 +1,12 @@
+spring:
+  profiles:
+    active: test
+  datasource:
+    url: jdbc:h2:mem:wa_cards;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: create-drop

@@ -1,4 +1,4 @@
-"""Transporte sin reintentos; nunca propaga mensajes t�cnicos del origen."""
+"""Transporte sin reintentos; nunca propaga mensajes técnicos del origen."""
 
 from typing import Self
 
@@ -45,7 +45,7 @@ class BaseClient:
         context: ContextoSesion,
         *,
         body: JsonValue = None,
-        params: dict[str, str] | None = None,
+        params: dict[str, str | int] | None = None,
     ) -> JsonValue:
         return await self._request(method, path, self.headers(context), body=body, params=params)
 
@@ -56,7 +56,7 @@ class BaseClient:
         headers: dict[str, str],
         *,
         body: JsonValue = None,
-        params: dict[str, str] | None = None,
+        params: dict[str, str | int] | None = None,
     ) -> JsonValue:
         # Las rutas las fijan las capacidades publicadas; nunca aceptar una URL externa.
         if not path.startswith("/api/v1/") or ".." in path or "?" in path or "#" in path:

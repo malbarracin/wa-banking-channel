@@ -12,6 +12,7 @@ import com.bcra.cards.ws.tarjeta.entity.Tarjeta;
 import com.bcra.cards.ws.tarjeta.entity.TipoTarjeta;
 import com.bcra.cards.ws.tarjeta.repository.AuditoriaTarjetaRepository;
 import com.bcra.cards.ws.tarjeta.repository.TarjetaRepository;
+import com.bcra.cards.ws.tarjeta.service.TarjetaService;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,6 +23,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
@@ -50,6 +53,12 @@ class TarjetaControllerTest {
 
     @Autowired
     private AuditoriaTarjetaRepository auditoriaRepository;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+
+    @Autowired
+    private TarjetaService tarjetaService;
 
     @BeforeEach
     void preparar() {
@@ -118,6 +127,44 @@ class TarjetaControllerTest {
         verify(tarjetaRepository, never())
                 .findByTitularDocumentoTipoAndTitularDocumentoNumero(anyString(), anyString());
         assertThat(auditoriaRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Una revocación posterior al listado impide volver a consultar productos con la misma credencial")
+    void rechazaRevocacionTrasListadoExitoso() throws Exception {
+        guardarTarjeta("DNI", "12345678");
+        mockMvc.perform(get("/api/v1/tarjetas").header("X-Credencial-Sesion", "sesion-valida"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)));
+        clearInvocations(credencialesClient, tarjetaRepository);
+        when(credencialesClient.validar("sesion-valida"))
+                .thenThrow(new UnauthorizedException("Credencial no válida"));
+
+        mockMvc.perform(get("/api/v1/tarjetas").header("X-Credencial-Sesion", "sesion-valida"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.message").value("Credencial no válida"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").isString());
+
+        verify(credencialesClient).validar("sesion-valida");
+        verifyNoInteractions(tarjetaRepository);
+        assertThat(auditoriaRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("La auditoría del listado permanece confirmada aunque la transacción externa se revierta")
+    void conservaAuditoriaTrasRollbackExterno() {
+        new TransactionTemplate(transactionManager).executeWithoutResult(transaccion -> {
+            assertThat(tarjetaService.listar("sesion-valida")).isEmpty();
+            transaccion.setRollbackOnly();
+        });
+
+        assertThat(auditoriaRepository.findAll()).singleElement().satisfies(auditoria -> {
+            assertThat(auditoria.getAccion()).isEqualTo(AuditoriaAccion.LISTAR_TARJETAS);
+            assertThat(auditoria.getResultado()).isEqualTo(AuditoriaResultado.EXITOSO);
+            assertThat(auditoria.getDocumentoTipo()).isEqualTo("DNI");
+            assertThat(auditoria.getDocumentoNumero()).isEqualTo("12345678");
+        });
     }
 
     private Tarjeta guardarTarjeta(String tipo, String numero) {

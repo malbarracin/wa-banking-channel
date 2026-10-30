@@ -1,8 +1,8 @@
 ---
 title: Agente conversacional (H9) — especificación
-status: borrador
+status: aprobada
 source: null
-updated: 2026-10-30T23:53:01.300Z
+updated: 2026-10-30T23:54:32.076Z
 ---
 
 # Agente conversacional (H9) — especificación

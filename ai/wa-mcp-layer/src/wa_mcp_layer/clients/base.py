@@ -38,15 +38,31 @@ class BaseClient:
     def headers(self, context: ContextoSesion) -> dict[str, str]:
         return {}
 
-    async def request(self, method: str, path: str, context: ContextoSesion, *, body: JsonValue = None) -> JsonValue:
-        return await self._request(method, path, self.headers(context), body=body)
+    async def request(
+        self,
+        method: str,
+        path: str,
+        context: ContextoSesion,
+        *,
+        body: JsonValue = None,
+        params: dict[str, str | int] | None = None,
+    ) -> JsonValue:
+        return await self._request(method, path, self.headers(context), body=body, params=params)
 
-    async def _request(self, method: str, path: str, headers: dict[str, str], *, body: JsonValue = None) -> JsonValue:
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        headers: dict[str, str],
+        *,
+        body: JsonValue = None,
+        params: dict[str, str | int] | None = None,
+    ) -> JsonValue:
         # Las rutas las fijan las capacidades publicadas; nunca aceptar una URL externa.
         if not path.startswith("/api/v1/") or ".." in path or "?" in path or "#" in path:
             raise BusinessError(map_error(400))
         try:
-            response = await self._http.request(method, path, headers=headers, json=body)
+            response = await self._http.request(method, path, headers=headers, json=body, params=params)
         except httpx.RequestError:
             raise BusinessError(map_error(None)) from None
         if not 200 <= response.status_code < 300:

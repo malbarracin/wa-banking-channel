@@ -32,4 +32,34 @@ exigir sus credenciales y umbrales antes de operar.
 
 H8 no opera productos bancarios ni consume Kafka o Twilio. El contenido del
 cliente y recuperado se trata como datos, nunca como instrucciones. La ingesta
-posterior deberá rechazar PII y contenido no aprobado. No usar datos reales en fixtures.
+rechaza PII, patrones de instrucciones y contenido no aprobado. No usar datos reales en fixtures.
+
+### Publicación de contenido
+
+Aplicar una vez `migrations/001_ingestion.sql` con `psql -v ON_ERROR_STOP=1 -f`:
+crea pgvector y las tablas/índices de ingesta (vector de 768 dimensiones).
+`Source` exige identidad lógica UUID, versión positiva, título, contenido, área,
+estado `approved`, aprobador y fecha con zona horaria. La aprobación es un dato
+de entrada de un proceso editorial confiable; esta biblioteca no autentica al editor.
+`audience` es `internal` por defecto; solo el editor que aprueba puede marcar
+explícitamente `public`. No se infiere publicidad por palabras clave del contenido.
+
+`ingest(source, Embedder(GoogleProvider(settings), settings), connection, correlation_id)`
+valida antes de llamar al proveedor. Usar una conexión psycopg exclusiva, sin una
+transacción exterior, preferentemente `autocommit=True`; la función abre su propia
+transacción. El proveedor genera lotes de hasta 32 textos con timeout de 30 segundos
+y hasta tres intentos. Los tokens del chunker son unidades léxicas aproximadas,
+no tokens exactos del modelo: ventanas de 500 con solapamiento de 50 por sección.
+
+La migración distingue `kb_source.source_id` (identidad lógica de la fuente) de
+`kb_source.id` (UUID de cada revisión); `kb_chunk.source_id` referencia la revisión.
+Los metadatos del chunk conservan la identidad lógica para la cita. Retrieval debe
+unir con `kb_source` y filtrar `status='approved'` y audiencia antes de recuperar.
+La versión debe crecer; un lock por fuente y el índice único de revisión vigente
+evitan publicaciones concurrentes inconsistentes. Un fallo de escritura revierte
+también el retiro previo. Las aprobaciones quedan en DB; los logs solo incluyen
+UUIDs técnicos, versión y cantidad de fragmentos, nunca aprobador ni contenido.
+
+Integración aislada con Docker: `uv run pytest -m integration -q`; verifica publicación,
+retiro, rechazo de versión repetida y rollback real sobre `pgvector/pgvector:pg17`.
+Sin Docker se omite únicamente esta prueba. No hace falta API key para los tests.

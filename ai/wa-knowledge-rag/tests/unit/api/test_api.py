@@ -183,3 +183,43 @@ def test_module_entrypoint():
     with patch("wa_knowledge_rag.api.main") as start:
         runpy.run_module("wa_knowledge_rag.api", run_name="__main__")
     start.assert_called_once()
+
+
+@pytest.mark.parametrize("body", [None, [], "consulta", 42, {**BODY, "query": None}])
+def test_invalid_body_is_business_error(backend, body):
+    client, repository = backend
+    response = client.post("/retrieval", json=body)
+    assert response.status_code == 400
+    assert response.json()["error"] == {
+        "code": "CONSULTA_INVALIDA",
+        "message": "Revisá los datos de la consulta.",
+    }
+    assert response.json()["correlationId"]
+    repository.search.assert_not_called()
+
+
+def test_invalid_query_is_not_logged(backend):
+    client, repository = backend
+    query = "Documento sintético 12345678"
+    with capture_logs() as logs:
+        response = client.post("/retrieval", json={**BODY, "query": query, "top_k": 0})
+    assert response.status_code == 400
+    assert response.json()["correlationId"] == BODY["correlationId"]
+    assert logs
+    assert all(log["correlationId"] == BODY["correlationId"] for log in logs)
+    assert query not in response.text + str(logs)
+    repository.search.assert_not_called()
+
+
+def test_correlation_after_failed_request(backend):
+    client, repository = backend
+    repository.search.side_effect = RuntimeError("synthetic failure")
+    assert client.post("/retrieval", json=BODY).status_code == 503
+    repository.search.side_effect = None
+    with capture_logs() as logs:
+        response = client.post("/retrieval", json={**BODY, "correlationId": "next-request"})
+    assert response.status_code == 200
+    assert response.json()["correlationId"] == "next-request"
+    assert logs
+    assert all(log["correlationId"] == "next-request" for log in logs)
+    assert "correlationId" not in get_contextvars()

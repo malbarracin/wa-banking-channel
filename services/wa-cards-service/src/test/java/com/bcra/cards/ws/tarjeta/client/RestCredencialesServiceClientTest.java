@@ -138,6 +138,37 @@ class RestCredencialesServiceClientTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"numeroWhatsapp", "documentoTipo", "documentoNumero", "fechaExpiracion"})
+    @DisplayName("No autoriza si H2 omite cualquier dato de identidad o el vencimiento")
+    void rechazaCadaCampoObligatorioAusente(String campo) {
+        String cuerpo = RESPUESTA.replaceAll("\"" + campo + "\":\"[^\"]*\"", "\"" + campo + "\":null");
+        responder(200, cuerpo);
+
+        assertThatThrownBy(() -> cliente.validar("jwt-interno"))
+                .isInstanceOf(CredencialesServiceUnavailableException.class);
+        servidor.verify(1, postRequestedFor(urlEqualTo(PATH)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"DNI", "12345678"})
+    @DisplayName("No autoriza una identidad con tipo o número documental en blanco")
+    void rechazaDocumentoEnBlanco(String valor) {
+        responder(200, RESPUESTA.replace(valor, " "));
+
+        assertThatThrownBy(() -> cliente.validar("jwt-interno"))
+                .isInstanceOf(CredencialesServiceUnavailableException.class);
+    }
+
+    @Test
+    @DisplayName("No autoriza si H2 devuelve una fecha de expiración ilegible")
+    void rechazaVencimientoMalformado() {
+        responder(200, RESPUESTA.replace("2099-01-01T00:00:00Z", "fecha-invalida"));
+
+        assertThatThrownBy(() -> cliente.validar("jwt-interno"))
+                .isInstanceOf(CredencialesServiceUnavailableException.class);
+    }
+
+    @ParameterizedTest
     @ValueSource(ints = {400, 403, 429, 500, 503})
     @DisplayName("Los errores HTTP impiden validar sin exponer el cuerpo remoto")
     void rechazaErrorRemoto(int estado) {

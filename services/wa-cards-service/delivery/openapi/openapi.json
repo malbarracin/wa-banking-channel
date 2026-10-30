@@ -957,85 +957,85 @@
     "examples" : {
       "BAD_REQUEST" : {
         "value" : {
-          "message" : "La solicitud no es válida",
           "details" : [ ],
           "code" : "BAD_REQUEST",
-          "timestamp" : "2026-10-30T12:00:00Z"
+          "timestamp" : "2026-10-30T12:00:00Z",
+          "message" : "La solicitud no es válida"
         }
       },
       "UNAUTHORIZED" : {
         "value" : {
-          "message" : "Credencial no válida",
           "details" : [ ],
           "code" : "UNAUTHORIZED",
-          "timestamp" : "2026-10-30T12:00:00Z"
+          "timestamp" : "2026-10-30T12:00:00Z",
+          "message" : "Credencial no válida"
         }
       },
       "FORBIDDEN" : {
         "value" : {
-          "message" : "Acceso no permitido",
           "details" : [ ],
           "code" : "FORBIDDEN",
-          "timestamp" : "2026-10-30T12:00:00Z"
+          "timestamp" : "2026-10-30T12:00:00Z",
+          "message" : "Acceso no permitido"
         }
       },
       "NOT_FOUND" : {
         "value" : {
-          "message" : "No se encontró la tarjeta",
           "details" : [ ],
           "code" : "NOT_FOUND",
-          "timestamp" : "2026-10-30T12:00:00Z"
+          "timestamp" : "2026-10-30T12:00:00Z",
+          "message" : "No se encontró la tarjeta"
         }
       },
       "CONFLICT" : {
         "value" : {
-          "message" : "El estado de la tarjeta no permite aplicar el bloqueo",
           "details" : [ ],
           "code" : "CONFLICT",
-          "timestamp" : "2026-10-30T12:00:00Z"
+          "timestamp" : "2026-10-30T12:00:00Z",
+          "message" : "El estado de la tarjeta no permite aplicar el bloqueo"
         }
       },
       "INTERNAL_ERROR" : {
         "value" : {
-          "message" : "Error interno",
           "details" : [ ],
           "code" : "INTERNAL_ERROR",
-          "timestamp" : "2026-10-30T12:00:00Z"
+          "timestamp" : "2026-10-30T12:00:00Z",
+          "message" : "Error interno"
         }
       },
       "Irreversible" : {
         "value" : {
-          "message" : "El bloqueo definitivo no se puede revertir por chat. Contactá los canales formales del banco",
           "details" : [ ],
           "code" : "CONFLICT",
-          "timestamp" : "2026-10-30T12:00:00Z"
+          "timestamp" : "2026-10-30T12:00:00Z",
+          "message" : "El bloqueo definitivo no se puede revertir por chat. Contactá los canales formales del banco"
         }
       },
       "DobleConfirmacion" : {
         "value" : {
-          "message" : "El bloqueo definitivo es irreversible por WhatsApp. Para continuar, confirme dos veces con CONFIRMAR e indique ROBO o EXTRAVIO.",
           "details" : [ ],
           "code" : "CONFLICT",
-          "timestamp" : "2026-10-30T12:00:00Z"
+          "timestamp" : "2026-10-30T12:00:00Z",
+          "message" : "El bloqueo definitivo es irreversible por WhatsApp. Para continuar, confirme dos veces con CONFIRMAR e indique ROBO o EXTRAVIO."
         }
       },
       "Confirmacion" : {
         "value" : {
-          "message" : "Se requiere confirmación explícita para continuar",
           "details" : [ ],
           "code" : "CONFLICT",
-          "timestamp" : "2026-10-30T12:00:00Z"
+          "timestamp" : "2026-10-30T12:00:00Z",
+          "message" : "Se requiere confirmación explícita para continuar"
         }
       },
       "ValidationError" : {
         "value" : {
-          "message" : "La solicitud tiene datos inválidos",
           "details" : [ {
             "field" : "tarjetaId",
             "message" : "no debe ser nulo"
           } ],
           "code" : "VALIDATION_ERROR",
-          "timestamp" : "2026-10-30T12:00:00Z"
+          "timestamp" : "2026-10-30T12:00:00Z",
+          "message" : "La solicitud tiene datos inválidos"
         }
       }
     },

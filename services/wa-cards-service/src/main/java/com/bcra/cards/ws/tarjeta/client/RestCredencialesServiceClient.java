@@ -10,6 +10,7 @@ import org.springframework.web.client.RestClientException;
 import com.bcra.cards.ws.tarjeta.client.dto.ValidarCredencialRequest;
 import com.bcra.cards.ws.tarjeta.client.dto.ValidarCredencialResponse;
 import com.bcra.cards.ws.exception.UnauthorizedException;
+import com.bcra.cards.ws.exception.ForbiddenException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -33,6 +34,9 @@ public class RestCredencialesServiceClient implements CredencialesServiceClient 
                     .retrieve()
                     .onStatus(estado -> estado.value() == HttpStatus.UNAUTHORIZED.value(), (request, response) -> {
                         throw new UnauthorizedException("Credencial no válida");
+                    })
+                    .onStatus(estado -> estado.value() == HttpStatus.FORBIDDEN.value(), (request, response) -> {
+                        throw new ForbiddenException("Vínculo inactivo");
                     })
                     .onStatus(estado -> !estado.is2xxSuccessful(), (request, response) -> {
                         throw new CredencialesServiceUnavailableException();

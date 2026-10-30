@@ -86,6 +86,14 @@ class RestCredencialesServiceClientTest {
                 .withRequestBody(equalToJson("{\"credencial\":\"jwt-interno\"}")));
     }
 
+    @Test
+    @DisplayName("El vínculo inactivo informado por H2 conserva el rechazo 403")
+    void rechazaVinculoInactivo() {
+        responder(403, "{}");
+        assertThatThrownBy(() -> cliente.validar("jwt-interno"))
+                .isInstanceOf(com.bcra.cards.ws.exception.ForbiddenException.class);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"expirada", "revocada", "invalida"})
     @DisplayName("Rechaza credenciales expiradas, revocadas o inválidas según el 401 de H2")
@@ -169,7 +177,7 @@ class RestCredencialesServiceClientTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {400, 403, 429, 500, 503})
+    @ValueSource(ints = {400, 429, 500, 503})
     @DisplayName("Los errores HTTP impiden validar sin exponer el cuerpo remoto")
     void rechazaErrorRemoto(int estado) {
         responder(estado, "detalle-sensible");

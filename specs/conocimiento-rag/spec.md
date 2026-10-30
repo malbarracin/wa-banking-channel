@@ -1,8 +1,8 @@
 ---
 title: Base de conocimiento RAG (H8) — especificación
-status: borrador
+status: aprobada
 source: null
-updated: 2026-10-30T20:57:41.140Z
+updated: 2026-10-30T20:59:47.180Z
 ---
 
 # Base de conocimiento RAG (H8) — especificación

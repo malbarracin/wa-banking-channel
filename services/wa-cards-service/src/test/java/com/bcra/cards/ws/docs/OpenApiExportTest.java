@@ -38,6 +38,15 @@ class OpenApiExportTest {
         JsonNode api = mapper.readTree(json);
         assertThat(io.swagger.v3.core.util.Yaml.mapper().readTree(yaml)).isEqualTo(api);
         assertThat(api.path("paths").size()).isEqualTo(6);
+        assertThat(api.at("/security/0/credencialSesion").isArray()).isTrue();
+        JsonNode security = api.at("/components/securitySchemes/credencialSesion");
+        assertThat(security.path("type").asText()).isEqualTo("apiKey");
+        assertThat(security.path("in").asText()).isEqualTo("header");
+        assertThat(security.path("name").asText()).isEqualTo("X-Credencial-Sesion");
+        for (String code : List.of("400", "401", "403", "404", "409", "500")) {
+            JsonNode response = api.at("/components/responses/" + code);
+            assertThat(response.at("/content/application~1json/examples").size()).isPositive();
+        }
         api.path("paths").properties().forEach(path -> path.getValue().properties().forEach(entry -> {
             JsonNode operation = entry.getValue();
             assertThat(operation.path("summary").asText()).isNotBlank();

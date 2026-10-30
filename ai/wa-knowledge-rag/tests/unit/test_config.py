@@ -85,3 +85,20 @@ def test_example_loads_without_secrets() -> None:
     assert settings.google_api_key is None
     assert settings.rag_confidence_high_min is None
     assert settings.rag_confidence_medium_min is None
+
+
+@pytest.mark.parametrize("name", ["RAG_CONFIDENCE_HIGH_MIN", "RAG_CONFIDENCE_MEDIUM_MIN"])
+@pytest.mark.parametrize("value", ["0", "1"])
+def test_threshold_endpoints_can_be_configured_independently(
+    monkeypatch: pytest.MonkeyPatch, name: str, value: str
+) -> None:
+    monkeypatch.setenv(name, value)
+    settings = Settings()
+    assert getattr(settings, name.lower()) == float(value)
+
+
+def test_empty_environment_keeps_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    defaults = Settings()
+    for name in Settings.model_fields:
+        monkeypatch.setenv(name.upper(), "")
+    assert Settings() == defaults

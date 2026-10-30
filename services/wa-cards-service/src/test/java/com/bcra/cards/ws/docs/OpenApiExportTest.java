@@ -79,8 +79,8 @@ class OpenApiExportTest {
                     });
                 }
                 if (response.getKey().startsWith("2")) {
-                    assertThat(response.getValue().at("/content/*~1*/examples").size()
-                            + response.getValue().at("/content/application~1json/examples").size()).isPositive();
+                    assertThat(response.getValue().path("content").has("*/*")).isFalse();
+                    assertThat(response.getValue().at("/content/application~1json/examples").size()).isPositive();
                 }
             });
         }));

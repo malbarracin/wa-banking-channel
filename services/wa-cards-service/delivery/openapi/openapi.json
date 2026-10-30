@@ -66,7 +66,7 @@
           "200" : {
             "description" : "Operación exitosa",
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/TarjetaResponse"
                 },
@@ -154,7 +154,7 @@
           "200" : {
             "description" : "Operación exitosa",
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/BloqueoTemporalResponse"
                 },
@@ -251,7 +251,7 @@
           "200" : {
             "description" : "Operación exitosa",
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/BloqueoDefinitivoResponse"
                 },
@@ -345,7 +345,7 @@
           "201" : {
             "description" : "Operación exitosa",
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/AvisoViajeResponse"
                 },
@@ -402,7 +402,7 @@
           "200" : {
             "description" : "Operación exitosa",
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "type" : "array",
                   "items" : {
@@ -497,7 +497,7 @@
           "200" : {
             "description" : "Operación exitosa",
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ConsumosPageResponse"
                 },
@@ -958,84 +958,84 @@
       "BAD_REQUEST" : {
         "value" : {
           "message" : "La solicitud no es válida",
-          "timestamp" : "2026-10-30T12:00:00Z",
+          "details" : [ ],
           "code" : "BAD_REQUEST",
-          "details" : [ ]
+          "timestamp" : "2026-10-30T12:00:00Z"
         }
       },
       "UNAUTHORIZED" : {
         "value" : {
           "message" : "Credencial no válida",
-          "timestamp" : "2026-10-30T12:00:00Z",
+          "details" : [ ],
           "code" : "UNAUTHORIZED",
-          "details" : [ ]
+          "timestamp" : "2026-10-30T12:00:00Z"
         }
       },
       "FORBIDDEN" : {
         "value" : {
           "message" : "Acceso no permitido",
-          "timestamp" : "2026-10-30T12:00:00Z",
+          "details" : [ ],
           "code" : "FORBIDDEN",
-          "details" : [ ]
+          "timestamp" : "2026-10-30T12:00:00Z"
         }
       },
       "NOT_FOUND" : {
         "value" : {
           "message" : "No se encontró la tarjeta",
-          "timestamp" : "2026-10-30T12:00:00Z",
+          "details" : [ ],
           "code" : "NOT_FOUND",
-          "details" : [ ]
+          "timestamp" : "2026-10-30T12:00:00Z"
         }
       },
       "CONFLICT" : {
         "value" : {
           "message" : "El estado de la tarjeta no permite aplicar el bloqueo",
-          "timestamp" : "2026-10-30T12:00:00Z",
+          "details" : [ ],
           "code" : "CONFLICT",
-          "details" : [ ]
+          "timestamp" : "2026-10-30T12:00:00Z"
         }
       },
       "INTERNAL_ERROR" : {
         "value" : {
           "message" : "Error interno",
-          "timestamp" : "2026-10-30T12:00:00Z",
+          "details" : [ ],
           "code" : "INTERNAL_ERROR",
-          "details" : [ ]
+          "timestamp" : "2026-10-30T12:00:00Z"
         }
       },
       "Irreversible" : {
         "value" : {
           "message" : "El bloqueo definitivo no se puede revertir por chat. Contactá los canales formales del banco",
-          "timestamp" : "2026-10-30T12:00:00Z",
+          "details" : [ ],
           "code" : "CONFLICT",
-          "details" : [ ]
+          "timestamp" : "2026-10-30T12:00:00Z"
         }
       },
       "DobleConfirmacion" : {
         "value" : {
           "message" : "El bloqueo definitivo es irreversible por WhatsApp. Para continuar, confirme dos veces con CONFIRMAR e indique ROBO o EXTRAVIO.",
-          "timestamp" : "2026-10-30T12:00:00Z",
+          "details" : [ ],
           "code" : "CONFLICT",
-          "details" : [ ]
+          "timestamp" : "2026-10-30T12:00:00Z"
         }
       },
       "Confirmacion" : {
         "value" : {
           "message" : "Se requiere confirmación explícita para continuar",
-          "timestamp" : "2026-10-30T12:00:00Z",
+          "details" : [ ],
           "code" : "CONFLICT",
-          "details" : [ ]
+          "timestamp" : "2026-10-30T12:00:00Z"
         }
       },
       "ValidationError" : {
         "value" : {
           "message" : "La solicitud tiene datos inválidos",
-          "timestamp" : "2026-10-30T12:00:00Z",
-          "code" : "VALIDATION_ERROR",
           "details" : [ {
-            "message" : "no debe ser nulo",
-            "field" : "tarjetaId"
-          } ]
+            "field" : "tarjetaId",
+            "message" : "no debe ser nulo"
+          } ],
+          "code" : "VALIDATION_ERROR",
+          "timestamp" : "2026-10-30T12:00:00Z"
         }
       }
     },

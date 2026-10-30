@@ -53,7 +53,7 @@ paths:
         "200":
           description: Operación exitosa
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: "#/components/schemas/TarjetaResponse"
               examples:
@@ -116,7 +116,7 @@ paths:
         "200":
           description: Operación exitosa
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: "#/components/schemas/BloqueoTemporalResponse"
               examples:
@@ -187,7 +187,7 @@ paths:
         "200":
           description: Operación exitosa
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: "#/components/schemas/BloqueoDefinitivoResponse"
               examples:
@@ -256,7 +256,7 @@ paths:
         "201":
           description: Operación exitosa
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: "#/components/schemas/AvisoViajeResponse"
               examples:
@@ -302,7 +302,7 @@ paths:
         "200":
           description: Operación exitosa
           content:
-            '*/*':
+            application/json:
               schema:
                 type: array
                 items:
@@ -375,7 +375,7 @@ paths:
         "200":
           description: Operación exitosa
           content:
-            '*/*':
+            application/json:
               schema:
                 $ref: "#/components/schemas/ConsumosPageResponse"
               examples:
@@ -736,67 +736,67 @@ components:
     BAD_REQUEST:
       value:
         message: La solicitud no es válida
-        timestamp: 2026-10-30T12:00:00Z
-        code: BAD_REQUEST
         details: []
+        code: BAD_REQUEST
+        timestamp: 2026-10-30T12:00:00Z
     UNAUTHORIZED:
       value:
         message: Credencial no válida
-        timestamp: 2026-10-30T12:00:00Z
-        code: UNAUTHORIZED
         details: []
+        code: UNAUTHORIZED
+        timestamp: 2026-10-30T12:00:00Z
     FORBIDDEN:
       value:
         message: Acceso no permitido
-        timestamp: 2026-10-30T12:00:00Z
-        code: FORBIDDEN
         details: []
+        code: FORBIDDEN
+        timestamp: 2026-10-30T12:00:00Z
     NOT_FOUND:
       value:
         message: No se encontró la tarjeta
-        timestamp: 2026-10-30T12:00:00Z
-        code: NOT_FOUND
         details: []
+        code: NOT_FOUND
+        timestamp: 2026-10-30T12:00:00Z
     CONFLICT:
       value:
         message: El estado de la tarjeta no permite aplicar el bloqueo
-        timestamp: 2026-10-30T12:00:00Z
-        code: CONFLICT
         details: []
+        code: CONFLICT
+        timestamp: 2026-10-30T12:00:00Z
     INTERNAL_ERROR:
       value:
         message: Error interno
-        timestamp: 2026-10-30T12:00:00Z
-        code: INTERNAL_ERROR
         details: []
+        code: INTERNAL_ERROR
+        timestamp: 2026-10-30T12:00:00Z
     Irreversible:
       value:
         message: El bloqueo definitivo no se puede revertir por chat. Contactá los
           canales formales del banco
-        timestamp: 2026-10-30T12:00:00Z
-        code: CONFLICT
         details: []
+        code: CONFLICT
+        timestamp: 2026-10-30T12:00:00Z
     DobleConfirmacion:
       value:
         message: "El bloqueo definitivo es irreversible por WhatsApp. Para continuar,\
           \ confirme dos veces con CONFIRMAR e indique ROBO o EXTRAVIO."
-        timestamp: 2026-10-30T12:00:00Z
-        code: CONFLICT
         details: []
+        code: CONFLICT
+        timestamp: 2026-10-30T12:00:00Z
     Confirmacion:
       value:
         message: Se requiere confirmación explícita para continuar
-        timestamp: 2026-10-30T12:00:00Z
-        code: CONFLICT
         details: []
+        code: CONFLICT
+        timestamp: 2026-10-30T12:00:00Z
     ValidationError:
       value:
         message: La solicitud tiene datos inválidos
-        timestamp: 2026-10-30T12:00:00Z
-        code: VALIDATION_ERROR
         details:
-        - message: no debe ser nulo
-          field: tarjetaId
+        - field: tarjetaId
+          message: no debe ser nulo
+        code: VALIDATION_ERROR
+        timestamp: 2026-10-30T12:00:00Z
   securitySchemes:
     credencialSesion:
       type: apiKey

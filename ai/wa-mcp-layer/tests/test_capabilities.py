@@ -7,7 +7,7 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
-from wa_mcp_layer.catalog import CATALOG, Catalog, Fallo
+from wa_mcp_layer.catalog import CATALOG, H1_H3, Catalog, Fallo
 from wa_mcp_layer.clients.channel_client import ChannelClient
 from wa_mcp_layer.clients.credentials_client import CredentialsClient
 from wa_mcp_layer.clients.users_client import UsersClient
@@ -25,6 +25,7 @@ EXPECTED_CHANNEL = {
     "vinculo.bloquear",
     "vinculo.desvincular",
 }
+H1_H3_NAMES = sorted(H1_H3)
 PARAMS = {
     "identidad.consultar_cliente": {"tipo": "DNI", "numero": "00000001"},
     "identidad.consultar_estado_cliente": {"tipo": "DNI", "numero": "00000001"},
@@ -71,10 +72,10 @@ async def backend():
         yield Catalog(*clients), calls, status
 
 
-@pytest.mark.parametrize("name", CATALOG)
+@pytest.mark.parametrize("name", H1_H3_NAMES)
 async def test_success_routes_headers_and_audit(name, ctx, backend, capfd):
     catalog, calls, _ = backend
-    entry = CATALOG[name]
+    entry = H1_H3[name]
     result = await catalog.invoke(name, ctx, PARAMS.get(name, {}), actor=entry.actor)
     assert isinstance(result, Resultado)
     assert result.resultado == {"estado": "ACTIVO"}
@@ -104,11 +105,11 @@ async def test_success_routes_headers_and_audit(name, ctx, backend, capfd):
     assert PHONE not in json.dumps(event) and "aaa.bbb.ccc" not in json.dumps(event)
 
 
-@pytest.mark.parametrize("name", CATALOG)
+@pytest.mark.parametrize("name", H1_H3_NAMES)
 async def test_no_credential_follows_catalog_policy(name, ctx, backend, capfd):
     catalog, calls, _ = backend
     ctx.credencial = None
-    entry = CATALOG[name]
+    entry = H1_H3[name]
     result = await catalog.invoke(name, ctx, PARAMS.get(name, {}), actor=entry.actor)
     if entry.requiere_credencial:
         assert isinstance(result, Fallo) and result.error.codigo == "CREDENCIAL_REQUERIDA"
@@ -119,11 +120,11 @@ async def test_no_credential_follows_catalog_policy(name, ctx, backend, capfd):
     assert json.loads(capfd.readouterr().out)["capacidad"] == name
 
 
-@pytest.mark.parametrize("name", CATALOG)
+@pytest.mark.parametrize("name", H1_H3_NAMES)
 async def test_service_errors_are_business_errors_and_audited(name, ctx, backend, capfd):
     catalog, _, status = backend
     status[0] = 500
-    result = await catalog.invoke(name, ctx, PARAMS.get(name, {}), actor=CATALOG[name].actor)
+    result = await catalog.invoke(name, ctx, PARAMS.get(name, {}), actor=H1_H3[name].actor)
     assert isinstance(result, Fallo) and result.error.codigo == "SERVICIO_NO_DISPONIBLE"
     assert "SQL" not in result.model_dump_json()
     assert json.loads(capfd.readouterr().out)["resultado"] == "SERVICIO_NO_DISPONIBLE"

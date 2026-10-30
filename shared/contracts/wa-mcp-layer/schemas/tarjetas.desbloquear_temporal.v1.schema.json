@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "tarjetas.desbloquear_temporal.v1",
+  "description": "Capacidad tarjetas.desbloquear_temporal v1; servicio H5; actor agente; handler desbloquear_temporal; requiere_credencial=True; habilitada=True",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entrada",
+    "salida"
+  ],
+  "properties": {
+    "entrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contexto",
+        "parametros"
+      ],
+      "properties": {
+        "contexto": {
+          "$ref": "_envelope.json#/definitions/contexto"
+        },
+        "parametros": {
+          "additionalProperties": false,
+          "properties": {
+            "tarjetaId": {
+              "format": "uuid",
+              "title": "Tarjetaid",
+              "type": "string"
+            },
+            "validacionAdicional": {
+              "default": false,
+              "title": "Validacionadicional",
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "tarjetaId"
+          ],
+          "title": "DesbloqueoTemporal",
+          "type": "object"
+        }
+      }
+    },
+    "salida": {
+      "oneOf": [
+        {
+          "$ref": "_envelope.json#/definitions/salida_exito"
+        },
+        {
+          "$ref": "_envelope.json#/definitions/salida_error"
+        }
+      ]
+    }
+  },
+  "x-mcp": {
+    "nombre": "tarjetas.desbloquear_temporal",
+    "version": 1,
+    "servicio": "H5",
+    "actor": "agente",
+    "handler": "desbloquear_temporal",
+    "requiere_credencial": true,
+    "habilitada": true,
+    "tool_name": "tarjetas_desbloquear_temporal_v1"
+  }
+}

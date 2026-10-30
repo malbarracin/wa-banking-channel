@@ -7,9 +7,8 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, JsonValue, ValidationError
 
 from wa_mcp_layer.audit.logger import log_invocation
-from wa_mcp_layer.catalog import Fallo
 from wa_mcp_layer.clients.cards_client import CardsClient
-from wa_mcp_layer.envelope import Auditoria, ContextoSesion, Resultado
+from wa_mcp_layer.envelope import Auditoria, ContextoSesion, Fallo, Resultado
 from wa_mcp_layer.errors import map_error
 from wa_mcp_layer.security.session_context import BusinessError, require_credential
 

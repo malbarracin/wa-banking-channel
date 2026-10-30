@@ -8,9 +8,8 @@ import respx
 from pydantic import SecretStr
 
 from wa_mcp_layer.capabilities.tarjetas import TarjetasCapabilities
-from wa_mcp_layer.catalog import Fallo
 from wa_mcp_layer.clients.cards_client import CardsClient
-from wa_mcp_layer.envelope import ContextoSesion, Resultado
+from wa_mcp_layer.envelope import ContextoSesion, Fallo, Resultado
 from wa_mcp_layer.settings import Settings
 
 CARD = "11111111-1111-4111-8111-111111111111"

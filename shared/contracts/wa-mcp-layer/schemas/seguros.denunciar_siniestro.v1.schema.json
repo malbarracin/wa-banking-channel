@@ -1,0 +1,85 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "seguros.denunciar_siniestro.v1",
+  "description": "Capacidad seguros.denunciar_siniestro v1; servicio H6; actor agente; handler denunciar_siniestro; requiere_credencial=True; habilitada=True",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entrada",
+    "salida"
+  ],
+  "properties": {
+    "entrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contexto",
+        "parametros"
+      ],
+      "properties": {
+        "contexto": {
+          "$ref": "_envelope.json#/definitions/contexto"
+        },
+        "parametros": {
+          "additionalProperties": false,
+          "properties": {
+            "polizaId": {
+              "format": "uuid",
+              "title": "Polizaid",
+              "type": "string"
+            },
+            "tipoSiniestro": {
+              "enum": [
+                "HOGAR",
+                "AUTO",
+                "VIDA",
+                "OTROS"
+              ],
+              "title": "Tiposiniestro",
+              "type": "string"
+            },
+            "fechaSiniestro": {
+              "format": "date",
+              "title": "Fechasiniestro",
+              "type": "string"
+            },
+            "descripcion": {
+              "maxLength": 2000,
+              "minLength": 1,
+              "title": "Descripcion",
+              "type": "string"
+            }
+          },
+          "required": [
+            "polizaId",
+            "tipoSiniestro",
+            "fechaSiniestro",
+            "descripcion"
+          ],
+          "title": "Denuncia",
+          "type": "object"
+        }
+      }
+    },
+    "salida": {
+      "oneOf": [
+        {
+          "$ref": "_envelope.json#/definitions/salida_exito"
+        },
+        {
+          "$ref": "_envelope.json#/definitions/salida_error"
+        }
+      ]
+    }
+  },
+  "x-mcp": {
+    "nombre": "seguros.denunciar_siniestro",
+    "version": 1,
+    "servicio": "H6",
+    "actor": "agente",
+    "handler": "denunciar_siniestro",
+    "requiere_credencial": true,
+    "habilitada": true,
+    "tool_name": "seguros_denunciar_siniestro_v1"
+  }
+}

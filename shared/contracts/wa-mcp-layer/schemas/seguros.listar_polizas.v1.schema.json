@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "seguros.listar_polizas.v1",
+  "description": "Capacidad seguros.listar_polizas v1; servicio H6; actor agente; handler listar_polizas; requiere_credencial=True; habilitada=True",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entrada",
+    "salida"
+  ],
+  "properties": {
+    "entrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contexto",
+        "parametros"
+      ],
+      "properties": {
+        "contexto": {
+          "$ref": "_envelope.json#/definitions/contexto"
+        },
+        "parametros": {
+          "additionalProperties": false,
+          "properties": {},
+          "title": "Parametros",
+          "type": "object"
+        }
+      }
+    },
+    "salida": {
+      "oneOf": [
+        {
+          "$ref": "_envelope.json#/definitions/salida_exito"
+        },
+        {
+          "$ref": "_envelope.json#/definitions/salida_error"
+        }
+      ]
+    }
+  },
+  "x-mcp": {
+    "nombre": "seguros.listar_polizas",
+    "version": 1,
+    "servicio": "H6",
+    "actor": "agente",
+    "handler": "listar_polizas",
+    "requiere_credencial": true,
+    "habilitada": true,
+    "tool_name": "seguros_listar_polizas_v1"
+  }
+}

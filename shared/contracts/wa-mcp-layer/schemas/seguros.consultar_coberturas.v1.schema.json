@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "seguros.consultar_coberturas.v1",
+  "description": "Capacidad seguros.consultar_coberturas v1; servicio H6; actor agente; handler consultar_coberturas; requiere_credencial=True; habilitada=True",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entrada",
+    "salida"
+  ],
+  "properties": {
+    "entrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contexto",
+        "parametros"
+      ],
+      "properties": {
+        "contexto": {
+          "$ref": "_envelope.json#/definitions/contexto"
+        },
+        "parametros": {
+          "additionalProperties": false,
+          "properties": {
+            "poliza_id": {
+              "format": "uuid",
+              "title": "Poliza Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "poliza_id"
+          ],
+          "title": "Poliza",
+          "type": "object"
+        }
+      }
+    },
+    "salida": {
+      "oneOf": [
+        {
+          "$ref": "_envelope.json#/definitions/salida_exito"
+        },
+        {
+          "$ref": "_envelope.json#/definitions/salida_error"
+        }
+      ]
+    }
+  },
+  "x-mcp": {
+    "nombre": "seguros.consultar_coberturas",
+    "version": 1,
+    "servicio": "H6",
+    "actor": "agente",
+    "handler": "consultar_coberturas",
+    "requiere_credencial": true,
+    "habilitada": true,
+    "tool_name": "seguros_consultar_coberturas_v1"
+  }
+}

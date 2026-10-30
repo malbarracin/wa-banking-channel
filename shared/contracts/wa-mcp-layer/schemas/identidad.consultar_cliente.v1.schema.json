@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "identidad.consultar_cliente.v1",
+  "description": "Capacidad identidad.consultar_cliente v1; servicio H1; actor soporte; handler consultar_cliente; requiere_credencial=False; habilitada=True",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entrada",
+    "salida"
+  ],
+  "properties": {
+    "entrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contexto",
+        "parametros"
+      ],
+      "properties": {
+        "contexto": {
+          "$ref": "_envelope.json#/definitions/contexto"
+        },
+        "parametros": {
+          "additionalProperties": false,
+          "properties": {
+            "tipo": {
+              "pattern": "^[A-Za-z0-9_-]{1,20}$",
+              "title": "Tipo",
+              "type": "string"
+            },
+            "numero": {
+              "pattern": "^[A-Za-z0-9-]{1,30}$",
+              "title": "Numero",
+              "type": "string"
+            }
+          },
+          "required": [
+            "tipo",
+            "numero"
+          ],
+          "title": "ConsultaCliente",
+          "type": "object"
+        }
+      }
+    },
+    "salida": {
+      "oneOf": [
+        {
+          "$ref": "_envelope.json#/definitions/salida_exito"
+        },
+        {
+          "$ref": "_envelope.json#/definitions/salida_error"
+        }
+      ]
+    }
+  },
+  "x-mcp": {
+    "nombre": "identidad.consultar_cliente",
+    "version": 1,
+    "servicio": "H1",
+    "actor": "soporte",
+    "handler": "consultar_cliente",
+    "requiere_credencial": false,
+    "habilitada": true,
+    "tool_name": "identidad_consultar_cliente_v1"
+  }
+}

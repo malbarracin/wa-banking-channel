@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "vinculo.consultar_historial.v1",
+  "description": "Capacidad vinculo.consultar_historial v1; servicio H3; actor soporte; handler consultar_historial; requiere_credencial=False; habilitada=True",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entrada",
+    "salida"
+  ],
+  "properties": {
+    "entrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contexto",
+        "parametros"
+      ],
+      "properties": {
+        "contexto": {
+          "$ref": "_envelope.json#/definitions/contexto"
+        },
+        "parametros": {
+          "additionalProperties": false,
+          "properties": {
+            "numero_whatsapp": {
+              "anyOf": [
+                {
+                  "pattern": "^\\+[1-9][0-9]{6,14}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Numero Whatsapp"
+            }
+          },
+          "title": "Numero",
+          "type": "object"
+        }
+      }
+    },
+    "salida": {
+      "oneOf": [
+        {
+          "$ref": "_envelope.json#/definitions/salida_exito"
+        },
+        {
+          "$ref": "_envelope.json#/definitions/salida_error"
+        }
+      ]
+    }
+  },
+  "x-mcp": {
+    "nombre": "vinculo.consultar_historial",
+    "version": 1,
+    "servicio": "H3",
+    "actor": "soporte",
+    "handler": "consultar_historial",
+    "requiere_credencial": false,
+    "habilitada": true,
+    "tool_name": "vinculo_consultar_historial_v1"
+  }
+}

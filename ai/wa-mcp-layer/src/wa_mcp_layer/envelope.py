@@ -29,3 +29,8 @@ class Auditoria(BaseModel):
 class Resultado(BaseModel):
     resultado: JsonValue
     auditoria: Auditoria
+
+
+class Fallo(BaseModel):
+    error: ErrorNegocio
+    auditoria: Auditoria

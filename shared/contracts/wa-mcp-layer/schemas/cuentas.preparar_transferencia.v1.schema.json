@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "cuentas.preparar_transferencia.v1",
+  "description": "Capacidad cuentas.preparar_transferencia v1; servicio H4; actor agente; handler preparar_transferencia; requiere_credencial=True; habilitada=True",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entrada",
+    "salida"
+  ],
+  "properties": {
+    "entrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contexto",
+        "parametros"
+      ],
+      "properties": {
+        "contexto": {
+          "$ref": "_envelope.json#/definitions/contexto"
+        },
+        "parametros": {
+          "additionalProperties": false,
+          "properties": {
+            "cuentaOrigen": {
+              "maxLength": 34,
+              "minLength": 1,
+              "title": "Cuentaorigen",
+              "type": "string"
+            },
+            "cuentaDestino": {
+              "anyOf": [
+                {
+                  "maxLength": 34,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Cuentadestino"
+            },
+            "terceroId": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Terceroid"
+            },
+            "monto": {
+              "minimum": 0.01,
+              "title": "Monto",
+              "type": "number"
+            },
+            "moneda": {
+              "enum": [
+                "ARS",
+                "USD"
+              ],
+              "title": "Moneda",
+              "type": "string"
+            },
+            "concepto": {
+              "anyOf": [
+                {
+                  "maxLength": 255,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Concepto"
+            }
+          },
+          "required": [
+            "cuentaOrigen",
+            "monto",
+            "moneda"
+          ],
+          "title": "Transferencia",
+          "type": "object"
+        }
+      }
+    },
+    "salida": {
+      "oneOf": [
+        {
+          "$ref": "_envelope.json#/definitions/salida_exito"
+        },
+        {
+          "$ref": "_envelope.json#/definitions/salida_error"
+        }
+      ]
+    }
+  },
+  "x-mcp": {
+    "nombre": "cuentas.preparar_transferencia",
+    "version": 1,
+    "servicio": "H4",
+    "actor": "agente",
+    "handler": "preparar_transferencia",
+    "requiere_credencial": true,
+    "habilitada": true,
+    "tool_name": "cuentas_preparar_transferencia_v1"
+  }
+}

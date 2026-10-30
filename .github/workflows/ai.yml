@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        component: [wa-mcp-layer]
+        component: [wa-mcp-layer, wa-knowledge-rag]
     defaults:
       run:
         working-directory: ai/${{ matrix.component }}
@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        component: [wa-mcp-layer]
+        component: [wa-mcp-layer, wa-knowledge-rag]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -89,10 +89,17 @@ jobs:
         run: |
           cp .env.example .env
           docker compose config >/dev/null
+          docker compose -f wa-knowledge-rag/docker-compose.yml config >/dev/null
 
   evals:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [wa-knowledge-rag]
+    defaults:
+      run:
+        working-directory: ai/${{ matrix.component }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -105,8 +112,7 @@ jobs:
       - name: Set up Python
         run: uv python install 3.12
 
-      - name: Evals (manual; H7 no tiene adk eval — es H9)
-        working-directory: ai/wa-mcp-layer
+      - name: Evals (manual con modelo real)
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: |

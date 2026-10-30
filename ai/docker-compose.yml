@@ -47,6 +47,40 @@ services:
       start_period: 10s
       retries: 3
 
+  wa-knowledge-rag:
+    build:
+      context: ./wa-knowledge-rag
+      dockerfile: Dockerfile
+    image: wa-knowledge-rag:local
+    container_name: wa-knowledge-rag
+    ports:
+      - "${RAG_HOST_PORT:-8102}:8102"
+    env_file:
+      - .env
+    environment:
+      PORT: "8102"
+      DATABASE_URL: postgresql://${DB_USERNAME}:${DB_PASSWORD}@kb-postgres:5432/${KB_DB_NAME:-wa_knowledge}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-004}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-768}
+      RAG_TOP_K: ${RAG_TOP_K:-5}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      kb-postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8102/health', timeout=2)",
+        ]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
   # --- H1–H6 (Java / Spring Boot) ---
 
   wa-users-service:

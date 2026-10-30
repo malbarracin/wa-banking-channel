@@ -1,0 +1,59 @@
+# Stack local de H8 (wa-knowledge-rag + pgvector)
+# Desde ai/wa-knowledge-rag: docker compose --env-file .env up -d --build
+# Secretos solo vía .env (copiar desde .env.example). Nunca valores reales en este archivo.
+
+services:
+  wa-knowledge-rag:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wa-knowledge-rag:local
+    container_name: wa-knowledge-rag
+    ports:
+      - "${RAG_HOST_PORT:-8102}:8102"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: "8102"
+      DATABASE_URL: postgresql://${DB_USERNAME:-app}:${DB_PASSWORD:-cambiar}@kb-postgres:5432/${KB_DB_NAME:-wa_knowledge}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-004}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-768}
+      RAG_TOP_K: ${RAG_TOP_K:-5}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      kb-postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8102/health', timeout=2)",
+        ]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+  kb-postgres:
+    image: pgvector/pgvector:pg17
+    container_name: kb-postgres
+    environment:
+      POSTGRES_DB: ${KB_DB_NAME:-wa_knowledge}
+      POSTGRES_USER: ${DB_USERNAME:-app}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cambiar}
+    ports:
+      - "${KB_DB_HOST_PORT:-5438}:5432"
+    volumes:
+      - kb-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  kb-postgres-data:

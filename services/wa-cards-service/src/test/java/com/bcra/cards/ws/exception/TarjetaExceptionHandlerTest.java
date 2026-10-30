@@ -11,6 +11,7 @@ import com.bcra.cards.ws.tarjeta.exception.TarjetaNoEncontradaException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -25,6 +26,30 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class TarjetaExceptionHandlerTest {
+
+    @Test
+    @DisplayName("Una tarjeta ajena y una inexistente devuelven el mismo error público")
+    void ocultaLaExistenciaDeTarjetasAjenas() throws Exception {
+        var mapper = new ObjectMapper();
+        var handler = new GlobalExceptionHandler();
+        var inexistente = MockMvcBuilders.standaloneSetup(
+                new TarjetaErrorController(new TarjetaNoEncontradaException()))
+                .setControllerAdvice(handler).build();
+        var ajena = MockMvcBuilders.standaloneSetup(
+                new TarjetaErrorController(new TarjetaNoAutorizadaException()))
+                .setControllerAdvice(handler).build();
+
+        var respuestaInexistente = inexistente.perform(get("/probe/tarjeta"))
+                .andExpect(status().isNotFound()).andReturn().getResponse();
+        var respuestaAjena = ajena.perform(get("/probe/tarjeta"))
+                .andExpect(status().isNotFound()).andReturn().getResponse();
+        var errorInexistente = mapper.readTree(respuestaInexistente.getContentAsString());
+        var errorAjena = mapper.readTree(respuestaAjena.getContentAsString());
+
+        for (String campo : new String[] {"code", "message", "details"}) {
+            assertThat(errorAjena.get(campo)).isEqualTo(errorInexistente.get(campo));
+        }
+    }
 
     @ParameterizedTest
     @MethodSource("erroresDeDominio")

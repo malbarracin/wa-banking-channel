@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Persiste la auditoría en una transacción independiente de la operación. */
+/** Persiste la auditoría de consultas y operaciones sobre tarjetas. */
 @Service
 @RequiredArgsConstructor
 public class AuditoriaTarjetaService {
@@ -24,6 +24,20 @@ public class AuditoriaTarjetaService {
     public void registrarBloqueoTemporal(ValidarCredencialResponse identidad, UUID tarjetaId) {
         var auditoria = new AuditoriaTarjeta();
         auditoria.setAccion(AuditoriaAccion.BLOQUEAR_TEMPORAL);
+        auditoria.setResultado(AuditoriaResultado.EXITOSO);
+        auditoria.setNumeroWhatsapp(identidad.numeroWhatsapp());
+        auditoria.setDocumentoTipo(identidad.documentoTipo());
+        auditoria.setDocumentoNumero(identidad.documentoNumero());
+        auditoria.setTarjetaId(tarjetaId);
+        auditoria.setFecha(Instant.now());
+        auditoriaRepository.save(auditoria);
+    }
+
+    /** Registra el desbloqueo en la misma transacción que la reactivación de la tarjeta. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void registrarDesbloqueo(ValidarCredencialResponse identidad, UUID tarjetaId) {
+        var auditoria = new AuditoriaTarjeta();
+        auditoria.setAccion(AuditoriaAccion.DESBLOQUEAR_TEMPORAL);
         auditoria.setResultado(AuditoriaResultado.EXITOSO);
         auditoria.setNumeroWhatsapp(identidad.numeroWhatsapp());
         auditoria.setDocumentoTipo(identidad.documentoTipo());

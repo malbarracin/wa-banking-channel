@@ -16,6 +16,12 @@ public interface TarjetaRepository extends JpaRepository<Tarjeta, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select t from Tarjeta t where t.id = :id and t.titularDocumentoTipo = :tipo "
             + "and t.titularDocumentoNumero = :numero")
+    Optional<Tarjeta> buscarParaActualizar(@Param("id") UUID id, @Param("tipo") String tipo,
+            @Param("numero") String numero);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select t from Tarjeta t where t.id = :id and t.titularDocumentoTipo = :tipo "
+            + "and t.titularDocumentoNumero = :numero")
     Optional<Tarjeta> buscarParaBloqueo(@Param("id") UUID id, @Param("tipo") String tipo,
             @Param("numero") String numero);
 

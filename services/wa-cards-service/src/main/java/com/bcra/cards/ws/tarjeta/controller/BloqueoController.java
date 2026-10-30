@@ -2,6 +2,8 @@ package com.bcra.cards.ws.tarjeta.controller;
 
 import com.bcra.cards.ws.tarjeta.dto.BloqueoTemporalRequest;
 import com.bcra.cards.ws.tarjeta.dto.BloqueoTemporalResponse;
+import com.bcra.cards.ws.tarjeta.dto.DesbloqueoRequest;
+import com.bcra.cards.ws.tarjeta.dto.TarjetaResponse;
 import com.bcra.cards.ws.tarjeta.service.BloqueoService;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -27,5 +29,13 @@ public class BloqueoController {
             @RequestHeader(value = "X-Credencial-Sesion", required = false) String credencial,
             @Valid @RequestBody BloqueoTemporalRequest request) {
         return bloqueoService.bloquearTemporal(credencial, tarjetaId, request);
+    }
+
+    /** Reactiva una tarjeta con bloqueo temporal tras la validación requerida. */
+    @PostMapping("/{tarjetaId}/desbloquear/temporal")
+    public TarjetaResponse desbloquearTemporal(@PathVariable UUID tarjetaId,
+            @RequestHeader(value = "X-Credencial-Sesion", required = false) String credencial,
+            @Valid @RequestBody DesbloqueoRequest solicitud) {
+        return bloqueoService.desbloquearTemporal(tarjetaId, credencial, solicitud);
     }
 }

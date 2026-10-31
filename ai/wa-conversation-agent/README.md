@@ -1,7 +1,8 @@
 # Agente conversacional (H9)
 
-Base Python 3.12 con Google ADK. El agente inicial es un placeholder sin herramientas;
-el contrato HTTP ofrece una respuesta determinista. H7, H8, Runner y memoria se integran en tareas siguientes.
+Base Python 3.12 con Google ADK y herramienta de consulta a H8;
+el contrato HTTP ofrece una respuesta determinista. La conexión del contrato HTTP con
+Runner, H7 y memoria se integra en tareas siguientes.
 
 Desde esta carpeta:
 
@@ -23,9 +24,20 @@ archivos `.env` automáticamente. `GOOGLE_API_KEY` lo consume el SDK al invocar 
 no hace falta para importar el paquete. Los secretos no se incluyen en las instrucciones.
 El puerto H9 es 8103; configurar `H9_BASE_URL` en H0.2 para apuntar a este puerto.
 
-Para explorar el placeholder con ADK, ejecutar `uv run adk web src`.
+Para explorar el agente con ADK, ejecutar `uv run adk web src`.
 El Dockerfile inicia el servidor HTTP en `AGENT_PORT` (8103 por defecto).
 
+La herramienta `consultar_conocimiento(query, correlation_id)` consulta H8 según
+`shared/contracts/wa-knowledge-rag/retrieval.md`, siempre con audiencia pública.
+`AGENT_RAG_URL` define la base HTTP (por defecto `http://localhost:8102`) y
+`AGENT_RAG_TIMEOUT_SECONDS` el timeout (10 segundos por defecto).
+Devuelve los fragmentos, citas y confianza recibidos; los fragmentos son datos,
+no instrucciones. Con baja confianza o error 400 devuelve `results: []` y
+`reason: sin_respuesta_suficiente`; ante indisponibilidad, timeout o respuesta
+inválida devuelve `reason: no_disponible`, también sin fragmentos.
+El llamador debe pasar el `correlationId` del turno y excluir PII y credenciales
+de la consulta. Los tests HTTP usan respx, sin red ni modelo real:
+`uv run pytest tests/test_knowledge.py -q -m 'not integration' --cov=wa_conversation_agent.knowledge --cov-fail-under=80`.
 `POST /api/v1/agent/turn` requiere `Authorization: Bearer <AGENT_SERVICE_TOKEN>`
 y los headers `X-Correlation-Id`, `X-Conversation-Id`, `X-Message-Id`, `X-Idempotency-Key`.
 El body sigue los DTO de H0.2: `correlationId`, `conversationId`, `messageId`,

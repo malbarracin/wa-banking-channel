@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from wa_conversation_agent import agent
 from wa_conversation_agent.config import Settings
+from wa_conversation_agent.knowledge import consultar_conocimiento
 
 COMPONENT = Path(__file__).resolve().parents[1]
 
@@ -45,7 +46,7 @@ def test_import_without_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     module = importlib.reload(agent)
     assert module.root_agent.name == "wa_conversation_agent"
-    assert module.root_agent.tools == []
+    assert module.root_agent.tools == [consultar_conocimiento]
 
 
 def test_environment_and_secret_isolation(monkeypatch: pytest.MonkeyPatch) -> None:

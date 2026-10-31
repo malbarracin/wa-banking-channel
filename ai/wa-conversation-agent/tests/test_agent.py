@@ -40,7 +40,7 @@ def test_agent_loads_packaged_prompt_without_credentials(monkeypatch: pytest.Mon
     monkeypatch.chdir(files("wa_conversation_agent").parent)
     root_agent = importlib.reload(agent).root_agent
     assert root_agent.model == "gemini-2.5-flash"
-    assert len(root_agent.tools) == 2
+    assert len(root_agent.tools) == 3
     assert root_agent.tools[0] is consultar_conocimiento
     assert isinstance(root_agent.tools[1], SessionMCPToolset)
     assert root_agent.before_tool_callback is before_tool_callback

@@ -47,7 +47,7 @@ def test_import_without_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     module = importlib.reload(agent)
     assert module.root_agent.name == "wa_conversation_agent"
-    assert len(module.root_agent.tools) == 2
+    assert len(module.root_agent.tools) == 3
     assert module.root_agent.tools[0] is consultar_conocimiento
     assert isinstance(module.root_agent.tools[1], SessionMCPToolset)
 

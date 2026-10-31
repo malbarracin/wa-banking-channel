@@ -32,7 +32,7 @@ REVERIFY = {
 
 def before_tool_callback(tool: BaseTool, args: dict[str, Any], tool_context: ToolContext) -> dict[str, Any] | None:
     """Rechaza productos sin identidad válida; nunca incorpora secretos en args."""
-    if tool.name == "consultar_conocimiento":
+    if tool.name in {"consultar_conocimiento", "escalar_a_humano"}:
         return None
     if tool.name not in ALLOWED:
         return {"error": {"codigo": "CAPACIDAD_NO_DISPONIBLE"}}

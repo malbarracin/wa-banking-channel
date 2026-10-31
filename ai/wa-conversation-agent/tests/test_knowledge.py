@@ -61,6 +61,29 @@ async def test_insufficient() -> None:
     assert await consultar_conocimiento("Pregunta", "turn-1") == payload
 
 
+@pytest.mark.parametrize("status", [200, 400, 503])
+@respx.mock
+async def test_public_audience_and_turn_correlation_on_every_outcome(status: int) -> None:
+    correlation_id = "turn:synthetic-147.2"
+    payload = {
+        "results": [],
+        "confidence": "low",
+        "reason": "sin_respuesta_suficiente",
+        "correlationId": correlation_id,
+    }
+    route = respx.post(URL).mock(return_value=httpx.Response(status, json=payload))
+
+    result = await consultar_conocimiento("Consulta sintética", correlation_id)
+
+    assert route.call_count == 1
+    request = json.loads(route.calls.last.request.content)
+    assert request["audience"] == "public"
+    assert request["correlationId"] == correlation_id
+    assert result["correlationId"] == correlation_id
+    assert result["results"] == []
+    assert result["reason"] == ("no_disponible" if status == 503 else "sin_respuesta_suficiente")
+
+
 @pytest.mark.parametrize(
     "status,reason",
     [(400, "sin_respuesta_suficiente"), (503, "no_disponible"), (500, "no_disponible"), (302, "no_disponible")],

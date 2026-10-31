@@ -1,5 +1,9 @@
 replicaCount: 2
 
+# Obligatorio: proporcionar env.DB_PASSWORD desde un archivo de valores privado
+# o mediante --set-file env.DB_PASSWORD=<archivo-de-credencial>.
+# Sin ese valor, el renderizado falla en templates/secret.yaml.
+
 image:
   pullPolicy: Always
 

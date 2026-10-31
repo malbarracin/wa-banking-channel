@@ -24,7 +24,7 @@ spring:
 env:
   DB_URL: jdbc:postgresql://postgres:5432/wa_users
   DB_USERNAME: app
-  # DB_PASSWORD via Secret
+  # DB_PASSWORD obligatorio: el chart lo usa para crear el Secret (sin valor por defecto).
 
 ingress:
   enabled: false

@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -58,7 +59,9 @@ class VinculoBloqueoServiceTest {
     @BeforeEach
     void preparar() {
         service = new VinculoService(vinculoRepository, Mappers.getMapper(VinculoMapper.class),
-                vinculoAuditService, usersServiceClient, credencialesServiceClient);
+                vinculoAuditService, usersServiceClient, credencialesServiceClient,
+                new CanalCredentialValidator(credencialesServiceClient));
+        lenient().when(credencialesServiceClient.validar("sesion-h2", NUMERO)).thenReturn(true);
         activo = vinculo(VinculoEstado.ACTIVO);
     }
 
@@ -71,7 +74,7 @@ class VinculoBloqueoServiceTest {
         when(credencialesServiceClient.solicitarRevocacion(NUMERO, "SOLICITUD_CLIENTE")).thenReturn(true);
 
         VinculoResponse respuesta = service.bloquear(NUMERO,
-                new BloquearVinculoRequest(MotivoBloqueo.SOLICITUD_CLIENTE, true), "true");
+                new BloquearVinculoRequest(MotivoBloqueo.SOLICITUD_CLIENTE, true), "sesion-h2");
 
         assertThat(respuesta.estado()).isEqualTo(VinculoEstado.BLOQUEADO);
         assertThat(activo.getEstado()).isEqualTo(VinculoEstado.BLOQUEADO);
@@ -143,7 +146,7 @@ class VinculoBloqueoServiceTest {
         when(vinculoRepository.saveAndFlush(activo)).thenReturn(activo);
         when(credencialesServiceClient.solicitarRevocacion(NUMERO, "SOLICITUD_CLIENTE")).thenReturn(true);
 
-        VinculoResponse respuesta = service.desvincular(NUMERO, new DesvincularRequest(true), "true");
+        VinculoResponse respuesta = service.desvincular(NUMERO, new DesvincularRequest(true), "sesion-h2");
 
         assertThat(respuesta.estado()).isEqualTo(VinculoEstado.DESVINCULADO);
         verify(vinculoAuditService).registrar(eq(AuditAccion.DESVINCULACION), eq(AuditResultado.EXITOSO),
@@ -160,7 +163,7 @@ class VinculoBloqueoServiceTest {
         when(vinculoRepository.saveAndFlush(bloqueado)).thenReturn(bloqueado);
         when(credencialesServiceClient.solicitarRevocacion(NUMERO, "SOLICITUD_CLIENTE")).thenReturn(true);
 
-        assertThat(service.desvincular(NUMERO, new DesvincularRequest(true), "true").estado())
+        assertThat(service.desvincular(NUMERO, new DesvincularRequest(true), "sesion-h2").estado())
                 .isEqualTo(VinculoEstado.DESVINCULADO);
     }
 
@@ -199,7 +202,7 @@ class VinculoBloqueoServiceTest {
         when(vinculoRepository.findFirstByNumeroWhatsappOrderByFechaUltimoCambioEstadoDesc(NUMERO))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.desvincular(NUMERO, new DesvincularRequest(true), "true"))
+        assertThatThrownBy(() -> service.desvincular(NUMERO, new DesvincularRequest(true), "sesion-h2"))
                 .isInstanceOf(VinculoNotFoundException.class);
     }
 
@@ -210,7 +213,7 @@ class VinculoBloqueoServiceTest {
         when(vinculoRepository.findFirstByNumeroWhatsappOrderByFechaUltimoCambioEstadoDesc(NUMERO))
                 .thenReturn(Optional.of(vinculo(estado)));
 
-        assertThatThrownBy(() -> service.desvincular(NUMERO, new DesvincularRequest(true), "true"))
+        assertThatThrownBy(() -> service.desvincular(NUMERO, new DesvincularRequest(true), "sesion-h2"))
                 .isInstanceOf(VinculoEstadoConflictoException.class);
         verify(credencialesServiceClient, never()).solicitarRevocacion(any(), any());
     }
@@ -223,7 +226,7 @@ class VinculoBloqueoServiceTest {
         when(vinculoRepository.saveAndFlush(activo)).thenReturn(activo);
         when(credencialesServiceClient.solicitarRevocacion(NUMERO, "SOLICITUD_CLIENTE")).thenReturn(false);
 
-        assertThat(service.desvincular(NUMERO, new DesvincularRequest(true), "true").estado())
+        assertThat(service.desvincular(NUMERO, new DesvincularRequest(true), "sesion-h2").estado())
                 .isEqualTo(VinculoEstado.DESVINCULADO);
         verify(vinculoAuditService).registrar(eq(AuditAccion.DESVINCULACION), eq(AuditResultado.RECHAZADO),
                 eq(NUMERO), eq("DNI"), eq("12345678"), eq("Fallo solicitud revocacion H2"));

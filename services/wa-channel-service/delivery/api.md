@@ -32,11 +32,13 @@ Todas las respuestas de error usan:
 
 ## Contexto de credencial
 
-H3 no valida tokens: exige el contexto que H2/H0.2 propagan después de validar la sesión.
+H3 valida con H2 la vigencia del token y su pertenencia al número solicitado antes de autorizar perfil,
+desvinculación y bloqueo a pedido del cliente. Si H2 no puede validarlo, rechaza la operación con 401.
+El antiguo header `X-Canal-Credencial-Valida` no autoriza operaciones.
 
 | Header | Endpoint | Valor |
 |---|---|---|
-| `X-Canal-Credencial-Valida` | Perfil, desvinculación, bloqueo con `SOLICITUD_CLIENTE` | `true` |
+| `X-Canal-Credencial-Token` | Perfil, desvinculación, bloqueo con `SOLICITUD_CLIENTE` | Token H2 vigente |
 | `X-Credencial-Documento-Tipo` | Preferencias | Tipo de documento del titular |
 | `X-Credencial-Documento-Numero` | Preferencias | Número de documento del titular |
 
@@ -203,11 +205,11 @@ Error: **500** error interno.
 ## 4. Perfil del canal — `GET /api/v1/vinculos/{numero}/perfil`
 
 Devuelve los datos de contacto de H1 y las preferencias locales del vínculo `ACTIVO`, sin datos legales
-sensibles. Exige `X-Canal-Credencial-Valida: true` y un vínculo activo.
+sensibles. Exige `X-Canal-Credencial-Token: <token-H2>` y un vínculo activo.
 
 ```bash
 curl -s http://localhost:8081/api/v1/vinculos/+5491112345678/perfil \
-  -H "X-Canal-Credencial-Valida: true"
+  -H "X-Canal-Credencial-Token: <token-H2>"
 ```
 
 **200**
@@ -293,7 +295,7 @@ H2 no confirma, el bloqueo local se mantiene y se audita el rechazo.
 ```bash
 curl -s -X PATCH http://localhost:8081/api/v1/vinculos/+5491112345678/bloqueo \
   -H "Content-Type: application/json" \
-  -H "X-Canal-Credencial-Valida: true" \
+  -H "X-Canal-Credencial-Token: <token-H2>" \
   -d '{
     "motivo": "SOLICITUD_CLIENTE",
     "confirmacion": true
@@ -337,7 +339,7 @@ Solicita la revocación a H2 de inmediato y de forma best-effort.
 ```bash
 curl -s -X PATCH http://localhost:8081/api/v1/vinculos/+5491112345678/desvinculacion \
   -H "Content-Type: application/json" \
-  -H "X-Canal-Credencial-Valida: true" \
+  -H "X-Canal-Credencial-Token: <token-H2>" \
   -d '{
     "confirmacion": true
   }'

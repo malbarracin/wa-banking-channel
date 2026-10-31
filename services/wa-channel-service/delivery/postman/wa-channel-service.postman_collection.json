@@ -5,6 +5,7 @@
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
+    { "key": "credencialSesion", "value": "" },
     { "key": "baseUrl", "value": "http://localhost:8081" },
     { "key": "h1BaseUrl", "value": "http://localhost:8080" },
     { "key": "docTipo", "value": "DNI" },
@@ -457,7 +458,7 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "X-Canal-Credencial-Valida", "value": "true" }
+              { "key": "X-Canal-Credencial-Token", "value": "{{credencialSesion}}" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/perfil",
@@ -632,7 +633,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "bloqueo"]
             },
-            "description": "El motivo SOLICITUD_CLIENTE exige X-Canal-Credencial-Valida: true."
+            "description": "El motivo SOLICITUD_CLIENTE exige X-Canal-Credencial-Token: {{credencialSesion}}."
           },
           "response": [
             {
@@ -712,7 +713,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "desvinculacion"]
             },
-            "description": "La desvinculación siempre exige X-Canal-Credencial-Valida: true."
+            "description": "La desvinculación siempre exige X-Canal-Credencial-Token: {{credencialSesion}}."
           },
           "response": [
             {
@@ -743,7 +744,7 @@
             "method": "PATCH",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "X-Canal-Credencial-Valida", "value": "true" }
+              { "key": "X-Canal-Credencial-Token", "value": "{{credencialSesion}}" }
             ],
             "body": {
               "mode": "raw",

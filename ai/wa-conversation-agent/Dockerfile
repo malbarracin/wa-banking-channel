@@ -6,4 +6,4 @@ COPY src ./src
 RUN uv sync --frozen --no-dev
 USER 10001:10001
 EXPOSE 8103
-CMD [".venv/bin/python", "-c", "import wa_conversation_agent; print('H9: base importable; servidor pendiente')"]
+CMD [".venv/bin/python", "-m", "wa_conversation_agent.server"]

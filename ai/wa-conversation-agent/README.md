@@ -46,6 +46,20 @@ La respuesta conserva los tres identificadores y agrega `reply.body`, `escalate`
 Devuelve 400 ante datos inválidos, 401 ante autenticación inválida y 503 ante indisponibilidad
 del procesador. Los errores no incluyen datos de entrada ni detalles técnicos.
 
+Memoria Redis (TASK-150): `create_memory_services(Settings())` devuelve
+`session_service, memory_service`, compatibles con los argumentos de `Runner`.
+Configurar `AGENT_REDIS_URL`, `AGENT_MEMORY_KEY_SECRET` (secreto estable de al
+menos 32 caracteres) y `AGENT_SESSION_TTL_MINUTES` (30). Se usa Redis directo;
+`AGENT_MEMORY_SERVER_URL` no interviene. El servidor HTTP aun no integra Runner.
+El procesador confiable debe envolver cada invocacion en
+`async with memory_service.for_turn(MemoryScope(app_name, user_id, customer_id, link_status)):`.
+Estados admitidos: `active`, `blocked`, `unlinked`; los dos ultimos borran el
+perfil antes del turno. El contexto del LLM no concede acceso a memoria.
+Usar `session_id=conversationId`; cerrar `session_service.store.client.aclose()`
+al apagar. Ver [ADR-150](docs/ADR-150-redis-memory.md) para claves, limites y
+proyeccion segura del historial. Pruebas Redis con Docker:
+`uv run pytest tests/test_memory_integration.py -m integration -q`.
+
 H7 se configura con `AGENT_MCP_URL` (default `http://localhost:8101/mcp`). Se ofrecen
 solo las 27 capacidades v1 con actor `agente`; soporte/banco quedan excluidas.
 El callback usa estado técnico confiable: `credencial`, `credencial_valida` (bool),

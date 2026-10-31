@@ -1,9 +1,9 @@
 ---
 title: Release v0.1.0 — plan de integración y publicación
-status: borrador
+status: aprobada
 source: Inventario de PRs abiertos con `gh pr list` + encadenamiento con `git
   merge-base --is-ancestor` (2026-10-31)
-updated: 2026-10-31T18:50:34.569Z
+updated: 2026-10-31T18:52:31.097Z
 ---
 
 # Release v0.1.0

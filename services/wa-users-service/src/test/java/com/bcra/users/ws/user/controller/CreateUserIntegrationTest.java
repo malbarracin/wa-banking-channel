@@ -242,7 +242,10 @@ class CreateUserIntegrationTest {
         mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
                         .content(solicitud.toString()))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details[0].field").isNotEmpty())
+                .andExpect(jsonPath("$.details[0].message").isNotEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
 
         assertThat(userRepository.count()).isZero();
         assertThat(auditLogRepository.findAll()).singleElement().satisfies(registro -> {
@@ -253,6 +256,35 @@ class CreateUserIntegrationTest {
             assertThat(registro.getMotivo()).isEqualTo("Datos mínimos de alta inválidos");
             assertThat(registro.getFecha()).isNotNull();
         });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"documento", "tipo", "numero", "tipoBlanco", "numeroBlanco",
+            "tipoLargo", "numeroLargo"})
+    @DisplayName("Conserva el 400 sin auditar un alta cuyo documento no permite identificar al solicitante")
+    void rechazaAltaSinReferenciaAuditable(String campo) throws Exception {
+        ObjectNode solicitud = solicitudValida();
+        solicitud.remove("nombre");
+        ObjectNode documento = (ObjectNode) solicitud.get("documento");
+        switch (campo) {
+            case "documento" -> solicitud.remove("documento");
+            case "tipo", "numero" -> documento.remove(campo);
+            case "tipoBlanco" -> documento.put("tipo", "  ");
+            case "numeroBlanco" -> documento.put("numero", "  ");
+            case "tipoLargo" -> documento.put("tipo", "X".repeat(256));
+            case "numeroLargo" -> documento.put("numero", "1".repeat(256));
+            default -> throw new IllegalArgumentException("Caso de prueba desconocido");
+        }
+
+        mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
+                        .content(solicitud.toString()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+
+        assertThat(userRepository.count()).isZero();
+        assertThat(auditLogRepository.findAll()).isEmpty();
     }
 
     @ParameterizedTest

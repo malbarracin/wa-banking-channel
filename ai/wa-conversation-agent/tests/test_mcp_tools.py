@@ -6,12 +6,14 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from google.adk.tools import FunctionTool
 from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
 from google.adk.tools.tool_context import ToolContext
 from mcp.types import CallToolResult, ListToolsResult, Tool
 
 from wa_conversation_agent.agent import root_agent
 from wa_conversation_agent.config import Settings
+from wa_conversation_agent.knowledge import consultar_conocimiento
 from wa_conversation_agent.mcp_tools import ALLOWED, REVERIFY, SENSITIVE, before_tool_callback, create_toolset
 
 CONTRACT = Path(__file__).resolve().parents[3] / "shared/contracts/wa-mcp-layer"
@@ -71,6 +73,16 @@ def context(**overrides):
     }
     state.update(overrides)
     return SimpleNamespace(state=state, spec=ToolContext)
+
+
+def test_callback_allows_public_knowledge_without_identity():
+    tool_context = SimpleNamespace(state={})
+    args = {"query": "Información pública", "correlation_id": "test-148"}
+    original = dict(args)
+    result = before_tool_callback(FunctionTool(consultar_conocimiento), args, tool_context)
+    assert result is None
+    assert args == original
+    assert "_h7_envelope" not in tool_context.__dict__
 
 
 async def test_catalog_filter(local_mcp_stub):

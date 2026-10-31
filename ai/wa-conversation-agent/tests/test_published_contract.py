@@ -11,6 +11,24 @@ from wa_conversation_agent.models import ContractModel, TurnRequest, TurnRespons
 CONTRACT = Path(__file__).resolve().parents[3] / "shared/contracts/wa-conversation-agent/turn.md"
 
 
+def test_published_transport_and_retry_contract() -> None:
+    document = CONTRACT.read_text(encoding="utf-8")
+    for required in (
+        "POST /api/v1/agent/turn",
+        "Authorization",
+        "Bearer <token de servicio>",
+        "X-Correlation-Id",
+        "X-Conversation-Id",
+        "X-Message-Id",
+        "X-Idempotency-Key",
+        "TTL por defecto de siete días",
+        "HTTP 409",
+        "H0.2 reintenta timeouts y HTTP 5xx; no reintenta HTTP 4xx",
+        "H9 es responsable de no duplicar operaciones sensibles",
+    ):
+        assert required in document
+
+
 def test_published_contract_examples_and_references() -> None:
     document = CONTRACT.read_text(encoding="utf-8")
     examples = re.findall(r"```json\s*\n(.*?)\n```", document, re.DOTALL)

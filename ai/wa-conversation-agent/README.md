@@ -1,8 +1,8 @@
 # Agente conversacional (H9)
 
-Base Python 3.12 con Google ADK, MCPToolset hacia H7 y herramienta de consulta a H8;
-el contrato HTTP ofrece una respuesta determinista. La conexión del contrato HTTP con
-Runner y memoria se integra en tareas siguientes.
+Base Python 3.12 con Google ADK, MCPToolset hacia H7 y herramienta de consulta a H8.
+`POST /api/v1/agent/turn` cablea `Runner` con `session_id=conversationId`, memoria Redis
+cuando hay `AGENT_REDIS_URL`, e idempotencia por `X-Idempotency-Key`/`messageId` (TTL 7 días).
 
 Desde esta carpeta:
 
@@ -42,17 +42,34 @@ de la consulta. Los tests HTTP usan respx, sin red ni modelo real:
 y los headers `X-Correlation-Id`, `X-Conversation-Id`, `X-Message-Id`, `X-Idempotency-Key`.
 El body sigue los DTO de H0.2: `correlationId`, `conversationId`, `messageId`,
 `customerAddress`, `body`, `context.technicalContext` y `context.history`.
+En sesiones nuevas o expiradas, el historial con `role` (`user`/`assistant`) y
+`body` textual se incorpora como datos del mensaje de usuario, con PII y la
+credencial de sesión redactadas. Se descartan roles técnicos y entradas inválidas.
+Si ADK ya tiene eventos, usa ese historial sin volver a insertar el recibido.
+El historial externo no autoriza operaciones ni constituye evidencia de herramientas.
 La respuesta conserva los tres identificadores y agrega `reply.body`, `escalate` y `toolsUsed`.
-Devuelve 400 ante datos inválidos, 401 ante autenticación inválida y 503 ante indisponibilidad
-del procesador. Los errores no incluyen datos de entrada ni detalles técnicos.
+Devuelve 400 ante datos inválidos, 401 ante autenticación inválida, 409 si la misma
+idempotency key está en curso (H0.2 → `REJECTED`, sin reintento) y 503 ante
+indisponibilidad del procesador. Los errores no incluyen datos de entrada ni detalles técnicos.
+
+Idempotencia (TASK-151): el resultado se cachea por `X-Idempotency-Key` (= `messageId`)
+con TTL `AGENT_IDEMPOTENCY_TTL_DAYS` (7). Una repetición exacta devuelve el mismo
+`TurnResponse` sin volver a invocar herramientas. Tope `AGENT_MAX_TOOL_CALLS_PER_TURN`
+y timeouts `AGENT_TOOL_TIMEOUT_SECONDS` / `AGENT_TURN_TIMEOUT_SECONDS`: al agotarse,
+respuesta empática de escalamiento y `escalate=true`.
+La misma clave con un request diferente devuelve 409. Si falla o se cancela un turno,
+la reserva permanece hasta su TTL: una operación puede haber ocurrido y no debe repetirse.
+Configurar Redis compartido para despliegues con varios procesos o reinicios; sin
+Redis, el almacén en memoria es solo para desarrollo local y no sobrevive reinicios.
+El timeout envuelve todas las herramientas (H7, H8 y locales). Los tests del Runner
+usan modelos ADK falsos: `uv run pytest tests/test_turn_runner.py tests/test_idempotency.py -q`.
 
 Memoria Redis (TASK-150): `create_memory_services(Settings())` devuelve
 `session_service, memory_service`, compatibles con los argumentos de `Runner`.
 Configurar `AGENT_REDIS_URL`, `AGENT_MEMORY_KEY_SECRET` (secreto estable de al
 menos 32 caracteres) y `AGENT_SESSION_TTL_MINUTES` (30). Se usa Redis directo;
-`AGENT_MEMORY_SERVER_URL` no interviene. El servidor HTTP aun no integra Runner.
-El procesador confiable debe envolver cada invocacion en
-`async with memory_service.for_turn(MemoryScope(app_name, user_id, customer_id, link_status)):`.
+`AGENT_MEMORY_SERVER_URL` no interviene. El procesador abre
+`async with memory_service.for_turn(MemoryScope(...))` en cada turno.
 Estados admitidos: `active`, `blocked`, `unlinked`; los dos ultimos borran el
 perfil antes del turno. El contexto del LLM no concede acceso a memoria.
 Usar `session_id=conversationId`; cerrar `session_service.store.client.aclose()`

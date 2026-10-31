@@ -5,10 +5,17 @@ from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
+from google.adk.agents import Agent
+from google.adk.models.base_llm import BaseLlm
+from google.adk.models.llm_response import LlmResponse
+from google.adk.sessions import InMemorySessionService
+from google.genai import types
 
 from wa_conversation_agent.config import Settings
+from wa_conversation_agent.idempotency import MemoryIdempotencyStore
 from wa_conversation_agent.models import TurnRequest, TurnResponse
 from wa_conversation_agent.server import TurnUnavailable, create_app, main
+from wa_conversation_agent.turn import TurnProcessor
 
 TOKEN = "synthetic-service-token"  # noqa: S105 — credencial sintética exclusiva del test, sin acceso real.
 PAYLOAD = {
@@ -28,10 +35,30 @@ HEADERS = {
 }
 
 
+class _StubModel(BaseLlm):
+    async def generate_content_async(self, llm_request, stream=False):
+        yield LlmResponse(
+            content=types.Content(
+                role="model",
+                parts=[types.Part(text="Hola, soy el asistente del banco por WhatsApp.")],
+            )
+        )
+
+
+def _stub_processor() -> TurnProcessor:
+    return TurnProcessor.from_settings(
+        Settings(service_token=TOKEN),
+        agent=Agent(name="stub", model=_StubModel(model="fake"), tools=[], instruction="Responde breve."),
+        session_service=InMemorySessionService(),
+        memory_service=None,
+        idempotency=MemoryIdempotencyStore(),
+    )
+
+
 @pytest.fixture
 def client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     monkeypatch.setenv("AGENT_SERVICE_TOKEN", TOKEN)
-    with TestClient(create_app()) as test_client:
+    with TestClient(create_app(Settings(service_token=TOKEN), processor=_stub_processor())) as test_client:
         yield test_client
 
 
@@ -60,7 +87,7 @@ def test_unauthorized(client: TestClient, authorization: str | None) -> None:
 
 
 def test_empty_configured_token() -> None:
-    with TestClient(create_app(Settings(service_token=""))) as client:
+    with TestClient(create_app(Settings(service_token=""), processor=_stub_processor())) as client:
         assert client.post("/api/v1/agent/turn", json=PAYLOAD, headers=HEADERS).status_code == 401
 
 
@@ -111,7 +138,10 @@ def test_missing_header(client: TestClient, header: str) -> None:
 
 
 def test_unavailable(client: TestClient) -> None:
-    with patch("wa_conversation_agent.server.process_turn", side_effect=TurnUnavailable("private failure")):
+    async def fail(_payload: TurnRequest, _key: str) -> TurnResponse:
+        raise TurnUnavailable("private failure")
+
+    with patch.object(client.app.state.processor, "process", side_effect=fail):
         response = client.post("/api/v1/agent/turn", json=PAYLOAD, headers=HEADERS)
     assert response.status_code == 503
     assert "private failure" not in response.text

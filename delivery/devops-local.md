@@ -84,10 +84,11 @@ helm upgrade --install wa-users services/wa-users-service/helm/wa-users-service 
 ```powershell
 cd services/wa-channel-service
 copy .env.example .env
-# Editar .env con valores locales (no commitear .env)
+# Editar .env: DB_PASSWORD y CREDENTIAL_H3_SERVICE_TOKEN (mismo valor que H2). No commitear .env
 ```
 
 Defaults del `.env.example`: app host `8081`, Postgres host `5433`, base `wa_channel` (no chocan con wa-users-service).
+`CREDENTIAL_H3_SERVICE_TOKEN` es el secreto compartido con H2 para autenticar llamadas privilegiadas a credenciales; sin valor H2 deniega emitir/revocar.
 
 ### Docker Compose (app + Postgres)
 
@@ -127,8 +128,13 @@ cd services/wa-channel-service
 ### Helm (sin cluster)
 
 ```powershell
-helm lint services/wa-channel-service/helm/wa-channel-service --set-string env.DB_PASSWORD=lint-only-placeholder
-helm template wa-channel services/wa-channel-service/helm/wa-channel-service -f services/wa-channel-service/helm/wa-channel-service/values-dev.yaml --set-string env.DB_PASSWORD=render-only-placeholder
+helm lint services/wa-channel-service/helm/wa-channel-service `
+  --set-string env.DB_PASSWORD=lint-only-placeholder `
+  --set-string env.CREDENTIAL_H3_SERVICE_TOKEN=lint-only-h3-token
+helm template wa-channel services/wa-channel-service/helm/wa-channel-service `
+  -f services/wa-channel-service/helm/wa-channel-service/values-dev.yaml `
+  --set-string env.DB_PASSWORD=render-only-placeholder `
+  --set-string env.CREDENTIAL_H3_SERVICE_TOKEN=render-only-h3-token
 ```
 
 Con cluster local:
@@ -137,6 +143,7 @@ Con cluster local:
 helm upgrade --install wa-channel services/wa-channel-service/helm/wa-channel-service `
   -f services/wa-channel-service/helm/wa-channel-service/values-dev.yaml `
   --set-string "env.DB_PASSWORD=$env:DB_PASSWORD" `
+  --set-string "env.CREDENTIAL_H3_SERVICE_TOKEN=$env:CREDENTIAL_H3_SERVICE_TOKEN" `
   -n dev --create-namespace
 ```
 
@@ -147,10 +154,12 @@ helm upgrade --install wa-channel services/wa-channel-service/helm/wa-channel-se
 ```powershell
 cd services/wa-credentials-service
 copy .env.example .env
-# Editar .env: DB_PASSWORD y CREDENTIAL_JWT_SECRET (≥32 bytes UTF-8). No commitear .env
+# Editar .env: DB_PASSWORD, CREDENTIAL_JWT_SECRET (≥32 bytes UTF-8),
+# CREDENTIAL_H3_SERVICE_TOKEN y CREDENTIAL_BANK_SERVICE_TOKEN (distintos). No commitear .env
 ```
 
 Defaults del `.env.example`: app host `8082`, Postgres host `5434`, base `wa_credentials` (no chocan con H1/H3).
+H3 comparte solo `CREDENTIAL_H3_SERVICE_TOKEN`; el banco usa `CREDENTIAL_BANK_SERVICE_TOKEN` para revocación masiva. Sin valor se deniega el acceso.
 
 ### Docker Compose (app + Postgres)
 
@@ -174,6 +183,8 @@ $env:DB_URL="jdbc:postgresql://localhost:5434/wa_credentials"
 $env:DB_USERNAME="app"
 $env:DB_PASSWORD="cambiar"
 $env:CREDENTIAL_JWT_SECRET="cambiar-por-clave-de-al-menos-32-bytes"
+$env:CREDENTIAL_H3_SERVICE_TOKEN="local-h3-token"
+$env:CREDENTIAL_BANK_SERVICE_TOKEN="local-bank-token"
 $env:WA_USERS_SERVICE_BASE_URL="http://localhost:8080"
 ./mvnw spring-boot:run
 ```
@@ -196,11 +207,15 @@ En sandbox con `.m2` restringido:
 ```powershell
 helm lint services/wa-credentials-service/helm/wa-credentials-service `
   --set-string env.DB_PASSWORD=lint-only-placeholder `
-  --set-string env.CREDENTIAL_JWT_SECRET=lint-only-jwt-secret-at-least-32b
+  --set-string env.CREDENTIAL_JWT_SECRET=lint-only-jwt-secret-at-least-32b `
+  --set-string env.CREDENTIAL_H3_SERVICE_TOKEN=lint-only-h3-token `
+  --set-string env.CREDENTIAL_BANK_SERVICE_TOKEN=lint-only-bank-token
 helm template wa-credentials services/wa-credentials-service/helm/wa-credentials-service `
   -f services/wa-credentials-service/helm/wa-credentials-service/values-dev.yaml `
   --set-string env.DB_PASSWORD=render-only-placeholder `
-  --set-string env.CREDENTIAL_JWT_SECRET=render-only-jwt-secret-at-least-32b
+  --set-string env.CREDENTIAL_JWT_SECRET=render-only-jwt-secret-at-least-32b `
+  --set-string env.CREDENTIAL_H3_SERVICE_TOKEN=render-only-h3-token `
+  --set-string env.CREDENTIAL_BANK_SERVICE_TOKEN=render-only-bank-token
 ```
 
 Con cluster local:
@@ -210,6 +225,8 @@ helm upgrade --install wa-credentials services/wa-credentials-service/helm/wa-cr
   -f services/wa-credentials-service/helm/wa-credentials-service/values-dev.yaml `
   --set-string "env.DB_PASSWORD=$env:DB_PASSWORD" `
   --set-string "env.CREDENTIAL_JWT_SECRET=$env:CREDENTIAL_JWT_SECRET" `
+  --set-string "env.CREDENTIAL_H3_SERVICE_TOKEN=$env:CREDENTIAL_H3_SERVICE_TOKEN" `
+  --set-string "env.CREDENTIAL_BANK_SERVICE_TOKEN=$env:CREDENTIAL_BANK_SERVICE_TOKEN" `
   -n dev --create-namespace
 ```
 
@@ -424,19 +441,23 @@ helm upgrade --install wa-cards services/wa-cards-service/helm/wa-cards-service 
 
 ## CI / CD
 
-Los charts exigen `env.DB_PASSWORD` explícito; wa-credentials-service también exige `env.CREDENTIAL_JWT_SECRET`. No tienen contraseña/JWT por defecto.
-Los valores `lint-only-placeholder` / `render-only-*` son solo para validación sin despliegue.
+Los charts exigen `env.DB_PASSWORD` explícito (sin default). Además:
+- `wa-channel-service`: `env.CREDENTIAL_H3_SERVICE_TOKEN` obligatorio.
+- `wa-credentials-service`: `env.CREDENTIAL_JWT_SECRET`, `env.CREDENTIAL_H3_SERVICE_TOKEN` y `env.CREDENTIAL_BANK_SERVICE_TOKEN` obligatorios.
 
-- CI: `.github/workflows/ci.yml` — matriz `wa-users-service` + `wa-channel-service` + `wa-credentials-service` + `wa-accounts-service` + `wa-insurance-service` + `wa-cards-service` con `./mvnw -B clean verify`; build de imagen en `main`; `helm lint` de los seis charts.
-- CD: `.github/workflows/cd.yml` — template con `workflow_dispatch` (elige servicio + entorno; deploy comentado hasta tener cluster/credenciales).
+Los valores `lint-only-*` / `render-only-*` son solo para validación sin despliegue.
+
+- CI: `.github/workflows/ci.yml` — matriz `wa-users-service` + `wa-channel-service` + `wa-credentials-service` + `wa-accounts-service` + `wa-insurance-service` + `wa-cards-service` con `./mvnw -B clean verify`; build de imagen en `main`; `helm lint` de los seis charts (con `--set-string` de los secretos requeridos).
+- CD: `.github/workflows/cd.yml` — template con `workflow_dispatch` (elige servicio + entorno; deploy comentado hasta tener cluster/credenciales GitHub Secrets).
 
 ## Decisiones
 
 - Registry por defecto: `ghcr.io/example/<servicio>` (configurable en cada `values.yaml`).
 - Ingress deshabilitado por defecto; hosts de ejemplo `wa-users.example.local` / `wa-channel.example.local` / `wa-credentials.example.local` / `wa-accounts.example.local` / `wa-insurance.example.local` / `wa-cards.example.local`.
-- Credenciales DB y JWT solo por `.env` / K8s Secret / `--set`; nunca en YAML commiteado.
+- Credenciales DB, JWT y tokens servicio-a-servicio solo por `.env` / K8s Secret / `--set`; nunca en YAML commiteado.
 - Puertos host: H1 `8080`/`5432`, H3 `8081`/`5433`, H2 `8082`/`5434`, H4 `8084`/`5435`, H6 `8085`/`5436`, H5 `8086`/`5437` para convivir en local.
 - H2 en Docker llama a H1 vía `WA_USERS_SERVICE_BASE_URL` (default `host.docker.internal:8080`).
+- H3 en Docker valida credenciales vía `CREDENCIALES_SERVICE_BASE_URL` (default `host.docker.internal:8082`) y autentica a H2 con `CREDENTIAL_H3_SERVICE_TOKEN`.
 - H4, H5 y H6 en Docker llaman a H2 vía `CREDENTIALS_SERVICE_BASE_URL` (default `host.docker.internal:8082`).
 - Perfil `docker` de H4/H5/H6 usa `ddl-auto=update` (sin Flyway); prod mantiene `validate`.
 - Postgres host de H5 es `5437` (no `5436`) para no chocar con H6 ni con `ORCHESTRATOR_DB_HOST_PORT` del orquestador.
@@ -448,9 +469,10 @@ Los valores `lint-only-placeholder` / `render-only-*` son solo para validación 
 | Compose users healthy + health | `cd services/wa-users-service && docker compose up -d --build && curl http://localhost:8080/actuator/health` | Verificado (entrega H1) |
 | Compose channel healthy + health | `cd services/wa-channel-service && docker compose up -d --build && curl http://localhost:8081/actuator/health` | Verificado (app + postgres healthy, HTTP 200) |
 | Compose credentials healthy + health | `cd services/wa-credentials-service && copy .env.example .env && docker compose up -d --build && curl http://localhost:8082/actuator/health` | Verificado (app + postgres healthy, HTTP 200 `{"status":"UP",...}`) |
-| `./mvnw clean verify` credentials | `cd services/wa-credentials-service && ./mvnw -B clean verify` | Verificado (JaCoCo OK, BUILD SUCCESS) |
-| `docker compose config` credentials | `cd services/wa-credentials-service && docker compose --env-file .env.example config` | Verificado |
-| Helm lint / template credentials | `helm lint services/wa-credentials-service/helm/wa-credentials-service --set-string env.DB_PASSWORD=lint-only-placeholder --set-string env.CREDENTIAL_JWT_SECRET=lint-only-jwt-secret-at-least-32b` | Pendiente: Helm no instalado en el entorno de entrega (no se instala ni descarga) |
+| `./mvnw clean verify` users / channel / credentials | `cd services/wa-<svc> && ./mvnw -B clean verify` | Verificado (cierre TASK-168: JaCoCo OK, EXIT 0 en los tres) |
+| `docker compose config` users / channel / credentials | `docker compose --env-file .env.example config --quiet` | Verificado (cierre TASK-168) |
+| Helm lint / template channel | `helm lint services/wa-channel-service/helm/wa-channel-service --set-string env.DB_PASSWORD=lint-only-placeholder --set-string env.CREDENTIAL_H3_SERVICE_TOKEN=lint-only-h3-token` | Pendiente: Helm no instalado en el entorno de entrega (no se instala ni descarga); CI lo corre en Actions |
+| Helm lint / template credentials | `helm lint services/wa-credentials-service/helm/wa-credentials-service --set-string env.DB_PASSWORD=lint-only-placeholder --set-string env.CREDENTIAL_JWT_SECRET=lint-only-jwt-secret-at-least-32b --set-string env.CREDENTIAL_H3_SERVICE_TOKEN=lint-only-h3-token --set-string env.CREDENTIAL_BANK_SERVICE_TOKEN=lint-only-bank-token` | Pendiente: Helm no instalado en el entorno de entrega (no se instala ni descarga); CI lo corre en Actions |
 | Compose accounts healthy + health | `cd services/wa-accounts-service && copy .env.example .env && docker compose up -d --build && curl http://localhost:8084/actuator/health` | Verificado (app + postgres healthy, HTTP 200) |
 | `docker compose config` accounts | `cd services/wa-accounts-service && docker compose --env-file .env.example config` | Verificado |
 | `./mvnw clean verify` accounts | `cd services/wa-accounts-service && ./mvnw -B clean verify` | Verificado (JaCoCo OK, BUILD SUCCESS) |

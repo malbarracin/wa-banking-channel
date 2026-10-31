@@ -24,7 +24,8 @@ spring:
 env:
   DB_URL: jdbc:postgresql://postgres:5432/wa_credentials
   DB_USERNAME: app
-  # DB_PASSWORD y CREDENTIAL_JWT_SECRET via Secret (obligatorios; sin default)
+  # DB_PASSWORD, CREDENTIAL_JWT_SECRET, CREDENTIAL_H3_SERVICE_TOKEN y
+  # CREDENTIAL_BANK_SERVICE_TOKEN via Secret (obligatorios; sin default)
   WA_USERS_SERVICE_BASE_URL: http://wa-users-service:8080
 
 ingress:

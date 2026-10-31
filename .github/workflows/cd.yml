@@ -55,9 +55,11 @@ jobs:
       #       --set image.tag=${{ inputs.image_tag }} \
       #       --set-string env.DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
       #       --set-string env.CREDENTIAL_JWT_SECRET=${{ secrets.CREDENTIAL_JWT_SECRET }} \
+      #       --set-string env.CREDENTIAL_H3_SERVICE_TOKEN=${{ secrets.CREDENTIAL_H3_SERVICE_TOKEN }} \
+      #       --set-string env.CREDENTIAL_BANK_SERVICE_TOKEN=${{ secrets.CREDENTIAL_BANK_SERVICE_TOKEN }} \
       #       -n ${{ inputs.environment }} --create-namespace
 
       - name: Placeholder
         run: |
-          echo "CD template listo. Configurar secrets KUBE_CONFIG / DB_PASSWORD / CREDENTIAL_JWT_SECRET y descomentar el deploy."
+          echo "CD template listo. Configurar secrets KUBE_CONFIG / DB_PASSWORD / CREDENTIAL_JWT_SECRET / CREDENTIAL_H3_SERVICE_TOKEN / CREDENTIAL_BANK_SERVICE_TOKEN y descomentar el deploy."
           echo "service=${{ inputs.service }} environment=${{ inputs.environment }} image_tag=${{ inputs.image_tag }}"

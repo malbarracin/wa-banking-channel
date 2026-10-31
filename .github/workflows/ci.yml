@@ -147,10 +147,10 @@ jobs:
             extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"
           - service: wa-channel-service
             chart: services/wa-channel-service/helm/wa-channel-service
-            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder --set-string env.CREDENTIAL_H3_SERVICE_TOKEN=lint-only-h3-token"
           - service: wa-credentials-service
             chart: services/wa-credentials-service/helm/wa-credentials-service
-            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder --set-string env.CREDENTIAL_JWT_SECRET=lint-only-jwt-secret-at-least-32b"
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder --set-string env.CREDENTIAL_JWT_SECRET=lint-only-jwt-secret-at-least-32b --set-string env.CREDENTIAL_H3_SERVICE_TOKEN=lint-only-h3-token --set-string env.CREDENTIAL_BANK_SERVICE_TOKEN=lint-only-bank-token"
           - service: wa-accounts-service
             chart: services/wa-accounts-service/helm/wa-accounts-service
             extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"

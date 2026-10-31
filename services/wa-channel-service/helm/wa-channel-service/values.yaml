@@ -24,7 +24,7 @@ spring:
 env:
   DB_URL: jdbc:postgresql://postgres:5432/wa_channel
   DB_USERNAME: app
-  # DB_PASSWORD via Secret (obligatorio; sin default)
+  # DB_PASSWORD y CREDENTIAL_H3_SERVICE_TOKEN via Secret (obligatorios; sin default)
 
 ingress:
   enabled: false

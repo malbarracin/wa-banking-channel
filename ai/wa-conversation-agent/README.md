@@ -1,8 +1,8 @@
 # Agente conversacional (H9)
 
-Base Python 3.12 con Google ADK y herramienta de consulta a H8;
+Base Python 3.12 con Google ADK, MCPToolset hacia H7 y herramienta de consulta a H8;
 el contrato HTTP ofrece una respuesta determinista. La conexión del contrato HTTP con
-Runner, H7 y memoria se integra en tareas siguientes.
+Runner y memoria se integra en tareas siguientes.
 
 Desde esta carpeta:
 
@@ -45,3 +45,16 @@ El body sigue los DTO de H0.2: `correlationId`, `conversationId`, `messageId`,
 La respuesta conserva los tres identificadores y agrega `reply.body`, `escalate` y `toolsUsed`.
 Devuelve 400 ante datos inválidos, 401 ante autenticación inválida y 503 ante indisponibilidad
 del procesador. Los errores no incluyen datos de entrada ni detalles técnicos.
+
+H7 se configura con `AGENT_MCP_URL` (default `http://localhost:8101/mcp`). Se ofrecen
+solo las 27 capacidades v1 con actor `agente`; soporte/banco quedan excluidas.
+El callback usa estado técnico confiable: `credencial`, `credencial_valida` (bool),
+`vinculo_activo` (bool), `numero_whatsapp` y `correlation_id`. No debe copiarse ese
+estado al prompt ni a memoria de largo plazo. La ausencia de identidad válida bloquea
+las capacidades protegidas antes de invocar el transporte. El adaptador agrega
+`contexto.credencial` solo al enviar, sin modificar argumentos/eventos del modelo.
+
+TASK-148 prueba con un servidor MCP local de prueba que publica los schemas de H7.
+La integración end-to-end contra H7 real queda pendiente: actualmente H7 solo expone
+`/health` y todavía debe publicar el transporte `/mcp`. No usar su contenedor para
+validar esta integración. API ADK confirmada en la versión instalada 1.39.1.

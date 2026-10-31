@@ -8,6 +8,7 @@ from google.adk.tools import FunctionTool
 
 from wa_conversation_agent import agent
 from wa_conversation_agent.knowledge import consultar_conocimiento
+from wa_conversation_agent.mcp_tools import SessionMCPToolset, before_tool_callback
 
 
 def test_knowledge_tool_has_adk_declaration() -> None:
@@ -39,6 +40,9 @@ def test_agent_loads_packaged_prompt_without_credentials(monkeypatch: pytest.Mon
     monkeypatch.chdir(files("wa_conversation_agent").parent)
     root_agent = importlib.reload(agent).root_agent
     assert root_agent.model == "gemini-2.5-flash"
-    assert root_agent.tools == [consultar_conocimiento]
+    assert len(root_agent.tools) == 2
+    assert root_agent.tools[0] is consultar_conocimiento
+    assert isinstance(root_agent.tools[1], SessionMCPToolset)
+    assert root_agent.before_tool_callback is before_tool_callback
     prompt = files("wa_conversation_agent").joinpath("prompts/instruccion_v1.md").read_text(encoding="utf-8")
     assert root_agent.instruction == prompt

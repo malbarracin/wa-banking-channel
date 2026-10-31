@@ -185,6 +185,40 @@ class AceptarTerminosIntegrationTest {
                 .hasSize(1);
     }
 
+    @Test
+    @DisplayName("Reutiliza el pendiente entre registros históricos y conserva el vínculo desvinculado")
+    void reutilizaPendienteAunqueExistaHistorialDesvinculado() throws Exception {
+        Vinculo historico = new Vinculo();
+        historico.setNumeroWhatsapp(NUMERO);
+        historico.setEstado(VinculoEstado.DESVINCULADO);
+        historico.setTerminosAceptados(true);
+        Instant fechaHistorica = Instant.parse("2026-01-01T00:00:00Z");
+        historico.setFechaAceptacionTerminos(fechaHistorica);
+        UUID idHistorico = vinculoRepository.saveAndFlush(historico).getId();
+        String solicitud = objectMapper.createObjectNode().put("numeroWhatsapp", NUMERO).toString();
+
+        String primera = mockMvc.perform(post(RUTA).contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String idPendiente = objectMapper.readTree(primera).get("id").asText();
+
+        mockMvc.perform(post(RUTA).contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(idPendiente))
+                .andExpect(jsonPath("$.estado").value("PENDIENTE_VERIFICACION"));
+
+        assertThat(idPendiente).isNotEqualTo(idHistorico.toString());
+        assertThat(vinculoRepository.count()).isEqualTo(2);
+        assertThat(vinculoRepository.findByNumeroWhatsappAndEstado(NUMERO, VinculoEstado.PENDIENTE_VERIFICACION))
+                .singleElement().satisfies(pendiente -> {
+                    assertThat(pendiente.getId()).isEqualTo(UUID.fromString(idPendiente));
+                    assertThat(pendiente.isTerminosAceptados()).isTrue();
+                });
+        Vinculo conservado = vinculoRepository.findById(idHistorico).orElseThrow();
+        assertThat(conservado.getEstado()).isEqualTo(VinculoEstado.DESVINCULADO);
+        assertThat(conservado.getFechaAceptacionTerminos()).isEqualTo(fechaHistorica);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"", "null", "{", "{\"numeroWhatsapp\":{}}"})
     @DisplayName("Rechaza cuerpos ausentes o ilegibles con BAD_REQUEST y sin escrituras")

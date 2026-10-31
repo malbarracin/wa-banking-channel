@@ -1,0 +1,43 @@
+{
+  "eval_set_id": "sin_credencial",
+  "name": "sin_credencial",
+  "eval_cases": [
+    {
+      "eval_id": "sin_credencial",
+      "session_input": {
+        "app_name": "wa_conversation_agent",
+        "user_id": "eval-user",
+        "state": {
+          "numero_whatsapp": "+12025550152",
+          "correlation_id": "eval-sin_credencial",
+          "vinculo_activo": true,
+          "credencial_valida": false
+        }
+      },
+      "conversation": [
+        {
+          "invocation_id": "turn-1",
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Quiero consultar mi saldo."
+              }
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [
+              {
+                "text": "Por seguridad, volvé a verificar tu identidad para continuar"
+              }
+            ]
+          },
+          "intermediate_data": {
+            "tool_uses": []
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "eval_set_id": "informativa",
+  "name": "informativa",
+  "eval_cases": [
+    {
+      "eval_id": "informativa",
+      "session_input": {
+        "app_name": "wa_conversation_agent",
+        "user_id": "eval-user",
+        "state": {
+          "numero_whatsapp": "+12025550152",
+          "correlation_id": "eval-informativa"
+        }
+      },
+      "conversation": [
+        {
+          "invocation_id": "turn-1",
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "¿Cuál es el horario de atención de la sucursal de prueba?"
+              }
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [
+              {
+                "text": "La sucursal de prueba atiende de 9 a 13. Fuente: Guía de prueba, sección Horarios."
+              }
+            ]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {
+                "name": "consultar_conocimiento",
+                "args": {
+                  "query": "¿Cuál es el horario de atención de la sucursal de prueba?",
+                  "correlation_id": "eval-informativa"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

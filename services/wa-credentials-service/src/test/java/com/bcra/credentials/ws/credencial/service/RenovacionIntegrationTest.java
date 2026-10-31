@@ -2,6 +2,7 @@ package com.bcra.credentials.ws.credencial.service;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -24,8 +25,14 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bcra.credentials.ws.credencial.client.UsersServiceClient;
+import com.bcra.credentials.ws.credencial.client.ClienteEstadoResponse;
+import com.bcra.credentials.ws.credencial.client.ClienteEstadoResponse.EstadoCliente;
+import com.bcra.credentials.ws.credencial.repository.EntregaRenovacionRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.bcra.credentials.ws.credencial.entity.AuditAccion;
 import com.bcra.credentials.ws.credencial.entity.AuditResultado;
 import com.bcra.credentials.ws.credencial.entity.CredencialEstado;
@@ -34,6 +41,7 @@ import com.bcra.credentials.ws.credencial.entity.MotivoRevocacion;
 import com.bcra.credentials.ws.credencial.entity.RevocadaPor;
 import com.bcra.credentials.ws.credencial.repository.CredencialAuditLogRepository;
 import com.bcra.credentials.ws.credencial.repository.CredencialRepository;
+import com.bcra.credentials.ws.credencial.mapper.CredencialMapper;
 import com.bcra.credentials.ws.exception.UnauthorizedException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -45,8 +53,11 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {"credencial.vigencia-minutos=120", "credencial.renovacion-ventana-minutos=15"})
@@ -71,11 +82,26 @@ class RenovacionIntegrationTest {
     private JwtEncoder jwtEncoder;
     @MockitoBean
     private UsersServiceClient usersServiceClient;
+    @Autowired
+    private EntregaRenovacionRepository entregas;
+    @Autowired
+    private ObjectMapper json;
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+    @Autowired
+    private CredencialMapper mapper;
+    @Autowired
+    private CredencialAuditService auditService;
+    @Autowired
+    private JwtService jwtService;
 
     @BeforeEach
     void limpiarPersistencia() {
+        entregas.deleteAll();
         repository.deleteAll();
         auditRepository.deleteAll();
+        when(usersServiceClient.consultarEstado("DNI", "12345678"))
+                .thenReturn(new ClienteEstadoResponse(EstadoCliente.ACTIVE));
     }
 
     @Test
@@ -83,7 +109,7 @@ class RenovacionIntegrationTest {
     void renuevaAtomicamenteConVigenciaConfigurada() {
         CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
 
-        service.renovarProximasAExpirar();
+        renovarYConfirmar(anterior);
 
         CredencialSesion revocada = repository.findById(anterior.getId()).orElseThrow();
         assertThat(revocada.getEstado()).isEqualTo(CredencialEstado.REVOCADA);
@@ -99,7 +125,7 @@ class RenovacionIntegrationTest {
         assertThat(nueva.getMotivoRevocacion()).isNull();
         assertThat(nueva.isRiesgo()).isFalse();
         var parametros = ArgumentCaptor.forClass(JwtEncoderParameters.class);
-        verify(jwtEncoder).encode(parametros.capture());
+        verify(jwtEncoder, times(1)).encode(parametros.capture());
         assertThat(parametros.getValue().getClaims().getId()).isEqualTo(nueva.getJti());
         assertThat(parametros.getValue().getClaims().getSubject()).isEqualTo(NUMERO);
         assertThat(auditRepository.findAll()).hasSize(2).anySatisfy(evento -> {
@@ -107,7 +133,7 @@ class RenovacionIntegrationTest {
             assertThat(evento.getResultado()).isEqualTo(AuditResultado.EXITOSO);
             assertThat(evento.getJti()).isEqualTo(nueva.getJti());
         });
-        verifyNoInteractions(usersServiceClient);
+        verify(usersServiceClient, times(2)).consultarEstado("DNI", "12345678");
         service.renovarProximasAExpirar();
         assertThat(repository.count()).isEqualTo(2);
     }
@@ -156,7 +182,7 @@ class RenovacionIntegrationTest {
         doThrow(new DataIntegrityViolationException("detalle protegido"))
                 .when(repository).saveAndFlush(any(CredencialSesion.class));
 
-        assertThatThrownBy(service::renovarProximasAExpirar).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> renovarYConfirmar(anterior)).isInstanceOf(DataIntegrityViolationException.class);
 
         verificarRollback(anterior);
     }
@@ -193,10 +219,10 @@ class RenovacionIntegrationTest {
         CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
         String token = firmar(anterior);
 
-        service.renovarProximasAExpirar();
+        renovarYConfirmar(anterior);
 
         verificarRechazoHttp(token);
-        verifyNoInteractions(usersServiceClient);
+        verify(usersServiceClient, times(2)).consultarEstado("DNI", "12345678");
     }
 
     @Test
@@ -219,7 +245,7 @@ class RenovacionIntegrationTest {
                 .save(argThat(evento -> evento.getAccion() == AuditAccion.RENOVACION
                         && evento.getResultado() == AuditResultado.EXITOSO));
 
-        assertThatThrownBy(service::renovarProximasAExpirar).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> renovarYConfirmar(anterior)).isInstanceOf(DataIntegrityViolationException.class);
 
         verificarRollback(anterior);
     }
@@ -228,7 +254,7 @@ class RenovacionIntegrationTest {
     @DisplayName("La revocación individual tras renovar afecta la nueva credencial y evita otra renovación")
     void conservaRevocacionIndividualTrasRenovar() throws Exception {
         CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
-        service.renovarProximasAExpirar();
+        renovarYConfirmar(anterior);
         CredencialSesion nueva = repository.findFirstByNumeroWhatsappOrderByFechaEmisionDesc(NUMERO)
                 .orElseThrow();
         assertThat(nueva.getJti()).isNotEqualTo(anterior.getJti());
@@ -248,7 +274,169 @@ class RenovacionIntegrationTest {
         });
         assertThat(repository.findById(anterior.getId())).hasValueSatisfying(credencial ->
                 assertThat(credencial.getMotivoRevocacion()).isEqualTo(MotivoRevocacion.REEMPLAZO));
-        verifyNoInteractions(usersServiceClient);
+        verify(usersServiceClient, times(2)).consultarEstado("DNI", "12345678");
+    }
+
+    private void renovarYConfirmar(CredencialSesion anterior) {
+        service.renovarProximasAExpirar();
+        String token = firmar(anterior);
+        String nuevo = service.obtener(token).credencial();
+        service.confirmar(nuevo);
+    }
+
+    @Test
+    @DisplayName("Entrega repetible por HTTP sin revocar antes del acuse; confirmar dos veces es seguro")
+    void entregaRepetibleYConfirmacionIdempotente() throws Exception {
+        CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
+        String token = firmar(anterior);
+        service.renovarProximasAExpirar();
+        service.renovarProximasAExpirar();
+        assertThat(entregas.count()).isEqualTo(1);
+        assertThat(repository.count()).isEqualTo(1);
+        assertThat(validacionService.validar(token).vigente()).isTrue();
+        String respuesta = mockMvc.perform(post("/api/v1/credenciales/renovacion/obtener")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("credencial", token))))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andReturn().getResponse().getContentAsString();
+        String nuevo = json.readTree(respuesta).get("credencial").asText();
+        assertThat(service.obtener(token).credencial()).isEqualTo(nuevo);
+        assertThat(validacionService.validar(token).vigente()).isTrue();
+        assertThatThrownBy(() -> validacionService.validar(nuevo)).isInstanceOf(UnauthorizedException.class);
+        for (int intento = 0; intento < 2; intento++) {
+            mockMvc.perform(post("/api/v1/credenciales/renovacion/confirmar")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(json.writeValueAsString(Map.of("credencial", nuevo))))
+                    .andExpect(status().isNoContent());
+        }
+        assertThat(validacionService.validar(nuevo).vigente()).isTrue();
+        verificarRechazoHttp(token);
+        assertThat(repository.count()).isEqualTo(2);
+        assertThat(auditRepository.findAll().stream().filter(evento -> evento.getAccion() == AuditAccion.RENOVACION
+                && evento.getResultado() == AuditResultado.EXITOSO)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("Revocar mientras H3 obtiene el reemplazo impide activarlo")
+    void revocacionPrevaleceSobreEntregaPendiente() {
+        CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
+        String token = firmar(anterior);
+        service.renovarProximasAExpirar();
+        String nuevo = service.obtener(token).credencial();
+        anterior.setEstado(CredencialEstado.REVOCADA);
+        anterior.setFechaRevocacion(Instant.now());
+        repository.saveAndFlush(anterior);
+        assertThatThrownBy(() -> service.obtener(token)).isInstanceOf(UnauthorizedException.class);
+        assertThatThrownBy(() -> service.confirmar(nuevo)).isInstanceOf(UnauthorizedException.class);
+        assertThat(repository.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Una instancia nueva de H2 recupera y confirma la misma entrega persistida")
+    void recuperaEntregaTrasReinicio() {
+        CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
+        String token = firmar(anterior);
+        service.renovarProximasAExpirar();
+        String nuevo = service.obtener(token).credencial();
+        RenovacionService reiniciado = new RenovacionService(repository, auditRepository, auditService, mapper,
+                jwtEncoder, transactionTemplate, entregas, jwtService, validacionService);
+        assertThat(reiniciado.obtener(token).credencial()).isEqualTo(nuevo);
+        reiniciado.confirmar(nuevo);
+        assertThat(validacionService.validar(nuevo).vigente()).isTrue();
+        assertThatThrownBy(() -> validacionService.validar(token)).isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
+    @DisplayName("El riesgo detectado después de preparar la entrega impide activarla")
+    void riesgoPosteriorImpideConfirmacion() {
+        CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
+        String token = firmar(anterior);
+        service.renovarProximasAExpirar();
+        String nuevo = service.obtener(token).credencial();
+        anterior.setRiesgo(true);
+        repository.saveAndFlush(anterior);
+        assertThatThrownBy(() -> service.confirmar(nuevo)).isInstanceOf(UnauthorizedException.class);
+        assertThat(repository.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("La expiración de la anterior antes del acuse impide activar el reemplazo entregado")
+    void expiracionAnteriorImpideConfirmacion() throws Exception {
+        CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
+        String token = firmar(anterior);
+        service.renovarProximasAExpirar();
+        String nuevo = service.obtener(token).credencial();
+        ReflectionTestUtils.setField(anterior, "fechaExpiracion", Instant.now().minusSeconds(60));
+        repository.saveAndFlush(anterior);
+
+        mockMvc.perform(post("/api/v1/credenciales/renovacion/confirmar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("credencial", nuevo))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+
+        assertThat(repository.count()).isEqualTo(1);
+        assertThat(entregas.count()).isEqualTo(1);
+        assertThat(auditRepository.findAll()).noneSatisfy(evento ->
+                assertThat(evento.getResultado()).isEqualTo(AuditResultado.EXITOSO));
+        assertThatThrownBy(() -> validacionService.validar(nuevo)).isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
+    @DisplayName("Una falla de firma durante la entrega conserva la anterior y los metadatos para reintentar")
+    void fallaDeEntregaNoRevoca() {
+        CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
+        String token = firmar(anterior);
+        service.renovarProximasAExpirar();
+        doThrow(new JwtEncodingException("detalle protegido"))
+                .when(jwtEncoder).encode(any(JwtEncoderParameters.class));
+        assertThatThrownBy(() -> service.obtener(token)).isInstanceOf(JwtEncodingException.class);
+        assertThat(validacionService.validar(token).vigente()).isTrue();
+        assertThat(entregas.count()).isEqualTo(1);
+        assertThat(repository.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("H1 suspendido impide activar el reemplazo sin perder la credencial anterior")
+    void clienteSuspendidoImpideConfirmar() {
+        CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
+        String token = firmar(anterior);
+        service.renovarProximasAExpirar();
+        String nuevo = service.obtener(token).credencial();
+        when(usersServiceClient.consultarEstado("DNI", "12345678"))
+                .thenReturn(new ClienteEstadoResponse(EstadoCliente.SUSPENDED));
+        assertThatThrownBy(() -> service.confirmar(nuevo)).isInstanceOf(UnauthorizedException.class);
+        assertThat(repository.findById(anterior.getId())).hasValueSatisfying(credencial ->
+                assertThat(credencial.getEstado()).isEqualTo(CredencialEstado.ACTIVA));
+        assertThat(repository.count()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("Endpoints rechazan cuerpos vacíos, tokens falsos y entregas todavía no preparadas")
+    void validaContratoDeEntrega() throws Exception {
+        for (String accion : new String[] {"obtener", "confirmar"}) {
+            mockMvc.perform(post("/api/v1/credenciales/renovacion/" + accion)
+                            .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                    .andExpect(jsonPath("$.details").isArray());
+            mockMvc.perform(post("/api/v1/credenciales/renovacion/" + accion)
+                            .contentType(MediaType.APPLICATION_JSON).content("{\"credencial\":\"falso\"}"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                    .andExpect(jsonPath("$.details").isArray());
+        }
+        String token = firmar(guardar(600, CredencialEstado.ACTIVA, false));
+        mockMvc.perform(post("/api/v1/credenciales/renovacion/obtener")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("credencial", token))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.details").isArray());
+        assertThat(validacionService.validar(token).vigente()).isTrue();
     }
 
     private void verificarRechazoHttp(String token) throws Exception {

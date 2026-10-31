@@ -52,12 +52,70 @@ class ExternalClientsTest {
     private UsersServiceClient usuarios;
     private CredencialesServiceClient credenciales;
 
+    @Test
+    @DisplayName("H3 obtiene el JWT sustituto y confirma su recepción en una llamada separada")
+    void recibeYConfirmaRenovacion() {
+        server.expect(requestTo(BASE_URL + "/api/v1/credenciales/renovacion/obtener"))
+                .andExpect(method(HttpMethod.POST)).andExpect(content().json("{\"credencial\":\"anterior\"}"))
+                .andRespond(withSuccess("""
+                        {"credencial":"reemplazo","fechaExpiracion":"2099-01-01T00:00:00Z"}
+                        """, MediaType.APPLICATION_JSON));
+        server.expect(requestTo(BASE_URL + "/api/v1/credenciales/renovacion/confirmar"))
+                .andExpect(method(HttpMethod.POST)).andExpect(content().json("{\"credencial\":\"reemplazo\"}"))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+        RenovacionCredencialResponse nueva = credenciales.obtenerRenovacion("anterior");
+        assertThat(nueva.credencial()).isEqualTo("reemplazo");
+        assertThat(nueva.toString()).doesNotContain("reemplazo");
+        assertThat(new SolicitudRenovacionRequest("anterior").toString()).doesNotContain("anterior");
+        credenciales.confirmarRenovacion(nueva.credencial());
+        server.verify();
+    }
+
+    @Test
+    @DisplayName("Un timeout de confirmación se propaga para conservar el reemplazo y reintentar")
+    void propagaTimeoutDeConfirmacion() {
+        server.expect(requestTo(BASE_URL + "/api/v1/credenciales/renovacion/confirmar"))
+                .andRespond(withException(new SocketTimeoutException()));
+        assertThatThrownBy(() -> credenciales.confirmarRenovacion("reemplazo"))
+                .isInstanceOf(ResourceAccessException.class);
+        server.verify();
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "{}", "{\"credencial\":\"\",\"fechaExpiracion\":\"2099-01-01T00:00:00Z\"}",
+        "{\"credencial\":\"jwt\",\"fechaExpiracion\":\"2000-01-01T00:00:00Z\"}"})
+    @DisplayName("H3 rechaza respuestas sin reemplazo vigente")
+    void rechazaRenovacionIncompleta(String respuesta) {
+        server.expect(requestTo(BASE_URL + "/api/v1/credenciales/renovacion/obtener"))
+                .andRespond(withSuccess(respuesta, MediaType.APPLICATION_JSON));
+        assertThatThrownBy(() -> credenciales.obtenerRenovacion("anterior")).isInstanceOf(RestClientException.class);
+        server.verify();
+    }
+
     @BeforeEach
     void prepararClientes() {
         RestClient cliente = builder.baseUrl(BASE_URL).build();
         server = customizer.getServer(builder);
         usuarios = new RestUsersServiceClient(cliente);
         credenciales = new RestCredencialesServiceClient(cliente);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {401, 404, 409, 503})
+    @DisplayName("Los errores al obtener o confirmar no se silencian como en la revocación best-effort")
+    void propagaErroresDeRenovacion(int status) {
+        server.expect(requestTo(BASE_URL + "/api/v1/credenciales/renovacion/obtener"))
+                .andRespond(withStatus(HttpStatus.valueOf(status)));
+        server.expect(requestTo(BASE_URL + "/api/v1/credenciales/renovacion/confirmar"))
+                .andRespond(withStatus(HttpStatus.valueOf(status)));
+
+        assertThatThrownBy(() -> credenciales.obtenerRenovacion("anterior"))
+                .isInstanceOfSatisfying(RestClientResponseException.class,
+                        exception -> assertThat(exception.getStatusCode().value()).isEqualTo(status));
+        assertThatThrownBy(() -> credenciales.confirmarRenovacion("reemplazo"))
+                .isInstanceOfSatisfying(RestClientResponseException.class,
+                        exception -> assertThat(exception.getStatusCode().value()).isEqualTo(status));
+        server.verify();
     }
 
     @ParameterizedTest

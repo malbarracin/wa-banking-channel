@@ -12,12 +12,30 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/** Valida sesiones con H2 y solicita revocación best-effort sin reintentos automáticos. */
+/** Adaptador H2: validación, entrega confirmable y revocación best-effort sin participación transaccional. */
 @RequiredArgsConstructor
 @Slf4j
 public class RestCredencialesServiceClient implements CredencialesServiceClient {
 
     private final RestClient restClient;
+
+    @Override
+    public RenovacionCredencialResponse obtenerRenovacion(String credencialActual) {
+        RenovacionCredencialResponse respuesta = restClient.post().uri("/api/v1/credenciales/renovacion/obtener")
+                .body(new SolicitudRenovacionRequest(credencialActual)).retrieve()
+                .body(RenovacionCredencialResponse.class);
+        if (respuesta == null || respuesta.credencial() == null || respuesta.credencial().isBlank()
+                || respuesta.fechaExpiracion() == null || !respuesta.fechaExpiracion().isAfter(Instant.now())) {
+            throw new RestClientException("Respuesta de renovación inválida");
+        }
+        return respuesta;
+    }
+
+    @Override
+    public void confirmarRenovacion(String credencialNueva) {
+        restClient.post().uri("/api/v1/credenciales/renovacion/confirmar")
+                .body(new SolicitudRenovacionRequest(credencialNueva)).retrieve().toBodilessEntity();
+    }
 
     @Override
     public boolean validar(String credencial, String numeroWhatsapp) {

@@ -1,8 +1,13 @@
 package com.bcra.channel.ws.vinculo.client;
 
-/** Puerto de validación autoritativa y solicitud de revocación a H2. */
+/** Puerto saliente de validación, renovación confirmable y revocación a H2. */
 public interface CredencialesServiceClient {
 
+    /** Obtiene un reemplazo repetible; H3 debe guardarlo antes de confirmar su recepción. */
+    RenovacionCredencialResponse obtenerRenovacion(String credencialActual);
+
+    /** Confirma el JWT nuevo ya guardado; ante timeout H3 conserva ambos y repite esta llamada. */
+    void confirmarRenovacion(String credencialNueva);
     /** Valida con H2 la vigencia y pertenencia de la sesión al número solicitado. */
     boolean validar(String credencial, String numeroWhatsapp);
 

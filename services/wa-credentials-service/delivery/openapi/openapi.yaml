@@ -274,6 +274,146 @@ paths:
                   $ref: "#/components/examples/Forbidden"
       security:
       - ServiceBearer: []
+  /api/v1/credenciales/renovacion/obtener:
+    post:
+      tags:
+      - Credenciales
+      summary: Obtener renovación preparada
+      description: H3 presenta el JWT vigente y guarda durablemente el reemplazo antes
+        de confirmarlo.
+      operationId: obtener
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidarCredencialRequest"
+            examples:
+              Actual:
+                description: Actual
+                value:
+                  credencial: JWT_ACTUAL
+        required: true
+      responses:
+        "200":
+          description: "JWT sustituto; Cache-Control: no-store"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmitirCredencialResponse"
+              examples:
+                Reemplazo:
+                  description: Reemplazo
+                  value:
+                    credencial: JWT_NUEVO
+                    fechaExpiracion: 2026-11-01T12:00:00Z
+        "400":
+          description: VALIDATION_ERROR o BAD_REQUEST
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                ValidationError:
+                  $ref: "#/components/examples/ValidationError"
+        "401":
+          description: "Credencial inválida, revocada, expirada o con riesgo"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/Unauthorized"
+        "404":
+          description: Todavía no hay renovación preparada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NoPreparada:
+                  description: NoPreparada
+                  value:
+                    code: NOT_FOUND
+                    message: Todavía no hay una renovación preparada
+                    details: []
+                    timestamp: 2026-10-26T12:00:00Z
+        "409":
+          description: Conflicto de persistencia
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Conflict:
+                  $ref: "#/components/examples/Conflict"
+        "500":
+          description: INTERNAL_ERROR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/credenciales/renovacion/confirmar:
+    post:
+      tags:
+      - Credenciales
+      summary: Confirmar recepción durable de renovación
+      description: H3 presenta el JWT nuevo. Activa el reemplazo y revoca el anterior
+        atómicamente.
+      operationId: confirmar
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ValidarCredencialRequest"
+            examples:
+              Nuevo:
+                description: Nuevo
+                value:
+                  credencial: JWT_NUEVO
+        required: true
+      responses:
+        "204":
+          description: "Reemplazo activo, también ante repetición"
+        "400":
+          description: VALIDATION_ERROR o BAD_REQUEST
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                ValidationError:
+                  $ref: "#/components/examples/ValidationError"
+        "401":
+          description: Reemplazo o credencial anterior no autorizados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Unauthorized:
+                  $ref: "#/components/examples/Unauthorized"
+        "409":
+          description: Conflicto de persistencia
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Conflict:
+                  $ref: "#/components/examples/Conflict"
+        "500":
+          description: INTERNAL_ERROR
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
   /api/v1/credenciales/emitir:
     post:
       tags:
@@ -620,6 +760,21 @@ components:
           format: int32
           description: Cantidad que cambió de ACTIVA a REVOCADA; cero si no hay coincidencias
           example: 1
+    EmitirCredencialResponse:
+      type: object
+      description: "Credencial destinada exclusivamente al canal H3, nunca a mensajes\
+        \ visibles por el cliente final."
+      properties:
+        credencial:
+          type: string
+          description: "JWT de sesión interno; usar el valor devuelto por emitir,\
+            \ nunca mostrarlo al cliente"
+          example: JWT_DEVUELTO_POR_EMITIR
+        fechaExpiracion:
+          type: string
+          format: date-time
+          description: Vencimiento UTC en formato ISO-8601
+          example: 2026-10-27T12:00:00Z
     EmitirCredencialRequest:
       type: object
       description: Confirmación del canal H3; ambos indicadores deben ser verdaderos
@@ -658,21 +813,6 @@ components:
       - identidadVerificada
       - numeroWhatsapp
       - vinculoActivo
-    EmitirCredencialResponse:
-      type: object
-      description: "Credencial destinada exclusivamente al canal H3, nunca a mensajes\
-        \ visibles por el cliente final."
-      properties:
-        credencial:
-          type: string
-          description: "JWT de sesión interno; usar el valor devuelto por emitir,\
-            \ nunca mostrarlo al cliente"
-          example: JWT_DEVUELTO_POR_EMITIR
-        fechaExpiracion:
-          type: string
-          format: date-time
-          description: Vencimiento UTC en formato ISO-8601
-          example: 2026-10-27T12:00:00Z
     EventoCredencialResponse:
       type: object
       description: "Evento resumido: motivo protegido en origen, sin token ni identificador\

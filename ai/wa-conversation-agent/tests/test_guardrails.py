@@ -110,6 +110,14 @@ def test_escalation_is_pure_and_allowed(context):
     assert "_h7_envelope" not in context.__dict__
 
 
+def test_escalation_preserves_required_bank_message(context):
+    decision = escalar_a_humano("caso complejo", "El cliente solicita soporte humano")
+    before_model_callback(context, request(payload=decision, name="escalar_a_humano"))
+    message = "Para ayudarte mejor, te comunico con una persona de nuestro equipo."
+    cleaned = after_model_callback(context, response(message))
+    assert cleaned is None or cleaned.content.parts[0].text == message
+
+
 @pytest.mark.parametrize(
     "payload,name",
     [

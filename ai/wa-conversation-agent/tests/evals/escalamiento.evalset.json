@@ -1,0 +1,49 @@
+{
+  "eval_set_id": "escalamiento",
+  "name": "escalamiento",
+  "eval_cases": [
+    {
+      "eval_id": "escalamiento",
+      "session_input": {
+        "app_name": "wa_conversation_agent",
+        "user_id": "eval-user",
+        "state": {
+          "numero_whatsapp": "+12025550152",
+          "correlation_id": "eval-escalamiento"
+        }
+      },
+      "conversation": [
+        {
+          "invocation_id": "turn-1",
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Estoy muy disconforme. Necesito que una persona resuelva este reclamo complejo."
+              }
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [
+              {
+                "text": "Para ayudarte mejor, te comunico con una persona de nuestro equipo."
+              }
+            ]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {
+                "name": "escalar_a_humano",
+                "args": {
+                  "motivo": "Cliente insatisfecho",
+                  "resumen": "Reclamo complejo; solicita atención humana."
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

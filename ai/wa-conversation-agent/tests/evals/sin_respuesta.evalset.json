@@ -1,0 +1,49 @@
+{
+  "eval_set_id": "sin_respuesta",
+  "name": "sin_respuesta",
+  "eval_cases": [
+    {
+      "eval_id": "sin_respuesta",
+      "session_input": {
+        "app_name": "wa_conversation_agent",
+        "user_id": "eval-user",
+        "state": {
+          "numero_whatsapp": "+12025550152",
+          "correlation_id": "eval-sin_respuesta"
+        }
+      },
+      "conversation": [
+        {
+          "invocation_id": "turn-1",
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "¿Qué beneficios tiene el producto inexistente EVAL-FUERA-DE-BASE?"
+              }
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [
+              {
+                "text": "No tengo información confirmada para responder eso. Podés consultar con soporte."
+              }
+            ]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {
+                "name": "consultar_conocimiento",
+                "args": {
+                  "query": "¿Qué beneficios tiene el producto inexistente EVAL-FUERA-DE-BASE?",
+                  "correlation_id": "eval-sin_respuesta"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -15,5 +15,7 @@ class Settings(BaseSettings):
     rag_url: str = "http://localhost:8102"
     rag_timeout_seconds: float = Field(default=10.0, gt=0, allow_inf_nan=False)
     redis_url: SecretStr = Field(default=SecretStr(""), repr=False)
+    memory_key_secret: SecretStr = Field(default=SecretStr(""), repr=False)
+    session_ttl_minutes: int = Field(default=30, ge=1, le=1440)
     memory_server_url: SecretStr = Field(default=SecretStr(""), repr=False)
     service_token: SecretStr = Field(default=SecretStr(""), repr=False)

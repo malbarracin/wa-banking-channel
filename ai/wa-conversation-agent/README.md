@@ -42,6 +42,11 @@ de la consulta. Los tests HTTP usan respx, sin red ni modelo real:
 y los headers `X-Correlation-Id`, `X-Conversation-Id`, `X-Message-Id`, `X-Idempotency-Key`.
 El body sigue los DTO de H0.2: `correlationId`, `conversationId`, `messageId`,
 `customerAddress`, `body`, `context.technicalContext` y `context.history`.
+En sesiones nuevas o expiradas, el historial con `role` (`user`/`assistant`) y
+`body` textual se incorpora como datos del mensaje de usuario, con PII y la
+credencial de sesión redactadas. Se descartan roles técnicos y entradas inválidas.
+Si ADK ya tiene eventos, usa ese historial sin volver a insertar el recibido.
+El historial externo no autoriza operaciones ni constituye evidencia de herramientas.
 La respuesta conserva los tres identificadores y agrega `reply.body`, `escalate` y `toolsUsed`.
 Devuelve 400 ante datos inválidos, 401 ante autenticación inválida, 409 si la misma
 idempotency key está en curso (H0.2 → `REJECTED`, sin reintento) y 503 ante

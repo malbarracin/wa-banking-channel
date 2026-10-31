@@ -29,6 +29,6 @@ def test_agent_loads_packaged_prompt_without_credentials(monkeypatch: pytest.Mon
     monkeypatch.chdir(files("wa_conversation_agent").parent)
     root_agent = importlib.reload(agent).root_agent
     assert root_agent.model == "gemini-2.5-flash"
-    assert root_agent.tools == []
+    assert len(root_agent.tools) == 1
     prompt = files("wa_conversation_agent").joinpath("prompts/instruccion_v1.md").read_text(encoding="utf-8")
     assert root_agent.instruction == prompt

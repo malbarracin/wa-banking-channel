@@ -45,7 +45,7 @@ def test_import_without_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     module = importlib.reload(agent)
     assert module.root_agent.name == "wa_conversation_agent"
-    assert module.root_agent.tools == []
+    assert len(module.root_agent.tools) == 1
 
 
 def test_environment_and_secret_isolation(monkeypatch: pytest.MonkeyPatch) -> None:

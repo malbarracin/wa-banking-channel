@@ -101,6 +101,24 @@ class ExternalClientsTest {
     }
 
     @ParameterizedTest
+    @ValueSource(ints = {401, 404, 409, 503})
+    @DisplayName("Los errores al obtener o confirmar no se silencian como en la revocación best-effort")
+    void propagaErroresDeRenovacion(int status) {
+        server.expect(requestTo(BASE_URL + "/api/v1/credenciales/renovacion/obtener"))
+                .andRespond(withStatus(HttpStatus.valueOf(status)));
+        server.expect(requestTo(BASE_URL + "/api/v1/credenciales/renovacion/confirmar"))
+                .andRespond(withStatus(HttpStatus.valueOf(status)));
+
+        assertThatThrownBy(() -> credenciales.obtenerRenovacion("anterior"))
+                .isInstanceOfSatisfying(RestClientResponseException.class,
+                        exception -> assertThat(exception.getStatusCode().value()).isEqualTo(status));
+        assertThatThrownBy(() -> credenciales.confirmarRenovacion("reemplazo"))
+                .isInstanceOfSatisfying(RestClientResponseException.class,
+                        exception -> assertThat(exception.getStatusCode().value()).isEqualTo(status));
+        server.verify();
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"ACTIVE", "SUSPENDED", "LOGICAL_DELETE"})
     @DisplayName("Lee los estados reales publicados por H1")
     void consultaEstado(String estado) {

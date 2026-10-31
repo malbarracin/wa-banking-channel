@@ -79,7 +79,7 @@ internos no se usan para texto al cliente.
 | Límite | Variable | Default | Efecto al agotarse |
 |---|---|---|---|
 | Timeout por herramienta (H7, H8 y locales) | `AGENT_TOOL_TIMEOUT_SECONDS` | 10 s | Escalamiento forzado |
-| Timeout total del turno | `AGENT_TURN_TIMEOUT_SECONDS` | 45 s | Escalamiento forzado |
+| Timeout total del turno | `AGENT_TURN_TIMEOUT_SECONDS` | 4 s | Escalamiento forzado |
 | Llamadas a herramientas por turno | `AGENT_MAX_TOOL_CALLS_PER_TURN` | 8 | Escalamiento forzado |
 | Ejecución de una capacidad protegida | fija | 1 por turno | Escalamiento forzado |
 

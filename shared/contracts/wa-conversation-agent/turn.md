@@ -30,6 +30,20 @@ El equipo integración-canal debe alinear ese default cuando corresponda. Al des
 por configuración de entorno del lado de H0.2: `H9_BASE_URL=http://localhost:8103`
 (o la dirección de H9 en esa red). Esta discrepancia se resuelve por configuración, sin cambios de código.
 
+## Presupuesto de tiempo
+
+El default de H9 es `AGENT_TURN_TIMEOUT_SECONDS=4`, alineado por debajo del
+default actual de H0.2 `H9_TIMEOUT_MS=5000`. H0.2 debe configurar siempre
+`H9_TIMEOUT_MS > 1000 * AGENT_TURN_TIMEOUT_SECONDS`, con margen para transporte,
+acceso a Redis y serialización fuera del presupuesto del Runner. El margen de un
+segundo del default debe validarse con la latencia del despliegue.
+Para permitir turnos de 45 segundos, configurar conjuntamente H9 con
+`AGENT_TURN_TIMEOUT_SECONDS=45` y H0.2 con, por ejemplo, `H9_TIMEOUT_MS=50000`;
+no aumentar solo H9. Integración-canal administra las variables de H0.2.
+Al agotarse el presupuesto del Runner, H9 devuelve una respuesta segura con
+`escalate=true`. Si H0.2 vence antes, puede reintentar mientras la reserva sigue
+en curso y recibir 409; debe conservar la misma clave y gestionar la contingencia.
+
 ## TurnRequest
 
 Todos los campos son obligatorios, no admiten `null` y distinguen mayúsculas/minúsculas.

@@ -1,6 +1,7 @@
 """Verifica importación sin red y configuración aislada del modelo."""
 
 import importlib
+import re
 import tomllib
 from pathlib import Path
 
@@ -13,6 +14,21 @@ from wa_conversation_agent.knowledge import consultar_conocimiento
 from wa_conversation_agent.mcp_tools import SessionMCPToolset
 
 COMPONENT = Path(__file__).resolve().parents[1]
+
+
+def test_default_turn_budget_fits_orchestrator_timeout(monkeypatch):
+    monkeypatch.delenv("AGENT_TURN_TIMEOUT_SECONDS", raising=False)
+    config = COMPONENT.parents[1] / "platform/wa-channel-orchestrator/src/main/resources/application.yml"
+    match = re.search(r"H9_TIMEOUT_MS:(\d+)", config.read_text(encoding="utf-8"))
+    assert match is not None
+    caller_timeout_ms = int(match.group(1))
+    assert Settings().turn_timeout_seconds * 1000 < caller_timeout_ms
+    example = dict(
+        line.split("=", 1)
+        for line in (COMPONENT / ".env.example").read_text(encoding="utf-8").splitlines()
+        if line and not line.startswith("#")
+    )
+    assert float(example["AGENT_TURN_TIMEOUT_SECONDS"]) * 1000 < caller_timeout_ms
 
 
 def test_project_manifest_and_lock() -> None:

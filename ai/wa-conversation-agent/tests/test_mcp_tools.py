@@ -5,7 +5,9 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
+import respx
 from google.adk.tools import FunctionTool
 from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
 from google.adk.tools.tool_context import ToolContext
@@ -17,6 +19,23 @@ from wa_conversation_agent.knowledge import consultar_conocimiento
 from wa_conversation_agent.mcp_tools import ALLOWED, REVERIFY, SENSITIVE, before_tool_callback, create_toolset
 
 CONTRACT = Path(__file__).resolve().parents[3] / "shared/contracts/wa-mcp-layer"
+
+
+@pytest.mark.parametrize("supplied", [None, "forged-correlation"])
+async def test_knowledge_uses_trusted_turn_correlation(supplied, monkeypatch):
+    monkeypatch.setenv("AGENT_RAG_URL", "http://knowledge.test")
+    trusted = "7aa50f54-a81c-45d7-912f-aabdf69a07a2"
+    args = {"query": "consulta sintética"}
+    if supplied is not None:
+        args["correlation_id"] = supplied
+    tool = FunctionTool(consultar_conocimiento)
+    ctx = context(correlation_id=trusted)
+    assert before_tool_callback(tool, args, ctx) is None
+    assert args == {"query": "consulta sintética", "correlation_id": trusted}
+    with respx.mock as router:
+        route = router.post("http://knowledge.test/retrieval").mock(return_value=httpx.Response(400))
+        await tool.run_async(args=args, tool_context=ctx)
+        assert json.loads(route.calls.last.request.content)["correlationId"] == trusted
 
 
 def test_mcp_transport_configuration(monkeypatch):
@@ -76,7 +95,7 @@ def context(**overrides):
 
 
 def test_callback_allows_public_knowledge_without_identity():
-    tool_context = SimpleNamespace(state={})
+    tool_context = SimpleNamespace(state={"correlation_id": "test-148"})
     args = {"query": "Información pública", "correlation_id": "test-148"}
     original = dict(args)
     result = before_tool_callback(FunctionTool(consultar_conocimiento), args, tool_context)

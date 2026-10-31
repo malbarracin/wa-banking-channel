@@ -32,8 +32,6 @@ SAFE_MESSAGES = {
     "¿Querés que te ayude una persona de nuestro equipo?",
     "Por seguridad, necesitamos verificar tu identidad de nuevo para continuar.",
     "Por seguridad, volvé a verificar tu identidad para continuar",
-    "Esa operación supera el monto permitido para este canal.",
-    "Podés hacerla desde la app o sucursal.",
     UNSUPPORTED,
     UNAVAILABLE,
 }

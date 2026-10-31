@@ -1,56 +1,21 @@
----
-title: Trazabilidad de fuentes
-status: aprobada
-source: null
-updated: 2026-10-30T18:06:32.415Z
----
+﻿# Origen de los requisitos
 
-# Trazabilidad de fuentes — H0 Gateway WhatsApp (Twilio)
+| Campo | Valor |
+|-------|-------|
+| Proyecto | wa-banking-channel (mi-proyecto) |
+| Fuente | PR reviews + specs existentes (H1/H2/H3) |
+| Link | https://github.com/malbarracin/wa-banking-channel/pulls (PR #2, #3, #4) |
+| Actualizado | 2026-10-31 |
 
-| Hito | Fuente Notion | Fecha consulta | Notas |
-|------|---------------|----------------|-------|
-| H0 — Gateway WhatsApp (Twilio) | https://app.notion.com/p/H0-Gateway-WhatsApp-Twilio-3a675bb08ca781e8bebcca1e1697a495 | 2026-07-24T13:48:15.761Z | Página del hito leída. |
-| Canal WhatsApp Banco — Roadmap Backend | https://app.notion.com/p/36875bb08ca781ccb11ffff55847b197 | 2026-07-24T14:14:27.117Z | Roadmap leído (secuencia, dependencias, límites). |
+## Requisito → fuente
 
-## Contratos referenciados
-- shared/contracts/events/ (H0.1)
-- shared/contracts/wa-twilio-gateway/handoff.md
-- shared/contracts/wa-channel-orchestrator/handoff.md
-
-| Hito | Fuente Notion | Fecha consulta | Notas |
-|------|---------------|----------------|-------|
-| H5 — Servicio de Tarjetas | https://app.notion.com/p/H5-Servicio-de-Tarjetas-36875bb08ca781bea9c8cb37c2ccdbbf | 2026-10-30T15:40:02Z | Página del hito leída; roadmap leído previamente. |
-
-| Hito | Fuente Notion | Fecha consulta | Notas |
-|------|---------------|----------------|-------|
-| H7 — Capa MCP (integración con servicios) | https://app.notion.com/p/H7-Capa-MCP-integraci-n-con-servicios-38375bb08ca78152aa2ee8a87168a5d3 | 2026-07-24T13:48:44.994Z | Página del hito leída; roadmap leído (reglas transversales, seguridad de credencial, límites). |
-
-## Contratos referenciados (H7)
-- shared/contracts/wa-users-service/ (H1)
-- shared/contracts/wa-channel-service/ (H3)
-- shared/contracts/wa-auth-service/ (H2)
-- shared/contracts/wa-accounts-service/ (H4)
-- shared/contracts/wa-cards-service/ (H5)
-- shared/contracts/wa-insurance-service/ (H6)
-- shared/contracts/wa-mcp-layer/ (publicado por H7)
-- specs/capa-mcp/spec.md
-
-| Hito | Fuente Notion | Fecha consulta | Notas |
-|------|---------------|----------------|-------|
-| H8 — Base de conocimiento RAG | https://app.notion.com/p/H8-Base-de-conocimiento-RAG-38375bb08ca781e2accfdd9eff1722a4 | 2026-07-24T14:14:49.820Z | Página del hito leída; roadmap leído (reglas transversales, límites entre componentes). |
-
-## Contratos referenciados (H8)
-- shared/contracts/wa-knowledge-rag/ (a publicar por H8)
-- shared/contracts/wa-conversation-agent/ (consume retrieval de H8)
-- specs/conocimiento-rag/spec.md
-
-| Hito | Fuente Notion | Fecha consulta | Notas |
-|------|---------------|----------------|-------|
-| H9 — Agente conversacional WhatsApp | https://app.notion.com/p/H9-Agente-conversacional-WhatsApp-38375bb08ca7813499c9d738fad34ebe | 2026-10-30T23:51:51Z | Página del hito leída; roadmap leído (reglas transversales, límites entre componentes). |
-
-## Contratos referenciados (H9)
-- shared/contracts/wa-mcp-layer/ (consume capacidades de H7)
-- shared/contracts/wa-knowledge-rag/ (consume retrieval de H8)
-- shared/contracts/wa-conversation-agent/ (publica contrato de turno/respuesta H9)
-- shared/contracts/events/ (H0.1 — contrato de turno con H0.2)
-- specs/agente-conversacional/spec.md
+| Requisito | Área | Id en la fuente |
+|-----------|------|-----------------|
+| Alta de usuario bancario (auditoría de rechazos, Location header) | usuarios | PR #2 hilos PRRT_kwDOVOsBA86wTyNc, PRRT_kwDOVOsBA86wTyNu |
+| Consulta con proyección/autorización por perfil | usuarios | PR #2 hilo PRRT_kwDOVOsBA86wTyNp |
+| Secret Helm sin valor por defecto | usuarios | PR #2 hilo PRRT_kwDOVOsBA86wTyNl |
+| Aceptación de términos sin duplicados / unicidad | canal-whatsapp | PR #3 hilo PRRT_kwDOVOsBA86wX1eL |
+| No confiar en header cliente | canal-whatsapp | PR #3 hilo PRRT_kwDOVOsBA86wX1eC |
+| Renovación entrega token sustituto sin invalidar prematuramente | acceso-sesion | PR #4 hilo PRRT_kwDOVOsBA86wcpmQ |
+| Autenticación/autorización servicio-a-servicio y por actor | acceso-sesion | PR #4 hilos PRRT_kwDOVOsBA86wcpmX, PRRT_kwDOVOsBA86wcpmd |
+| Validación body /validar con @Valid | acceso-sesion | PR #4 hilo PRRT_kwDOVOsBA86wcpmg |

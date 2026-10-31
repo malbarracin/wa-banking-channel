@@ -58,3 +58,19 @@ TASK-148 prueba con un servidor MCP local de prueba que publica los schemas de H
 La integración end-to-end contra H7 real queda pendiente: actualmente H7 solo expone
 `/health` y todavía debe publicar el transporte `/mcp`. No usar su contenedor para
 validar esta integración. API ADK confirmada en la versión instalada 1.39.1.
+
+## Guardrails y escalamiento (TASK-149)
+
+`root_agent` conecta H7, H8 y `escalar_a_humano`, que solo devuelve
+`{escalate, motivo, resumen}` para H0.2, sin ejecutar una derivación.
+Los callbacks enmascaran identificadores y correos, bloquean patrones conocidos
+de inyección directa/indirecta y separan instrucciones del sistema de datos externos.
+Son defensas complementarias: el filtrado de patrones no detecta toda inyección.
+La autorización de productos permanece en H7 y su callback de identidad.
+
+La salida debe reproducir literalmente una frase de evidencia del turno actual
+o usar mensajes conversacionales del vocabulario cerrado `SAFE_MESSAGES`;
+las paráfrasis se rechazan de forma conservadora para evitar afirmaciones que
+escapen a clasificadores por palabras clave. No se reutiliza evidencia de turnos
+anteriores. Ante errores H7/H8 se ofrece soporte o reintento sin detalles técnicos. Las pruebas deterministas
+están en `tests/test_guardrails.py`; no llaman al modelo real.

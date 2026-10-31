@@ -81,6 +81,35 @@ class RevocacionMasivaIntegrationTest {
         });
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"", "Bearer desconocido", "Bearer h3-test-token"})
+    @DisplayName("Sin actor banco autorizado no revoca credenciales ni genera auditorías")
+    void rechazaRevocacionSinActorBanco(String authorization) throws Exception {
+        var request = post(ENDPOINT).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"criterio\":\"TODAS\"}");
+        if (!authorization.isEmpty()) {
+            request.header("Authorization", authorization);
+        }
+        boolean actorH3 = "Bearer h3-test-token".equals(authorization);
+
+        mockMvc.perform(request)
+                .andExpect(status().is(actorH3 ? 403 : 401))
+                .andExpect(jsonPath("$.code").value(actorH3 ? "FORBIDDEN" : "UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        assertThat(repository.findAll()).hasSize(5)
+                .allSatisfy(credencial -> {
+                    assertThat(credencial.getFechaRevocacion()).isNull();
+                    assertThat(credencial.getMotivoRevocacion()).isNull();
+                    assertThat(credencial.getRevocadaPor()).isNull();
+                });
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.ACTIVA).hasSize(3);
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.EXPIRADA).hasSize(1);
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.REVOCADA).hasSize(1);
+        assertThat(auditRepository.count()).isZero();
+    }
+
     @Test
     @DisplayName("POR_CLIENTE alcanza todos sus números y respeta a otros clientes y tipos documentales")
     void revocaSoloClienteSeleccionado() throws Exception {

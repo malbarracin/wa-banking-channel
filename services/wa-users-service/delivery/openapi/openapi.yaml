@@ -90,9 +90,9 @@ paths:
       tags:
       - Usuarios
       summary: Consultar usuario por documento
-      description: Devuelve el UserResponse completo de este hito (provisional hasta
-        que Compliance defina el filtrado por perfil). Incluye usuarios en cualquier
-        estado.
+      description: |-
+        Devuelve el UserResponse completo de este hito (provisional hasta que Compliance defina el filtrado por perfil). Requiere principal autenticado y rol de servidor
+        USERS_FULL_READ; sin ellos devuelve 403. Incluye usuarios en cualquier estado.
       operationId: consultar
       parameters:
       - name: tipo
@@ -110,6 +110,12 @@ paths:
           type: string
         example: 30111222
       responses:
+        "403":
+          description: Sin principal o rol USERS_FULL_READ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "200":
           description: Usuario encontrado
           content:
@@ -365,6 +371,7 @@ components:
           - BAD_REQUEST
           - NOT_FOUND
           - CONFLICT
+          - FORBIDDEN
           - INTERNAL_ERROR
           example: VALIDATION_ERROR
         message:

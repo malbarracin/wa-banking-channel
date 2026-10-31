@@ -162,6 +162,18 @@ com.bcra.users.ws/
 
 ## Documentación
 
+La consulta completa `GET /api/v1/users/{tipo}/{numero}` es provisional mientras
+Compliance define los campos por perfil. Solo permite acceso con principal autenticado
+y rol de servidor `USERS_FULL_READ`; los demás consultantes reciben 403 `FORBIDDEN`
+sin datos personales, incluso para documentos inexistentes. El rol permite los diez
+campos actuales de `UserResponse`. No representa una política de negocio aprobada.
+El despliegue debe autenticar y asignar ese rol en el contenedor servlet mediante
+un mecanismo confiable del banco. Esta aplicación no configura ese mecanismo:
+por defecto la consulta completa queda denegada. Headers de perfil, usuario o rol
+no otorgan acceso. No exponer la respuesta completa fuera del perímetro autorizado.
+Al definirse la matriz de Compliance deberán implementarse proyecciones y pruebas
+por cada perfil aprobado antes de habilitar otros consultantes.
+
 | Documento | Para qué |
 |---|---|
 | [`delivery/api.md`](delivery/api.md) | Uso de la API con curl |

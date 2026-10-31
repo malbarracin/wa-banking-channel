@@ -1,6 +1,7 @@
 package com.bcra.users.ws.user.controller;
 
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.bcra.users.ws.exception.ErrorResponse;
+import com.bcra.users.ws.exception.ForbiddenException;
 import com.bcra.users.ws.user.dto.CreateUserRequest;
 import com.bcra.users.ws.user.dto.UpdateStatusRequest;
 import com.bcra.users.ws.user.dto.UpdateUserRequest;
@@ -225,7 +227,7 @@ public class UserController {
 
     /**
      * Devuelve los datos completos definidos para este hito o 404 si el usuario no existe.
-     * El filtrado por perfil se parametrizará cuando Compliance defina la política.
+     * Acceso provisional reservado al rol autenticado USERS_FULL_READ hasta la política de Compliance.
      * @return datos y estado actual del usuario
      */
     @GetMapping("/{tipo}/{numero}")
@@ -233,8 +235,11 @@ public class UserController {
             summary = "Consultar usuario por documento",
             description = """
                     Devuelve el UserResponse completo de este hito (provisional hasta que Compliance \
-                    defina el filtrado por perfil). Incluye usuarios en cualquier estado.""")
+                    defina el filtrado por perfil). Requiere principal autenticado y rol de servidor
+                    USERS_FULL_READ; sin ellos devuelve 403. Incluye usuarios en cualquier estado.""")
     @ApiResponses({
+            @ApiResponse(responseCode = "403", description = "Sin principal o rol USERS_FULL_READ",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "200", description = "Usuario encontrado",
                     content = @Content(schema = @Schema(implementation = UserResponse.class),
                             examples = @ExampleObject(value = USER_RESPONSE_EXAMPLE))),
@@ -246,8 +251,12 @@ public class UserController {
                             examples = @ExampleObject(ref = "#/components/examples/InternalError")))
     })
     public UserResponse consultar(
+            HttpServletRequest request,
             @Parameter(description = "Tipo de documento", example = "DNI") @PathVariable String tipo,
             @Parameter(description = "Número de documento", example = "30111222") @PathVariable String numero) {
+        if (request.getUserPrincipal() == null || !request.isUserInRole("USERS_FULL_READ")) {
+            throw new ForbiddenException();
+        }
         return mapper.toResponse(userService.consultar(tipo, numero));
     }
 

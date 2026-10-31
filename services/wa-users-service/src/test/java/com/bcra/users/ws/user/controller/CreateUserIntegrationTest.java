@@ -63,7 +63,8 @@ class CreateUserIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
 
-        mockMvc.perform(get("/api/v1/users/DNI/123"))
+        mockMvc.perform(get("/api/v1/users/DNI/123").principal(() -> "servicio-autorizado")
+                        .with(request -> { request.addUserRole("USERS_FULL_READ"); return request; }))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(objectMapper.readTree(respuesta).get("id").asText()))
                 .andExpect(jsonPath("$.documento.tipo").value("DNI"))
@@ -97,7 +98,8 @@ class CreateUserIntegrationTest {
                 .andExpect(jsonPath("$.id").value(identificador))
                 .andExpect(jsonPath("$.email").value("nuevo contacto"))
                 .andExpect(jsonPath("$.nombreTratamiento").value("Anita"));
-        mockMvc.perform(get("/api/v1/users/DNI/123"))
+        mockMvc.perform(get("/api/v1/users/DNI/123").principal(() -> "servicio-autorizado")
+                        .with(request -> { request.addUserRole("USERS_FULL_READ"); return request; }))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(identificador))
                 .andExpect(jsonPath("$.documento.tipo").value("DNI"))

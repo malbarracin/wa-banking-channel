@@ -415,14 +415,14 @@
           },
           "example" : "+5491112345678"
         }, {
-          "name" : "X-Canal-Credencial-Valida",
+          "name" : "X-Canal-Credencial-Token",
           "in" : "header",
-          "description" : "Contexto de credencial validado aguas arriba; debe ser true",
+          "description" : "Token de sesión validado con H2 para el número solicitado",
           "required" : false,
           "schema" : {
             "type" : "string"
           },
-          "example" : true
+          "example" : "token-emitido-por-h2"
         } ],
         "requestBody" : {
           "content" : {
@@ -533,14 +533,14 @@
           },
           "example" : "+5491112345678"
         }, {
-          "name" : "X-Canal-Credencial-Valida",
+          "name" : "X-Canal-Credencial-Token",
           "in" : "header",
-          "description" : "Contexto de credencial validado aguas arriba; obligatorio si el motivo es SOLICITUD_CLIENTE",
+          "description" : "Token validado con H2; obligatorio si el motivo es SOLICITUD_CLIENTE",
           "required" : false,
           "schema" : {
             "type" : "string"
           },
-          "example" : true
+          "example" : "token-emitido-por-h2"
         } ],
         "requestBody" : {
           "content" : {
@@ -652,7 +652,7 @@
       "get" : {
         "tags" : [ "Vínculos" ],
         "summary" : "Consultar el perfil permitido del canal",
-        "description" : "Devuelve los datos de contacto de H1 y las preferencias locales del vínculo ACTIVO, sin datos legales sensibles. Exige el contexto de credencial válida que H2/H0.2 propagan tras validar la sesión; H3 no valida el token, solo su presencia. Sin credencial responde 401 para derivar a verificación; sin vínculo ACTIVO responde 409.",
+        "description" : "Devuelve los datos de contacto de H1 y las preferencias locales del vínculo ACTIVO, sin datos legales sensibles. Exige el contexto de credencial válida que H2/H0.2 propagan; H3 valida vigencia y pertenencia con H2. Sin credencial responde 401 para derivar a verificación; sin vínculo ACTIVO responde 409.",
         "operationId" : "consultarPerfil",
         "parameters" : [ {
           "name" : "numero",
@@ -664,14 +664,14 @@
           },
           "example" : "+5491112345678"
         }, {
-          "name" : "X-Canal-Credencial-Valida",
+          "name" : "X-Canal-Credencial-Token",
           "in" : "header",
-          "description" : "Contexto de credencial validado aguas arriba; debe ser true",
+          "description" : "Token de sesión validado con H2 para el número solicitado",
           "required" : false,
           "schema" : {
             "type" : "string"
           },
-          "example" : true
+          "example" : "token-emitido-por-h2"
         } ],
         "responses" : {
           "200" : {

@@ -14,6 +14,7 @@ import com.bcra.channel.ws.vinculo.client.CredencialesServiceClient;
 import com.bcra.channel.ws.vinculo.client.UsersServiceClient;
 import com.bcra.channel.ws.vinculo.dto.ActualizarPreferenciasRequest;
 import com.bcra.channel.ws.vinculo.dto.BloquearVinculoRequest;
+import com.bcra.channel.ws.vinculo.dto.CanalCredentialToken;
 import com.bcra.channel.ws.vinculo.dto.DesvincularRequest;
 import com.bcra.channel.ws.vinculo.dto.HistorialVinculoResponse;
 import com.bcra.channel.ws.vinculo.dto.PerfilCanalResponse;
@@ -45,6 +46,7 @@ public class VinculoService {
     private final VinculoAuditService vinculoAuditService;
     private final UsersServiceClient usersServiceClient;
     private final CredencialesServiceClient credencialesServiceClient;
+    private final CanalCredentialValidator canalCredentialValidator;
 
     /**
      * Informa si el número ya tiene vínculo (anti-duplicados), sin exponer datos del cliente.
@@ -64,14 +66,14 @@ public class VinculoService {
     /**
      * Combina preferencias locales con el perfil permitido de H1 para un vínculo activo.
      * @param numeroWhatsapp número del canal
-     * @param valorHeaderCredencial valor del header {@link CredencialCanal#HEADER_CREDENCIAL_VALIDA}
+     * @param valorHeaderCredencial valor del header {@link CredencialCanal#HEADER_CREDENCIAL_TOKEN}
      * @return perfil del canal sin datos legales sensibles
      * @throws CredencialInvalidaException si falta el contexto de credencial válida
      * @throws VinculoNoActivoException si no hay vínculo ACTIVO
      */
     @Transactional(readOnly = true)
     public PerfilCanalResponse consultarPerfil(String numeroWhatsapp, String valorHeaderCredencial) {
-        if (!CredencialCanal.esContextoValido(valorHeaderCredencial)) {
+        if (!canalCredentialValidator.validar(new CanalCredentialToken(valorHeaderCredencial), numeroWhatsapp)) {
             throw new CredencialInvalidaException();
         }
         List<Vinculo> activos = vinculoRepository.findByNumeroWhatsappAndEstado(
@@ -188,7 +190,8 @@ public class VinculoService {
     public VinculoResponse bloquear(String numeroWhatsapp, BloquearVinculoRequest request,
             String valorHeaderCredencial) {
         if (request.motivo() == MotivoBloqueo.SOLICITUD_CLIENTE
-                && !CredencialCanal.esContextoValido(valorHeaderCredencial)) {
+                && !canalCredentialValidator.validar(
+                        new CanalCredentialToken(valorHeaderCredencial), numeroWhatsapp)) {
             throw new CredencialInvalidaException();
         }
         Vinculo vinculo = buscarVinculo(numeroWhatsapp);
@@ -217,7 +220,7 @@ public class VinculoService {
     @Transactional
     public VinculoResponse desvincular(String numeroWhatsapp, DesvincularRequest request,
             String valorHeaderCredencial) {
-        if (!CredencialCanal.esContextoValido(valorHeaderCredencial)) {
+        if (!canalCredentialValidator.validar(new CanalCredentialToken(valorHeaderCredencial), numeroWhatsapp)) {
             throw new CredencialInvalidaException();
         }
         Vinculo vinculo = buscarVinculo(numeroWhatsapp);

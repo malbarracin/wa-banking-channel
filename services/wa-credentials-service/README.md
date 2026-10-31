@@ -270,3 +270,20 @@ services/wa-credentials-service/
 | [`../../delivery/devops-local.md`](../../delivery/devops-local.md) | Puertos, Docker, CI y despliegue local |
 | [`../../specs/acceso-sesion/spec.md`](../../specs/acceso-sesion/spec.md) | Fuente funcional |
 | [`../../specs/acceso-sesion/arquitectura.md`](../../specs/acceso-sesion/arquitectura.md) | Decisiones de arquitectura |
+
+## Autenticación de operaciones de credenciales
+
+H2 verifica `Authorization: Bearer <secreto-de-servicio>` antes de leer el body.
+Configurar `CREDENTIAL_H3_SERVICE_TOKEN` en H2 y H3 con el mismo secreto; permite
+`POST /api/v1/credenciales/emitir` y `POST /api/v1/credenciales/{numero}/revocacion`.
+El banco usa un secreto diferente, `CREDENTIAL_BANK_SERVICE_TOKEN`, exclusivamente
+para `POST /api/v1/credenciales/revocacion-masiva`. No son JWT de clientes.
+Una credencial ausente o desconocida devuelve 401; un actor sin permiso devuelve 403.
+Sin secreto configurado se rechaza el acceso de ese actor; ambos secretos deben ser diferentes.
+
+`vinculoActivo` e `identidadVerificada` son afirmaciones de H3 autenticado, que debe
+comprobarlas antes de emitir; ningún cliente de WhatsApp debe conocer el secreto de H3.
+H2 conserva los controles de precondiciones y consulta del estado del cliente en H1.
+Desplegar con HTTPS, secretos administrados y rotación coordinada entre H2 y H3;
+nunca exponer estos secretos al navegador, LLM o usuario. La autenticación no depende
+de un proxy externo. Validación e historial conservan su contrato actual.

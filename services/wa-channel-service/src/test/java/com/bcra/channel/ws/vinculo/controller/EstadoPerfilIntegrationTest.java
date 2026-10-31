@@ -55,6 +55,7 @@ class EstadoPerfilIntegrationTest {
     @DynamicPropertySource
     static void configurar(DynamicPropertyRegistry registry) {
         registry.add("clients.wa-users-service.base-url", H1::baseUrl);
+        registry.add("clients.credenciales-service.base-url", H1::baseUrl);
         registry.add("spring.datasource.url",
                 () -> "jdbc:h2:mem:estado-perfil;MODE=PostgreSQL;DB_CLOSE_DELAY=-1");
     }
@@ -71,10 +72,28 @@ class EstadoPerfilIntegrationTest {
         this.vinculoRepository = vinculoRepository;
     }
 
+    private void stubValidacion() {
+        H1.stubFor(WireMock.post(WireMock.urlEqualTo("/api/v1/credenciales/validar"))
+                .withRequestBody(WireMock.equalToJson("{\"credencial\":\"sesion-h2\"}"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json")
+                        .withBody("{\"vigente\":true,\"numeroWhatsapp\":\"" + NUMERO
+                                + "\",\"fechaExpiracion\":\"" + Instant.now().plusSeconds(300) + "\"}")));
+    }
+
+    @Test
+    @DisplayName("El marcador booleano anterior no autoriza consultas de perfil")
+    void rechazaHeaderControladoPorCliente() throws Exception {
+        mockMvc.perform(get(RUTA_PERFIL, NUMERO).header("X-Canal-Credencial-Valida", "true"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+        H1.verify(0, WireMock.postRequestedFor(WireMock.urlEqualTo("/api/v1/credenciales/validar")));
+    }
+
     @BeforeEach
     void preparar() {
         vinculoRepository.deleteAll();
         H1.resetAll();
+        stubValidacion();
     }
 
     @AfterAll
@@ -125,7 +144,7 @@ class EstadoPerfilIntegrationTest {
         stubPerfilH1();
 
         mockMvc.perform(get(RUTA_PERFIL, NUMERO)
-                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true"))
+                        .header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, "sesion-h2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nombre").value("Ana"))
                 .andExpect(jsonPath("$.apellido").value("García"))
@@ -141,7 +160,7 @@ class EstadoPerfilIntegrationTest {
 
     @ParameterizedTest
     @NullAndEmptySource
-    @ValueSource(strings = {"false", "FALSE", "1", "si"})
+    @ValueSource(strings = {"true", "false", "FALSE", "1", "si"})
     @DisplayName("GET /perfil sin contexto de credencial válida responde 401 UNAUTHORIZED")
     void rechazaPerfilSinCredencial(String header) throws Exception {
         guardarVinculo(VinculoEstado.ACTIVO);
@@ -149,7 +168,7 @@ class EstadoPerfilIntegrationTest {
 
         MockHttpServletRequestBuilder solicitud = get(RUTA_PERFIL, NUMERO);
         if (header != null) {
-            solicitud.header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, header);
+            solicitud.header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, header);
         }
 
         String respuesta = mockMvc.perform(solicitud)
@@ -176,7 +195,7 @@ class EstadoPerfilIntegrationTest {
         stubPerfilH1();
 
         String respuesta = mockMvc.perform(get(RUTA_PERFIL, NUMERO)
-                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true"))
+                        .header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, "sesion-h2"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("CONFLICT"))
                 .andExpect(jsonPath("$.message").isNotEmpty())
@@ -194,7 +213,7 @@ class EstadoPerfilIntegrationTest {
     @DisplayName("GET /perfil sin vínculo responde 409 CONFLICT con el contrato de error")
     void rechazaPerfilSinVinculo() throws Exception {
         mockMvc.perform(get(RUTA_PERFIL, NUMERO)
-                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true"))
+                        .header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, "sesion-h2"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("CONFLICT"))
                 .andExpect(jsonPath("$.details").isEmpty())

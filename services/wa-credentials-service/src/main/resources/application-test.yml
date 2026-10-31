@@ -1,3 +1,6 @@
+CREDENTIAL_H3_SERVICE_TOKEN: h3-test-token
+CREDENTIAL_BANK_SERVICE_TOKEN: bank-test-token
+
 credencial:
   renovacion:
     habilitada: false

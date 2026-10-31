@@ -260,6 +260,7 @@ class RenovacionIntegrationTest {
         assertThat(nueva.getJti()).isNotEqualTo(anterior.getJti());
 
         mockMvc.perform(post("/api/v1/credenciales/{numero}/revocacion", NUMERO)
+                .header("Authorization", "Bearer h3-test-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"motivo\":\"BLOQUEO\",\"solicitadoPor\":\"CANAL\"}"))
                 .andExpect(status().isNoContent());

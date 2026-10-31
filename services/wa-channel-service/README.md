@@ -135,11 +135,13 @@ Guía con curl y flujo típico: [`delivery/api.md`](delivery/api.md).
 
 ### Contexto de credencial
 
-H3 **no valida tokens**: exige el contexto que H2/H0.2 propagan tras validar la sesión.
+H3 valida con H2 la vigencia del token y su pertenencia al número solicitado antes de autorizar perfil,
+desvinculación y bloqueo a pedido del cliente. Si H2 no puede validarlo, rechaza la operación con 401.
+El antiguo header `X-Canal-Credencial-Valida` no autoriza operaciones.
 
 | Header | Dónde se exige | Valor |
 |---|---|---|
-| `X-Canal-Credencial-Valida` | Perfil, desvinculación y bloqueo con `SOLICITUD_CLIENTE` | `true` |
+| `X-Canal-Credencial-Token` | Perfil, desvinculación y bloqueo con `SOLICITUD_CLIENTE` | Token H2 vigente |
 | `X-Credencial-Documento-Tipo` | Preferencias | Tipo de documento del titular |
 | `X-Credencial-Documento-Numero` | Preferencias | Número de documento del titular |
 

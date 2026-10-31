@@ -106,7 +106,8 @@ class RevocacionMasivaIntegrationTest {
     })
     @DisplayName("Rechaza alcances inválidos con contrato 400 sin modificar credenciales")
     void validaAlcanceSinAmpliarlo(String request) throws Exception {
-        mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(request))
+        mockMvc.perform(post(ENDPOINT)
+                .header("Authorization", "Bearer bank-test-token").contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.details").isArray())
@@ -121,7 +122,8 @@ class RevocacionMasivaIntegrationTest {
         doThrow(new org.springframework.dao.DataIntegrityViolationException("fallo de prueba"))
                 .when(auditRepository).save(any(CredencialAuditLog.class));
 
-        mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content("{\"criterio\":\"TODAS\"}"))
+        mockMvc.perform(post(ENDPOINT)
+                .header("Authorization", "Bearer bank-test-token").contentType(MediaType.APPLICATION_JSON).content("{\"criterio\":\"TODAS\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("CONFLICT"));
 
@@ -141,7 +143,8 @@ class RevocacionMasivaIntegrationTest {
             return auditRepository.saveAndFlush(auditoria);
         }).when(auditRepository).save(any(CredencialAuditLog.class));
 
-        mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content("{\"criterio\":\"TODAS\"}"))
+        mockMvc.perform(post(ENDPOINT)
+                .header("Authorization", "Bearer bank-test-token").contentType(MediaType.APPLICATION_JSON).content("{\"criterio\":\"TODAS\"}"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("CONFLICT"))
                 .andExpect(jsonPath("$.details").isArray())
@@ -181,7 +184,8 @@ class RevocacionMasivaIntegrationTest {
                 {"criterio":"POR_CLIENTE","segmento":{"documentoTipo":"%s","documentoNumero":"%s"}}
                 """.formatted(tipo, numero);
 
-        mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(request))
+        mockMvc.perform(post(ENDPOINT)
+                .header("Authorization", "Bearer bank-test-token").contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
                 .andExpect(jsonPath("$.details[*].field").value(
@@ -200,6 +204,7 @@ class RevocacionMasivaIntegrationTest {
                 {"motivo":"DESVINCULACION","solicitadoPor":"CANAL"}
                 """;
         mockMvc.perform(post("/api/v1/credenciales/{numero}/revocacion", numero)
+                .header("Authorization", "Bearer h3-test-token")
                 .contentType(MediaType.APPLICATION_JSON).content(solicitud))
                 .andExpect(status().isNoContent());
         CredencialSesion individual = repository.findByNumeroWhatsappAndEstado(numero, CredencialEstado.REVOCADA)
@@ -212,6 +217,7 @@ class RevocacionMasivaIntegrationTest {
         assertThat(conservada.getMotivoRevocacion()).isEqualTo(MotivoRevocacion.DESVINCULACION);
         assertThat(conservada.getRevocadaPor()).isEqualTo(RevocadaPor.CANAL);
         mockMvc.perform(post("/api/v1/credenciales/{numero}/revocacion", numero)
+                .header("Authorization", "Bearer h3-test-token")
                 .contentType(MediaType.APPLICATION_JSON).content(solicitud))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"))
@@ -234,7 +240,8 @@ class RevocacionMasivaIntegrationTest {
     }
 
     private void revocar(String request, int cantidad) throws Exception {
-        mockMvc.perform(post(ENDPOINT).contentType(MediaType.APPLICATION_JSON).content(request))
+        mockMvc.perform(post(ENDPOINT)
+                .header("Authorization", "Bearer bank-test-token").contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.revocadas").value(cantidad));
     }
 

@@ -42,6 +42,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "wa-channel-service.fullname" . }}-secret
                   key: DB_PASSWORD
+            - name: CREDENTIAL_H3_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wa-channel-service.fullname" . }}-secret
+                  key: CREDENTIAL_H3_SERVICE_TOKEN
           livenessProbe:
             httpGet:
               path: /actuator/health

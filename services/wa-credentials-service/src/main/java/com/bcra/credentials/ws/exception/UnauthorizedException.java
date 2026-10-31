@@ -6,4 +6,8 @@ public class UnauthorizedException extends RuntimeException {
     public UnauthorizedException() {
         super("La credencial no es válida; se requiere verificar la identidad nuevamente");
     }
+
+    public UnauthorizedException(String message) {
+        super(message);
+    }
 }

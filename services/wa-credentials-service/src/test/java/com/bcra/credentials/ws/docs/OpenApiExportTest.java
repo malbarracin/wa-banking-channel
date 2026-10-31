@@ -48,10 +48,10 @@ class OpenApiExportTest {
         assertThat(document.path("servers").get(0).path("url").asText()).isEqualTo("http://localhost:8082");
         assertThat(paths.size()).isEqualTo(7);
         Map<String, List<String>> expected = Map.of(
-                "/emitir", List.of("201", "400", "403", "404", "409", "500", "503"),
+                "/emitir", List.of("201", "400", "401", "403", "404", "409", "500", "503"),
                 "/validar", List.of("200", "400", "401", "500"),
-                "/{numero}/revocacion", List.of("204", "400", "404", "500"),
-                "/revocacion-masiva", List.of("200", "400", "500"),
+                "/{numero}/revocacion", List.of("204", "400", "401", "403", "404", "500"),
+                "/revocacion-masiva", List.of("200", "400", "401", "403", "500"),
                 "/{numero}/historial", List.of("200", "400", "404", "500"),
                 "/renovacion/obtener", List.of("200", "400", "401", "404", "409", "500"),
                 "/renovacion/confirmar", List.of("204", "400", "401", "409", "500"));

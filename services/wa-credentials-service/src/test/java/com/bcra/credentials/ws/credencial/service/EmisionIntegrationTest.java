@@ -147,6 +147,7 @@ class EmisionIntegrationTest {
         var activa = repository.findByNumeroWhatsappAndEstado(NUMERO, CredencialEstado.ACTIVA).orElseThrow();
 
         mockMvc.perform(post("/api/v1/credenciales/{numero}/revocacion", NUMERO)
+                .header("Authorization", "Bearer h3-test-token")
                 .contentType(MediaType.APPLICATION_JSON).content("{\"motivo\":\"SOLICITUD_CLIENTE\"}"))
                 .andExpect(status().isNoContent());
 
@@ -223,6 +224,7 @@ class EmisionIntegrationTest {
 
     private com.fasterxml.jackson.databind.JsonNode emitir() throws Exception {
         var response = mockMvc.perform(post("/api/v1/credenciales/emitir")
+                .header("Authorization", "Bearer h3-test-token")
                 .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.credencial").isString())
                 .andReturn().getResponse();
@@ -230,7 +232,8 @@ class EmisionIntegrationTest {
     }
 
     private void rechazar(String request, int statusCode, String code) throws Exception {
-        mockMvc.perform(post("/api/v1/credenciales/emitir").contentType(MediaType.APPLICATION_JSON).content(request))
+        mockMvc.perform(post("/api/v1/credenciales/emitir")
+                .header("Authorization", "Bearer h3-test-token").contentType(MediaType.APPLICATION_JSON).content(request))
                 .andExpect(status().is(statusCode)).andExpect(jsonPath("$.code").value(code))
                 .andExpect(jsonPath("$.details").isArray()).andExpect(jsonPath("$.timestamp").exists());
     }

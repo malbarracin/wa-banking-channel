@@ -52,6 +52,16 @@ spec:
                 secretKeyRef:
                   name: {{ include "wa-credentials-service.fullname" . }}-secret
                   key: CREDENTIAL_JWT_SECRET
+            - name: CREDENTIAL_H3_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wa-credentials-service.fullname" . }}-secret
+                  key: CREDENTIAL_H3_SERVICE_TOKEN
+            - name: CREDENTIAL_BANK_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wa-credentials-service.fullname" . }}-secret
+                  key: CREDENTIAL_BANK_SERVICE_TOKEN
           livenessProbe:
             httpGet:
               path: /actuator/health

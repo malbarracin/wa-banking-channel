@@ -13,6 +13,8 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       CREDENTIAL_JWT_SECRET: ${CREDENTIAL_JWT_SECRET}
+      CREDENTIAL_H3_SERVICE_TOKEN: ${CREDENTIAL_H3_SERVICE_TOKEN}
+      CREDENTIAL_BANK_SERVICE_TOKEN: ${CREDENTIAL_BANK_SERVICE_TOKEN}
       # H1 en host (perfil docker); ajustar si wa-users corre en la misma red Compose
       WA_USERS_SERVICE_BASE_URL: ${WA_USERS_SERVICE_BASE_URL:-http://host.docker.internal:8080}
     depends_on:

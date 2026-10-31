@@ -63,7 +63,8 @@ class RevocacionContratoIntegrationTest {
         var activa = guardar(CredencialEstado.ACTIVA);
         Instant inicio = Instant.now();
 
-        mockMvc.perform(post(PATH, NUMERO).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(PATH, NUMERO)
+                .header("Authorization", "Bearer h3-test-token").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"motivo\":\"" + motivoSolicitado + "\",\"solicitadoPor\":null}"))
                 .andExpect(status().isNoContent())
                 .andExpect(content().string(""));
@@ -93,7 +94,8 @@ class RevocacionContratoIntegrationTest {
         var expirada = guardar(CredencialEstado.EXPIRADA);
         var activa = guardar(CredencialEstado.ACTIVA);
 
-        mockMvc.perform(post(PATH, NUMERO).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(PATH, NUMERO)
+                .header("Authorization", "Bearer h3-test-token").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"motivo\":\"DESVINCULACION\",\"solicitadoPor\":\"CANAL\"}"))
                 .andExpect(status().isNoContent());
 
@@ -109,7 +111,8 @@ class RevocacionContratoIntegrationTest {
     @Test
     @DisplayName("Un número inexistente devuelve el contrato 404 y registra el rechazo")
     void rechazaNumeroInexistente() throws Exception {
-        mockMvc.perform(post(PATH, NUMERO).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(PATH, NUMERO)
+                .header("Authorization", "Bearer h3-test-token").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"motivo\":\"FRAUDE\",\"solicitadoPor\":\"SISTEMA\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"))
@@ -138,7 +141,8 @@ class RevocacionContratoIntegrationTest {
     void rechazaContenidoInvalido(String solicitud) throws Exception {
         var activa = guardar(CredencialEstado.ACTIVA);
 
-        mockMvc.perform(post(PATH, NUMERO).contentType(MediaType.APPLICATION_JSON).content(solicitud))
+        mockMvc.perform(post(PATH, NUMERO)
+                .header("Authorization", "Bearer h3-test-token").contentType(MediaType.APPLICATION_JSON).content(solicitud))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
                 .andExpect(jsonPath("$.details").isArray())

@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -134,8 +135,15 @@ public class CredencialController {
         @ApiResponse(responseCode = "500", description = "Error interno sin detalles sensibles",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                         examples = {@ExampleObject(name = "InternalError",
-                                ref = "#/components/examples/InternalError")}))
+                                ref = "#/components/examples/InternalError")})),
+        @ApiResponse(responseCode = "401", description = "Servicio no autenticado",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                    examples = @ExampleObject(name = "Unauthorized", ref = "#/components/examples/Unauthorized"))),
+        @ApiResponse(responseCode = "403", description = "Se requiere el actor banco",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                    examples = @ExampleObject(name = "Forbidden", ref = "#/components/examples/Forbidden")))
     })
+    @SecurityRequirement(name = "ServiceBearer")
     @PostMapping("/revocacion-masiva")
     public RevocacionMasivaResponse revocarMasivamente(@Valid @RequestBody RevocacionMasivaRequest request) {
         return revocacionMasivaService.revocar(request);
@@ -211,8 +219,15 @@ public class CredencialController {
         @ApiResponse(responseCode = "500", description = "Error interno sin detalles sensibles",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                         examples = {@ExampleObject(name = "InternalError",
-                                ref = "#/components/examples/InternalError")}))
+                                ref = "#/components/examples/InternalError")})),
+        @ApiResponse(responseCode = "401", description = "Servicio no autenticado",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                    examples = @ExampleObject(name = "Unauthorized", ref = "#/components/examples/Unauthorized"))),
+        @ApiResponse(responseCode = "403", description = "Se requiere el actor H3",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                    examples = @ExampleObject(name = "Forbidden", ref = "#/components/examples/Forbidden")))
     })
+    @SecurityRequirement(name = "ServiceBearer")
     @PostMapping("/{numero}/revocacion")
     public ResponseEntity<Void> revocar(
             @Parameter(description = "Número de WhatsApp E.164", example = "+5491111111111")
@@ -325,8 +340,12 @@ public class CredencialController {
         @ApiResponse(responseCode = "500", description = "Error interno sin detalles sensibles",
                 content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                         examples = {@ExampleObject(name = "InternalError",
-                                ref = "#/components/examples/InternalError")}))
+                                ref = "#/components/examples/InternalError")})),
+        @ApiResponse(responseCode = "401", description = "Servicio H3 no autenticado",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                    examples = @ExampleObject(name = "Unauthorized", ref = "#/components/examples/Unauthorized")))
     })
+    @SecurityRequirement(name = "ServiceBearer")
     @PostMapping("/emitir")
     public ResponseEntity<EmitirCredencialResponse> emitir(@Valid @RequestBody EmitirCredencialRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(credencialService.emitir(request));

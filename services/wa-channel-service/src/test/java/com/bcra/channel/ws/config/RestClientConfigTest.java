@@ -27,6 +27,28 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class RestClientConfigTest {
 
     @Test
+    @DisplayName("Envía a H2 el secreto de servicio de H3 al revocar")
+    void enviaAutenticacionDeServicio() throws IOException {
+        var recibido = new java.util.concurrent.atomic.AtomicReference<String>();
+        HttpServer servidor = HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        servidor.createContext("/", intercambio -> {
+            recibido.set(intercambio.getRequestHeaders().getFirst("Authorization"));
+            intercambio.sendResponseHeaders(204, -1);
+            intercambio.close();
+        });
+        servidor.start();
+        try {
+            var cliente = new RestClientConfig("h3-test-token").credencialesServiceClient(RestClient.builder(),
+                    "http://127.0.0.1:" + servidor.getAddress().getPort(), Duration.ofSeconds(1),
+                    Duration.ofSeconds(1));
+            assertThat(cliente.solicitarRevocacion("+5491123456789", "BLOQUEO")).isTrue();
+            assertThat(recibido.get()).isEqualTo("Bearer h3-test-token");
+        } finally {
+            servidor.stop(0);
+        }
+    }
+
+    @Test
     @DisplayName("Crea ambos adaptadores con URLs y duraciones configuradas")
     void cargaProperties() {
         new ApplicationContextRunner()
@@ -47,7 +69,7 @@ class RestClientConfigTest {
     @Test
     @DisplayName("Rechaza timeouts cero o negativos para evitar esperas ilimitadas")
     void rechazaTimeoutsInvalidos() {
-        var configuracion = new RestClientConfig();
+        var configuracion = new RestClientConfig("h3-test-token");
 
         assertThatThrownBy(() -> configuracion.usersServiceClient(RestClient.builder(), "http://h1.test",
                 Duration.ZERO, Duration.ofSeconds(1))).isInstanceOf(IllegalArgumentException.class);
@@ -80,7 +102,7 @@ class RestClientConfigTest {
         servidor.start();
         try {
             String baseUrl = "http://127.0.0.1:" + servidor.getAddress().getPort();
-            var configuracion = new RestClientConfig();
+            var configuracion = new RestClientConfig("h3-test-token");
             UsersServiceClient usuarios = configuracion.usersServiceClient(RestClient.builder(), baseUrl,
                     Duration.ofMillis(500), Duration.ofMillis(100));
             CredencialesServiceClient credenciales = configuracion.credencialesServiceClient(RestClient.builder(),

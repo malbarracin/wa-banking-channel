@@ -99,6 +99,7 @@ class EmisionAtomicaIntegrationTest {
     @DisplayName("La vigencia configurada se refleja en la persistencia y en la respuesta")
     void aplicaVigenciaConfigurada() throws Exception {
         String respuesta = mockMvc.perform(post("/api/v1/credenciales/emitir")
+                .header("Authorization", "Bearer h3-test-token")
                 .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         Instant expiracion = Instant.parse(objectMapper.readTree(respuesta).get("fechaExpiracion").asText());
@@ -110,7 +111,7 @@ class EmisionAtomicaIntegrationTest {
     }
 
     private String emitirYObtenerJti() throws Exception {
-        mockMvc.perform(post("/api/v1/credenciales/emitir")
+        mockMvc.perform(post("/api/v1/credenciales/emitir").header("Authorization", "Bearer h3-test-token")
                 .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().isCreated());
         return repository.findByNumeroWhatsappAndEstado(NUMERO, CredencialEstado.ACTIVA)
@@ -119,6 +120,7 @@ class EmisionAtomicaIntegrationTest {
 
     private void rechazar(int estado, String codigo) throws Exception {
         String respuesta = mockMvc.perform(post("/api/v1/credenciales/emitir")
+                .header("Authorization", "Bearer h3-test-token")
                 .contentType(MediaType.APPLICATION_JSON).content(REQUEST))
                 .andExpect(status().is(estado))
                 .andExpect(jsonPath("$.code").value(codigo))

@@ -40,6 +40,10 @@ def create_app(
     app.state.settings = config
     app.state.processor = turn_processor
 
+    @app.get("/health", include_in_schema=False)
+    async def health() -> dict[str, str]:
+        return {"status": "ok"}
+
     async def authorize(
         credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
     ) -> None:

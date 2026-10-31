@@ -1,0 +1,22 @@
+# Desde la raíz: docker compose -f ai/wa-conversation-agent/docker-compose.yml --env-file ai/.env up -d --build
+# Reutiliza infraestructura y conexiones de ai/docker-compose.yml; inicia H7/H8 desde ese stack si se necesitan.
+services:
+  wa-conversation-agent:
+    extends:
+      file: ../docker-compose.yml
+      service: wa-conversation-agent
+  agent-redis:
+    extends:
+      file: ../docker-compose.yml
+      service: agent-redis
+  agent-memory-server:
+    extends:
+      file: ../docker-compose.yml
+      service: agent-memory-server
+
+volumes:
+  agent-redis-data:
+
+networks:
+  default:
+    name: ai_default

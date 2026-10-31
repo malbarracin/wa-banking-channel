@@ -81,6 +81,36 @@ services:
       start_period: 10s
       retries: 3
 
+  wa-conversation-agent:
+    build:
+      context: ./wa-conversation-agent
+    image: wa-conversation-agent:local
+    ports:
+      - "${AGENT_HOST_PORT:-8103}:8103"
+    env_file:
+      - .env
+    environment:
+      AGENT_PORT: "8103"
+      AGENT_MODEL: ${AGENT_MODEL:-gemini-2.5-flash}
+      AGENT_MCP_URL: http://wa-mcp-layer:8101/mcp
+      AGENT_RAG_URL: http://wa-knowledge-rag:8102
+      AGENT_REDIS_URL: redis://agent-redis:6379
+      AGENT_MEMORY_SERVER_URL: http://agent-memory-server:8000
+      AGENT_MEMORY_KEY_SECRET: ${AGENT_MEMORY_KEY_SECRET:-}
+      AGENT_SERVICE_TOKEN: ${AGENT_SERVICE_TOKEN:-}
+      AGENT_SESSION_TTL_MINUTES: ${AGENT_SESSION_TTL_MINUTES:-30}
+    depends_on:
+      agent-redis:
+        condition: service_healthy
+      agent-memory-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8103/health', timeout=2)"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
   # --- H1–H6 (Java / Spring Boot) ---
 
   wa-users-service:

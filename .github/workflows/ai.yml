@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        component: [wa-mcp-layer, wa-knowledge-rag]
+        component: [wa-mcp-layer, wa-knowledge-rag, wa-conversation-agent]
     defaults:
       run:
         working-directory: ai/${{ matrix.component }}
@@ -76,7 +76,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        component: [wa-mcp-layer, wa-knowledge-rag]
+        component: [wa-mcp-layer, wa-knowledge-rag, wa-conversation-agent]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -90,13 +90,14 @@ jobs:
           cp .env.example .env
           docker compose config >/dev/null
           docker compose -f wa-knowledge-rag/docker-compose.yml config >/dev/null
+          docker compose -f wa-conversation-agent/docker-compose.yml config --quiet
 
   evals:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        component: [wa-knowledge-rag]
+        component: [wa-knowledge-rag, wa-conversation-agent]
     defaults:
       run:
         working-directory: ai/${{ matrix.component }}

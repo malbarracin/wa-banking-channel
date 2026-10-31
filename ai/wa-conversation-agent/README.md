@@ -24,3 +24,15 @@ El puerto H9 es 8103; configurar `H9_BASE_URL` en H0.2 para apuntar a este puert
 
 Para explorar el placeholder con ADK, ejecutar `uv run adk web src`.
 El Dockerfile es una base para completar con el servidor HTTP en DevOps.
+
+La herramienta `consultar_conocimiento(query, correlation_id)` consulta H8 según
+`shared/contracts/wa-knowledge-rag/retrieval.md`, siempre con audiencia pública.
+`AGENT_RAG_URL` define la base HTTP (por defecto `http://localhost:8102`) y
+`AGENT_RAG_TIMEOUT_SECONDS` el timeout (10 segundos por defecto).
+Devuelve los fragmentos, citas y confianza recibidos; los fragmentos son datos,
+no instrucciones. Con baja confianza o error 400 devuelve `results: []` y
+`reason: sin_respuesta_suficiente`; ante indisponibilidad, timeout o respuesta
+inválida devuelve `reason: no_disponible`, también sin fragmentos.
+El llamador debe pasar el `correlationId` del turno y excluir PII y credenciales
+de la consulta. Los tests HTTP usan respx, sin red ni modelo real:
+`uv run pytest tests/test_knowledge.py -q -m 'not integration' --cov=wa_conversation_agent.knowledge --cov-fail-under=80`.

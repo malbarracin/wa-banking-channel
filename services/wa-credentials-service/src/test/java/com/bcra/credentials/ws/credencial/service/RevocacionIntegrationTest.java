@@ -58,7 +58,8 @@ class RevocacionIntegrationTest {
     void revocaPorBanco() throws Exception {
         var sesion = crear(CredencialEstado.ACTIVA);
 
-        mockMvc.perform(post(PATH, NUMERO).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(PATH, NUMERO)
+                .header("Authorization", "Bearer h3-test-token").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"motivo\":\"POLITICA_BANCO\",\"solicitadoPor\":\"BANCO\"}"))
                 .andExpect(status().isNoContent()).andExpect(content().string(""));
 
@@ -81,14 +82,16 @@ class RevocacionIntegrationTest {
     void aceptaH3YRechazaRepeticion() throws Exception {
         var sesion = crear(CredencialEstado.ACTIVA);
         String solicitud = "{\"motivo\":\"SOLICITUD_CLIENTE\"}";
-        mockMvc.perform(post(PATH, NUMERO).contentType(MediaType.APPLICATION_JSON).content(solicitud))
+        mockMvc.perform(post(PATH, NUMERO)
+                .header("Authorization", "Bearer h3-test-token").contentType(MediaType.APPLICATION_JSON).content(solicitud))
                 .andExpect(status().isNoContent());
         assertThat(repository.findById(sesion.getId())).hasValueSatisfying(revocada -> {
             assertThat(revocada.getRevocadaPor()).isEqualTo(RevocadaPor.CANAL);
             assertThat(revocada.getMotivoRevocacion()).isEqualTo(MotivoRevocacion.BLOQUEO);
         });
 
-        mockMvc.perform(post(PATH, NUMERO).contentType(MediaType.APPLICATION_JSON).content(solicitud))
+        mockMvc.perform(post(PATH, NUMERO)
+                .header("Authorization", "Bearer h3-test-token").contentType(MediaType.APPLICATION_JSON).content(solicitud))
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"))
                 .andExpect(jsonPath("$.details").isArray()).andExpect(jsonPath("$.timestamp").exists());
         assertThat(auditRepository.findAll()).hasSize(2).anySatisfy(evento -> {
@@ -105,7 +108,8 @@ class RevocacionIntegrationTest {
                 .doAnswer(invocacion -> auditRepository.saveAndFlush(invocacion.getArgument(0)))
                 .when(auditRepository).save(any());
 
-        mockMvc.perform(post(PATH, NUMERO).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(PATH, NUMERO)
+                .header("Authorization", "Bearer h3-test-token").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"motivo\":\"FRAUDE\",\"solicitadoPor\":\"SISTEMA\"}"))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CONFLICT"));
 
@@ -123,7 +127,8 @@ class RevocacionIntegrationTest {
     @DisplayName("Una credencial expirada no se revoca y genera auditoría de rechazo")
     void rechazaExpirada() throws Exception {
         var sesion = crear(CredencialEstado.EXPIRADA);
-        mockMvc.perform(post(PATH, NUMERO).contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(PATH, NUMERO)
+                .header("Authorization", "Bearer h3-test-token").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"motivo\":\"DESVINCULACION\",\"solicitadoPor\":\"CANAL\"}"))
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
         assertThat(repository.findById(sesion.getId())).hasValueSatisfying(expirada -> {
@@ -141,9 +146,11 @@ class RevocacionIntegrationTest {
     @DisplayName("Valida motivo y número y no modifica credenciales ante solicitudes inválidas")
     void rechazaSolicitudInvalida() throws Exception {
         crear(CredencialEstado.ACTIVA);
-        mockMvc.perform(post(PATH, NUMERO).contentType(MediaType.APPLICATION_JSON).content("{}"))
+        mockMvc.perform(post(PATH, NUMERO)
+                .header("Authorization", "Bearer h3-test-token").contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
-        mockMvc.perform(post(PATH, "invalido").contentType(MediaType.APPLICATION_JSON)
+        mockMvc.perform(post(PATH, "invalido")
+                .header("Authorization", "Bearer h3-test-token").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"motivo\":\"FRAUDE\",\"solicitadoPor\":\"SISTEMA\"}"))
                 .andExpect(status().isBadRequest());
         assertThat(repository.findByNumeroWhatsappAndEstado(NUMERO, CredencialEstado.ACTIVA)).isPresent();

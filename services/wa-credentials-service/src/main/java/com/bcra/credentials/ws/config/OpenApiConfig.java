@@ -8,6 +8,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.servers.Server;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,6 +22,9 @@ public class OpenApiConfig {
     public OpenAPI credentialsOpenApi(@Value("${info.version}") String version,
             @Value("${server.port}") int port) {
         Components components = new Components();
+        components.addSecuritySchemes("ServiceBearer", new SecurityScheme()
+                .type(SecurityScheme.Type.HTTP).scheme("bearer")
+                .description("Secreto de H3 para emitir/revocar; secreto del banco para revocación masiva"));
         components.addExamples("ValidationError", error("VALIDATION_ERROR", "La solicitud tiene datos inválidos",
                 List.of(Map.of("field", "documentoTipo", "message", "no debe estar vacío"))));
         components.addExamples("ValidationMotivo", error("VALIDATION_ERROR", "La solicitud tiene datos inválidos",

@@ -27,6 +27,7 @@ SAFE_MESSAGES = {
     "Hola, ¿en qué te puedo ayudar?",
     "¿Podés aclarar tu consulta?",
     "¿Querés que te ayude una persona de nuestro equipo?",
+    "Para ayudarte mejor, te comunico con una persona de nuestro equipo.",
     "Por seguridad, necesitamos verificar tu identidad de nuevo para continuar.",
     "Por seguridad, volvé a verificar tu identidad para continuar",
     UNSUPPORTED,

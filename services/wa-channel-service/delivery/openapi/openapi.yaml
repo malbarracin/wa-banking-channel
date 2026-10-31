@@ -141,8 +141,9 @@ paths:
       summary: Aceptar términos del canal
       description: "Primer paso obligatorio: registra la aceptación explícita sin\
         \ pedir datos de identificación y deja el vínculo en PENDIENTE_VERIFICACION.\
-        \ Cada llamada crea un nuevo registro pendiente (no es idempotente); la verificació\
-        n requiere el más reciente."
+        \ Es idempotente por número: si ya existe un pendiente lo reutiliza (mismo\
+        \ id); no crea duplicados. Un índice único parcial refuerza la unicidad ante\
+        \ carreras concurrentes."
       operationId: aceptarTerminos
       requestBody:
         content:
@@ -154,7 +155,7 @@ paths:
         required: true
       responses:
         "201":
-          description: Términos aceptados; vínculo pendiente
+          description: Términos aceptados; vínculo pendiente creado o reutilizado
           content:
             application/json:
               schema:
@@ -179,6 +180,13 @@ paths:
                   $ref: "#/components/examples/ValidationError"
                 BadRequest:
                   $ref: "#/components/examples/BadRequest"
+        "409":
+          description: Número ya ACTIVO o carrera al crear el pendiente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
         "500":
           description: Error interno
           content:

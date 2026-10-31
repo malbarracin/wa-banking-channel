@@ -12,6 +12,7 @@ post {
 
 headers {
   Content-Type: application/json
+  Authorization: Bearer {{h3ServiceToken}}
 }
 
 body:json {
@@ -30,6 +31,6 @@ assert {
 }
 
 docs {
-  Número sin '+' inicial: no cumple E.164.
+  Solo H3 (Bearer h3ServiceToken). Número sin '+' inicial: no cumple E.164.
   Respuestas: 400 VALIDATION_ERROR.
 }

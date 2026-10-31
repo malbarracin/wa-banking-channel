@@ -1,0 +1,37 @@
+meta {
+  name: Obtener renovación preparada
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/renovacion/obtener
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "credencial": "{{jwt}}"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.credencial: isString
+  res.body.fechaExpiracion: isString
+}
+
+script:post-response {
+  bru.setVar("jwtNuevo", res.body.credencial);
+}
+
+docs {
+  H3 presenta el JWT vigente. Requiere una entrega preparada por el job (ver delivery/qa-manual.md).
+  El JWT anterior sigue activo hasta confirmar. Repetir la llamada devuelve el mismo reemplazo.
+  Respuestas: 200 con JWT sustituto (Cache-Control: no-store), 400, 401, 404 si aún no hay entrega, 409, 500.
+}

@@ -12,6 +12,10 @@ espera en cada caso.
    crear un cliente. Sin H1, la carpeta **0** falla y emisión/validación responden **503**/**401**.
 4. `CREDENTIAL_JWT_SECRET` configurado (≥ 32 bytes UTF-8). Sin él, H2 no arranca.
 5. `WA_USERS_SERVICE_BASE_URL` apuntando a H1 (default `http://localhost:8080`).
+6. `CREDENTIAL_H3_SERVICE_TOKEN` y `CREDENTIAL_BANK_SERVICE_TOKEN` con valores distintos. Emitir,
+   revocar individualmente y renovar exigen el secreto de H3; la revocación masiva, el del banco.
+   Sin ellos esas operaciones responden **401**; con el secreto del actor equivocado, **403**.
+   Las colecciones leen los secretos de las variables `h3ServiceToken` y `bankServiceToken`.
 
 La carpeta **0. Preparación H1** genera un `docNumber` único por corrida y crea el cliente `ACTIVE` en
 H1. Es la forma recomendada de repetir la suite sin limpiar bases. Si se omite, hay que garantizar a
@@ -21,13 +25,17 @@ mano que el documento de `docNumber` exista y esté `ACTIVE` en H1.
 
 1. Importar `delivery/postman/wa-credentials-service.postman_collection.json`.
 2. Importar el entorno `delivery/postman/wa-credentials-service.postman_environment.json`
-   (`baseUrl` H2 `http://localhost:8082`, `h1BaseUrl` H1 `http://localhost:8080`).
-3. Seleccionar el entorno **wa-credentials-service - local**.
+   (`baseUrl` H2 `http://localhost:8082`, `h1BaseUrl` H1 `http://localhost:8080`,
+   `h3ServiceToken`, `bankServiceToken`).
+3. Seleccionar el entorno **wa-credentials-service - local** y ajustar los dos secretos a los valores
+   configurados en H2.
 4. Collection Runner → ejecutar en orden:
-   **0. Preparación H1** → **1. Flujo feliz** → **2. Errores** → **3. Salud**.
+   **0. Preparación H1** → **1. Flujo feliz** → **2. Errores** → **3. Salud** →
+   **4. Renovación** (opcional, requiere una entrega preparada; ver más abajo).
 
 Cada pedido tiene tests de status y de campos clave, más una respuesta de ejemplo guardada.
 La carpeta 1 guarda `jwt` y `fechaExpiracion` en variables de colección y las reutiliza.
+La carpeta 4 se ejecuta después de preparar la ventana de renovación.
 
 ### Newman (opcional)
 
@@ -43,8 +51,9 @@ Si `newman` no está instalado: `npm i -g newman`.
 
 1. Open Collection → carpeta `delivery/bruno/wa-credentials-service/`.
 2. Entorno **local** (`environments/local.bru`): `baseUrl`, `h1BaseUrl`, `docTipo`, `docNumber`,
-   `numeroWhatsapp`.
-3. Ejecutar en orden `0-preparacion-h1`, `1-flujo-feliz`, `2-errores`, `3-salud`.
+   `numeroWhatsapp`, `h3ServiceToken` y `bankServiceToken`.
+3. Ejecutar en orden `0-preparacion-h1`, `1-flujo-feliz`, `2-errores`, `3-salud` y, si se preparó la
+   entrega, `4-renovacion`.
 
 Misma secuencia, datos y aserciones que Postman. También se puede importar el JSON de Postman en Bruno.
 
@@ -73,6 +82,9 @@ Misma secuencia, datos y aserciones que Postman. También se puede importar el J
 | Revocar sin credencial activa | 404 `NOT_FOUND` |
 | Revocar sin `motivo` | 400 `VALIDATION_ERROR` |
 | Revocación masiva `POR_CLIENTE` sin `segmento` | 400 `VALIDATION_ERROR` |
+| Emitir, revocar o renovar sin `Authorization` | 401 `UNAUTHORIZED` |
+| Revocación masiva con el secreto de H3 | 403 `FORBIDDEN` |
+| Validar con body `{}` o `credencial` vacía | 400 `VALIDATION_ERROR` |
 | Historial de un número sin registros | 404 `NOT_FOUND` |
 
 Casos que dependen del entorno:
@@ -82,11 +94,12 @@ Casos que dependen del entorno:
 | H1 no disponible | Detener H1 y emitir o validar | Emitir **503** `SERVICE_UNAVAILABLE`; validar **401** `UNAUTHORIZED` |
 | Cliente suspendido | Cambiar el cliente a `SUSPENDED` en H1 (`PATCH .../status`) y emitir/validar | Emitir **403** `FORBIDDEN`; validar **401** `UNAUTHORIZED` |
 | Revocación concurrente / duplicada | Revocar dos veces el mismo número | La primera **204**; la segunda **404** `NOT_FOUND` |
-| Renovación automática | Ver sección siguiente | La credencial anterior deja de validar y aparece `RENOVACION`/`EXITOSO` en el historial |
+| Renovación en dos fases | Ver sección siguiente | El anterior sigue validando hasta `confirmar`; luego responde 401 y el historial muestra `RENOVACION`/`EXITOSO` |
 
 ## Renovación automática (opcional, local)
 
-La renovación no tiene endpoint. Para observarla sin esperar 24 h, levantar H2 con:
+El job no entrega el JWT: solo prepara la entrega durable. Para observarla sin esperar 24 h, levantar
+H2 con:
 
 ```powershell
 $env:CREDENTIAL_VIGENCIA_MINUTOS="2"
@@ -95,9 +108,18 @@ $env:CREDENTIAL_RENOVACION_INTERVALO_MS="10000"
 ./mvnw spring-boot:run
 ```
 
-Emitir una credencial, esperar al menos una ejecución del job (10 s) y validar: el token emitido antes
-de la rotación debe responder **401** y el historial debe mostrar `RENOVACION` `EXITOSO`. La ventana
-debe ser positiva y menor que la vigencia. En el perfil `test` la renovación está deshabilitada.
+1. Emitir una credencial (carpeta 1) y esperar al menos una ejecución del job (10 s).
+2. `POST /api/v1/credenciales/renovacion/obtener` con el JWT actual → **200** con el sustituto.
+   El JWT anterior **sigue validando** en este punto.
+3. `POST /api/v1/credenciales/renovacion/confirmar` con el JWT nuevo → **204**. Repetir la llamada
+   devuelve **204** sin efectos adicionales.
+4. Validar el JWT nuevo → **200**; validar el anterior → **401**. El historial muestra
+   `RENOVACION` `EXITOSO`.
+
+Antes de que la entrega esté preparada, `obtener` responde **404** `NOT_FOUND` (conservar el actual y
+reintentar). La ventana debe ser positiva y menor que la vigencia. En el perfil `test` la renovación
+está deshabilitada. Las carpetas **4** de Postman y Bruno cubren los pasos 2 a 4 cuando la entrega ya
+está preparada.
 
 ## Tests automatizados del repo
 
@@ -116,7 +138,9 @@ de líneas. En un sandbox con `~/.m2` restringido:
 
 ## Qué no cubre la suite manual
 
-- Entrega del JWT renovado a H3: el job es interno (outbox fuera de alcance).
+- Pérdida de respuesta o reinicios de H3 durante la entrega: cubierto por `RenovacionIntegrationTest`.
+- Autenticación real entre servicios (mTLS, rotación de secretos): aquí solo se verifica el Bearer.
+- Concurrencia de entregas de renovación: cubierta por el bloqueo pesimista y los tests.
 - Concurrencia real de emisiones simultáneas: cubierta por el índice parcial de PostgreSQL y los tests.
 - Criterios reales de riesgo/fraude: dependen de la política del banco (hoy `riesgo` se persiste como
   bandera y bloquea la renovación).

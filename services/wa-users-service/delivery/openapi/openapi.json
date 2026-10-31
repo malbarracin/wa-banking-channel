@@ -49,6 +49,16 @@
         "responses" : {
           "201" : {
             "description" : "Usuario creado",
+            "headers" : {
+              "Location" : {
+                "description" : "URI canónica del usuario creado",
+                "style" : "simple",
+                "schema" : {
+                  "type" : "string",
+                  "example" : "/api/v1/users/DNI/30111222"
+                }
+              }
+            },
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -147,6 +157,17 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "Forbidden" : {
+                    "description" : "Forbidden",
+                    "value" : {
+                      "code" : "FORBIDDEN",
+                      "message" : "Acceso no autorizado a la consulta completa",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-26T12:00:00Z"
+                    }
+                  }
                 }
               }
             }

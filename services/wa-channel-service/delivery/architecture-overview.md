@@ -19,7 +19,7 @@ Identidad Maven: `com.bcra:wa-channel-service` · paquete base `com.bcra.channel
 com.bcra.channel.ws/
 ├── ChannelApplication.java
 ├── vinculo/
-│   ├── CredencialCanal.java        # contrato del header de credencial válida
+│   ├── CredencialCanal.java        # header del token de sesión emitido por H2
 │   ├── CredencialHeaders.java      # headers de documento propagados por H2/H0.2
 │   ├── controller/                 # VinculoController (/api/v1/vinculos)
 │   ├── service/                    # VinculoService, VerificacionService,
@@ -58,7 +58,7 @@ concurrentes no activen el mismo número.
 
 | Método | Ruta | Responsabilidad |
 |--------|------|-----------------|
-| POST | `/api/v1/vinculos/terminos` | Aceptación explícita; crea un pendiente nuevo |
+| POST | `/api/v1/vinculos/terminos` | Aceptación explícita; crea o reutiliza el pendiente del número |
 | POST | `/api/v1/vinculos/{numero}/verificaciones` | Identidad, límite de intentos y activación/re-vinculación |
 | GET | `/api/v1/vinculos/{numero}/estado` | Anti-duplicados sin datos del cliente; nunca 404 |
 | GET | `/api/v1/vinculos/{numero}/perfil` | Perfil de H1 + preferencias locales; exige ACTIVO |
@@ -78,7 +78,9 @@ No hay versionado por paquetes: todos los endpoints están bajo `/api/v1`.
 | `BLOQUEADO` | Pausado por cliente, banco o intentos | `DESVINCULADO` |
 | `DESVINCULADO` | Canal dado de baja | Re-vinculación con un proceso nuevo |
 
-- Cada `POST /terminos` crea un registro pendiente nuevo (no es idempotente).
+- `POST /terminos` es idempotente por número: reutiliza el vínculo `PENDIENTE_VERIFICACION` existente en
+  lugar de crear otro. Un índice único parcial (`uq_vinculo_numero_pendiente`) impide duplicados ante
+  carreras concurrentes y el servicio traduce el conflicto a **409**.
 - Un fallo de verificación deja el vínculo en `PENDIENTE_VERIFICACION` y descuenta un intento.
 - Al agotar los fallos de la ventana, la siguiente solicitud responde **423** `LOCKED` y deriva a
   soporte; el estado no cambia y se puede reintentar cuando vence la ventana.
@@ -136,7 +138,9 @@ identidad ni secretos. El endpoint de historial omite esos motivos.
 ## Decisiones relevantes
 
 - Número en formato E.164 con prefijo `+`; el path lo transporta tal cual.
-- El contexto de credencial se recibe por headers y H3 solo comprueba su presencia/valor `true`, no el token.
+- El contexto de credencial se recibe en `X-Canal-Credencial-Token`; H3 delega la validación en H2
+  (`POST /api/v1/credenciales/validar`) y exige token vigente, expiración futura y número coincidente.
+  El antiguo header booleano `X-Canal-Credencial-Valida` ya no autoriza operaciones.
 - La verificación es un puerto (`VerificadorIdentidad`); el bean por defecto rechaza toda prueba hasta
   que Compliance defina el método. Los datos viajan en un mapa y no se persisten.
 - Los límites de intentos y la ventana son configurables por entorno.

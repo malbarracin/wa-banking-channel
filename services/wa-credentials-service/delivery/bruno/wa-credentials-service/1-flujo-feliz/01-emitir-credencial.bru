@@ -12,6 +12,7 @@ post {
 
 headers {
   Content-Type: application/json
+  Authorization: Bearer {{h3ServiceToken}}
 }
 
 body:json {
@@ -36,7 +37,8 @@ script:post-response {
 }
 
 docs {
+  Solo H3: Authorization Bearer con h3ServiceToken (mismo valor que CREDENTIAL_H3_SERVICE_TOKEN).
   Requiere confirmaciones verdaderas y cliente ACTIVE en H1.
   Invalida la credencial ACTIVA anterior del número (motivo REEMPLAZO).
-  Respuestas: 201 emitida, 400 datos inválidos, 403 no autorizada, 404 cliente inexistente, 409 conflicto, 503 H1 caído.
+  Respuestas: 201 emitida, 400 datos inválidos, 401 sin autenticar, 403 no autorizada, 404 cliente inexistente, 409 conflicto, 503 H1 caído.
 }

@@ -122,6 +122,8 @@ Variables de entorno (perfil default y `docker`):
 | `DB_NAME` | `wa_credentials` | Base usada por Compose |
 | `DB_HOST_PORT` | `5434` | Puerto host de PostgreSQL en Compose |
 | `CREDENTIAL_JWT_SECRET` | — | Obligatorio, ≥ 32 bytes UTF-8, sin default |
+| `CREDENTIAL_H3_SERVICE_TOKEN` | — | Secreto servicio a servicio de H3 (emitir, revocar, renovación); sin valor se deniega |
+| `CREDENTIAL_BANK_SERVICE_TOKEN` | — | Secreto del banco, exclusivo para la revocación masiva; distinto del de H3 |
 | `CREDENTIAL_VIGENCIA_MINUTOS` | `1440` | Vigencia del JWT en minutos (positiva) |
 | `CREDENTIAL_RENOVACION_VENTANA_MINUTOS` | `30` | Ventana de renovación; positiva y menor que la vigencia |
 | `CREDENTIAL_RENOVACION_HABILITADA` | `true` | Habilita el job de renovación |
@@ -144,7 +146,8 @@ Perfiles:
 `V001__credencial.sql` impone un `jti` único y una sola credencial `ACTIVA` por número con un índice
 único parcial de PostgreSQL; por eso el esquema de `test` lo genera JPA y Flyway se desactiva (H2 no
 soporta el índice parcial). `V002__auditoria_validacion_sin_identidad.sql` permite auditar rechazos sin
-identidad. Actuator expone solo `health` e `info`.
+identidad. `V003__entrega_renovacion.sql` crea la tabla de entregas durables de renovación (sin JWT:
+solo `jti`, emisión, expiración y la credencial anterior). Actuator expone solo `health` e `info`.
 
 El JWT contiene `sub` (número E.164), `doc` (`tipo:numero`), `iat`, `exp` y `jti`, firmado HS256 con
 `CREDENTIAL_JWT_SECRET`. Como el contrato de H3 no envía el UUID del vínculo, `vinculoId` conserva una
@@ -159,14 +162,19 @@ Base: `http://localhost:8082`. Swagger UI: `/swagger-ui.html` · OpenAPI: `/v3/a
 
 | Método | Ruta | Éxito | Errores principales |
 |--------|------|-------|---------------------|
-| POST | `/api/v1/credenciales/emitir` | 201 `credencial`, `fechaExpiracion` | 400, 403, 404, 409, 503 |
+| POST | `/api/v1/credenciales/emitir` | 201 `credencial`, `fechaExpiracion` | 400, 401, 403, 404, 409, 503 |
 | POST | `/api/v1/credenciales/validar` | 200 `vigente`, identidad y vencimiento | 400, 401 |
-| POST | `/api/v1/credenciales/{numero}/revocacion` | 204 sin cuerpo | 400, 404, 500 |
-| POST | `/api/v1/credenciales/revocacion-masiva` | 200 `revocadas` | 400, 500 |
+| POST | `/api/v1/credenciales/{numero}/revocacion` | 204 sin cuerpo | 400, 401, 403, 404, 500 |
+| POST | `/api/v1/credenciales/revocacion-masiva` | 200 `revocadas` | 400, 401, 403, 500 |
+| POST | `/api/v1/credenciales/renovacion/obtener` | 200 JWT sustituto (`Cache-Control: no-store`) | 400, 401, 404, 409, 500 |
+| POST | `/api/v1/credenciales/renovacion/confirmar` | 204 sin cuerpo | 400, 401, 409, 500 |
 | GET | `/api/v1/credenciales/{numero}/historial` | 200 `estadoActual`, `eventos` | 400, 404 |
 | GET | `/actuator/health` | 200 `UP` | — |
 
-La validación recibe `{"credencial":"<JWT>"}`. El número se expresa en E.164 (`+[1-9][0-9]{1,14}`).
+La validación, la entrega de renovación y la confirmación reciben `{"credencial":"<JWT>"}`.
+El número se expresa en E.164 (`+[1-9][0-9]{1,14}`). Emitir, revocar individualmente y revocar
+masivamente exigen `Authorization: Bearer <secreto-de-servicio>` (ver la sección **Autenticación de
+operaciones de credenciales** más abajo).
 Las respuestas de emisión/validación solo van a servicios internos; no se muestran al cliente final.
 
 ## Errores

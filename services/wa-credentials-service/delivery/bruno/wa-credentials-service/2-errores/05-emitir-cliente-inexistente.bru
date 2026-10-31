@@ -12,6 +12,7 @@ post {
 
 headers {
   Content-Type: application/json
+  Authorization: Bearer {{h3ServiceToken}}
 }
 
 body:json {
@@ -30,6 +31,6 @@ assert {
 }
 
 docs {
-  Requiere H1 disponible: el documento 00000000 no existe. Si H1 está caído, responde 503.
+  Solo H3 (Bearer h3ServiceToken). Requiere H1 disponible: el documento 00000000 no existe. Si H1 está caído, responde 503.
   Respuestas: 404 NOT_FOUND, 503 SERVICE_UNAVAILABLE.
 }

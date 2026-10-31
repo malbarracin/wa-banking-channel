@@ -12,6 +12,7 @@ post {
 
 headers {
   Content-Type: application/json
+  Authorization: Bearer {{h3ServiceToken}}
 }
 
 body:json {
@@ -27,6 +28,6 @@ assert {
 }
 
 docs {
-  Tras la revocación masiva no queda ninguna credencial activa para el número.
+  Solo H3 (Bearer h3ServiceToken). Tras la revocación masiva no queda ninguna credencial activa para el número.
   Respuestas: 404 NOT_FOUND.
 }

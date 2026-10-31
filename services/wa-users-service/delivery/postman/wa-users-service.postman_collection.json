@@ -31,6 +31,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Location del recurso', () => pm.expect(pm.response.headers.get('Location')).to.include('/api/v1/users/'));",
                   "const body = pm.response.json();",
                   "pm.test('estado ACTIVE', () => pm.expect(body.estado).to.eql('ACTIVE'));",
                   "pm.test('devuelve id', () => pm.expect(body.id).to.be.a('string'));"
@@ -71,23 +72,26 @@
               },
               "status": "Created",
               "code": 201,
-              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "header": [
+                { "key": "Location", "value": "/api/v1/users/DNI/30111222" },
+                { "key": "Content-Type", "value": "application/json" }
+              ],
               "_postman_previewlanguage": "json",
               "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\",\n  \"telefono\": \"5551234\",\n  \"nombreTratamiento\": null,\n  \"preferencias\": null,\n  \"estado\": \"ACTIVE\"\n}"
             }
           ]
         },
         {
-          "name": "Consultar usuario",
+          "name": "Consultar usuario (requiere rol USERS_FULL_READ)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "const body = pm.response.json();",
-                  "pm.test('mismo documento', () => pm.expect(body.documento.numero).to.eql(pm.collectionVariables.get('docNumber')));"
+                  "pm.test('403 sin principal o rol', () => pm.response.to.have.status(403));",
+                  "pm.test('code FORBIDDEN', () => pm.expect(pm.response.json().code).to.eql('FORBIDDEN'));",
+                  "pm.test('sin PII en el error', () => pm.expect(pm.response.json().documento).to.be.undefined);"
                 ]
               }
             }
@@ -100,11 +104,11 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "users", "{{docTipo}}", "{{docNumber}}"]
             },
-            "description": "UserResponse completo (provisional hasta Compliance)."
+            "description": "Consulta completa provisional. Exige principal autenticado y rol de servidor USERS_FULL_READ; el servicio no configura autenticación, por lo que con la configuración del repo responde 403. Con rol devuelve el UserResponse completo y 404 si no existe."
           },
           "response": [
             {
-              "name": "200 - encontrado",
+              "name": "403 - sin autorización",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
@@ -114,11 +118,11 @@
                   "path": ["api", "v1", "users", "DNI", "30111222"]
                 }
               },
-              "status": "OK",
-              "code": 200,
+              "status": "Forbidden",
+              "code": 403,
               "header": [{ "key": "Content-Type", "value": "application/json" }],
               "_postman_previewlanguage": "json",
-              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\",\n  \"telefono\": \"5551234\",\n  \"nombreTratamiento\": null,\n  \"preferencias\": null,\n  \"estado\": \"ACTIVE\"\n}"
+              "body": "{\n  \"code\": \"FORBIDDEN\",\n  \"message\": \"Acceso no autorizado a la consulta completa\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
             }
           ]
         },
@@ -384,15 +388,16 @@
           ]
         },
         {
-          "name": "Consulta inexistente — 404 NOT_FOUND",
+          "name": "Consulta inexistente sin rol — 403 FORBIDDEN",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('404', () => pm.response.to.have.status(404));",
-                  "pm.test('NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('NOT_FOUND'));"
+                  "pm.test('403', () => pm.response.to.have.status(403));",
+                  "pm.test('FORBIDDEN', () => pm.expect(pm.response.json().code).to.eql('FORBIDDEN'));",
+                  "pm.test('sin PII', () => pm.expect(pm.response.json().documento).to.be.undefined);"
                 ]
               }
             }
@@ -405,11 +410,11 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "users", "DNI", "00000000"]
             },
-            "description": "Sin PII en el cuerpo de error."
+            "description": "Sin principal o rol la consulta responde 403 aunque el documento no exista, sin PII. Con rol USERS_FULL_READ el caso inexistente responde 404 NOT_FOUND (cubierto por tests de integración)."
           },
           "response": [
             {
-              "name": "404 - no encontrado",
+              "name": "403 - sin autorización",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
@@ -419,11 +424,11 @@
                   "path": ["api", "v1", "users", "DNI", "00000000"]
                 }
               },
-              "status": "Not Found",
-              "code": 404,
+              "status": "Forbidden",
+              "code": 403,
               "header": [{ "key": "Content-Type", "value": "application/json" }],
               "_postman_previewlanguage": "json",
-              "body": "{\n  \"code\": \"NOT_FOUND\",\n  \"message\": \"Usuario no encontrado\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+              "body": "{\n  \"code\": \"FORBIDDEN\",\n  \"message\": \"Acceso no autorizado a la consulta completa\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
             }
           ]
         },

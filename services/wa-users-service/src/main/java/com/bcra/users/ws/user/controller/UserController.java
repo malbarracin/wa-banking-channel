@@ -25,6 +25,7 @@ import com.bcra.users.ws.user.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -124,6 +125,9 @@ public class UserController {
                     email o teléfono. No exige formato cerrado de contacto ni catálogo de documentos.""")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Usuario creado",
+                    headers = @Header(name = "Location",
+                            description = "URI canónica del usuario creado",
+                            schema = @Schema(type = "string", example = "/api/v1/users/DNI/30111222")),
                     content = @Content(schema = @Schema(implementation = UserResponse.class),
                             examples = @ExampleObject(value = USER_RESPONSE_EXAMPLE))),
             @ApiResponse(responseCode = "400", description = "Datos inválidos o incompletos",
@@ -239,7 +243,15 @@ public class UserController {
                     USERS_FULL_READ; sin ellos devuelve 403. Incluye usuarios en cualquier estado.""")
     @ApiResponses({
             @ApiResponse(responseCode = "403", description = "Sin principal o rol USERS_FULL_READ",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(name = "Forbidden", value = """
+                                    {
+                                      "code": "FORBIDDEN",
+                                      "message": "Acceso no autorizado a la consulta completa",
+                                      "details": [],
+                                      "timestamp": "2026-10-26T12:00:00Z"
+                                    }
+                                    """))),
             @ApiResponse(responseCode = "200", description = "Usuario encontrado",
                     content = @Content(schema = @Schema(implementation = UserResponse.class),
                             examples = @ExampleObject(value = USER_RESPONSE_EXAMPLE))),

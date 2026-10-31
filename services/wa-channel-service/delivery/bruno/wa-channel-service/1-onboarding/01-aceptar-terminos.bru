@@ -25,6 +25,7 @@ assert {
 }
 
 docs {
-  Primer paso obligatorio. Crea un vínculo PENDIENTE_VERIFICACION nuevo; no es idempotente.
-  Respuestas: 201 creado, 400 número inválido, 500 error interno.
+  Primer paso obligatorio. Deja el vínculo en PENDIENTE_VERIFICACION. Es idempotente por número:
+  si ya hay un pendiente lo reutiliza (mismo id) en lugar de crear un duplicado.
+  Respuestas: 201 creado o reutilizado, 400 número inválido, 409 número ya ACTIVO o carrera, 500 error interno.
 }

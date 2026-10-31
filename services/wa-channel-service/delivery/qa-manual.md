@@ -9,9 +9,13 @@ alcanzables con la configuración por defecto y cuáles requieren un vínculo `A
    [`../../../delivery/devops-local.md`](../../../delivery/devops-local.md).
 2. Health OK: `curl http://localhost:8081/actuator/health` → `{"status":"UP"}`.
 3. **H1 `wa-users-service`** en `http://localhost:8080` con la posibilidad de crear un cliente.
-   Sin H1, la verificación y el perfil responden **500**.
-4. H2 `credenciales-service` es opcional: si no está, bloqueo/desvinculación siguen funcionando y la
-   revocación se audita como rechazada.
+   Sin H1, la verificación y la consulta de perfil responden **500**.
+4. **H2 `wa-credentials-service`** en `http://localhost:8082` (`CREDENCIALES_SERVICE_BASE_URL`). El
+   perfil, el bloqueo con `SOLICITUD_CLIENTE` y la desvinculación validan el token contra H2: si no puede
+   validarlo, responden **401**. Sin H2, el bloqueo/desvinculación local por política y el resto de
+   endpoints siguen funcionando; la revocación a H2 se audita como rechazada.
+5. H2 y H3 comparten `CREDENTIAL_H3_SERVICE_TOKEN` para las llamadas de H3 a H2 (validación, entrega de
+   renovación y revocación). Sin ese secreto H2 responde 401 a H3.
 
 ## Postman
 
@@ -41,8 +45,9 @@ Si `newman` no está instalado: `npm i -g newman`.
 ## Bruno
 
 1. Open Collection → carpeta `delivery/bruno/wa-channel-service/`.
-2. Entorno **local** (`environments/local.bru`): `baseUrl`, `h1BaseUrl`, `docTipo`, `docNumber` y
-   `numeroWhatsapp`.
+2. Entorno **local** (`environments/local.bru`): `baseUrl`, `h1BaseUrl`, `docTipo`, `docNumber`,
+   `numeroWhatsapp` y `credencialSesion` (token de H2 del número; los pedidos de perfil, bloqueo y
+   desvinculación lo envían en `X-Canal-Credencial-Token`).
 3. Ejecutar en orden `0-preparacion-h1`, `1-onboarding`, `2-consultas-errores`, `3-salud`.
 
 Misma secuencia, datos y aserciones que Postman. También se puede importar el JSON de Postman en Bruno.
@@ -69,10 +74,12 @@ placeholder hasta que Compliance defina el método. Por eso el flujo llega a 423
 |------|----------|
 | Aceptar términos sin número | 400 `VALIDATION_ERROR` (`details` con `numeroWhatsapp`) |
 | Aceptar términos con número fuera de E.164 | 400 `VALIDATION_ERROR` |
+| Aceptar términos dos veces para el mismo número | 201 con el mismo `id` de vínculo (idempotente, sin duplicado) |
 | Verificación sin términos aceptados | 404 `NOT_FOUND` |
 | Verificación con body vacío | 400 `VALIDATION_ERROR` |
 | Historial de un número sin vínculo | 404 `NOT_FOUND` |
-| Perfil sin `X-Canal-Credencial-Valida` | 401 `UNAUTHORIZED` |
+| Perfil sin `X-Canal-Credencial-Token` | 401 `UNAUTHORIZED` |
+| Perfil con token inválido, vencido o de otro número | 401 `UNAUTHORIZED` |
 | Perfil con credencial sobre vínculo no `ACTIVO` | 409 `CONFLICT` |
 | Preferencias sin headers de documento | 401 `UNAUTHORIZED` |
 | Preferencias sobre vínculo no `ACTIVO` | 409 `CONFLICT` |

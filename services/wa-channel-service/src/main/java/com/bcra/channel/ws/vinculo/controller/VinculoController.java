@@ -432,10 +432,11 @@ public class VinculoController {
             summary = "Aceptar términos del canal",
             description = """
                     Primer paso obligatorio: registra la aceptación explícita sin pedir datos de \
-                    identificación y deja el vínculo en PENDIENTE_VERIFICACION. Cada llamada crea un nuevo \
-                    registro pendiente (no es idempotente); la verificación requiere el más reciente.""")
+                    identificación y deja el vínculo en PENDIENTE_VERIFICACION. Es idempotente por número: \
+                    si ya existe un pendiente lo reutiliza (mismo id); no crea duplicados. Un índice único \
+                    parcial refuerza la unicidad ante carreras concurrentes.""")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Términos aceptados; vínculo pendiente",
+            @ApiResponse(responseCode = "201", description = "Términos aceptados; vínculo pendiente creado o reutilizado",
                     content = @Content(schema = @Schema(implementation = VinculoResponse.class),
                             examples = @ExampleObject(value = VINCULO_PENDIENTE_EXAMPLE))),
             @ApiResponse(responseCode = "400", description = "Número ausente o fuera de E.164",
@@ -446,6 +447,9 @@ public class VinculoController {
                                     @ExampleObject(name = "BadRequest",
                                             ref = "#/components/examples/BadRequest")
                             })),
+            @ApiResponse(responseCode = "409", description = "Número ya ACTIVO o carrera al crear el pendiente",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/ConflictEstado"))),
             @ApiResponse(responseCode = "500", description = "Error interno",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(ref = "#/components/examples/InternalError")))

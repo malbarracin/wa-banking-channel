@@ -12,6 +12,7 @@ post {
 
 headers {
   Content-Type: application/json
+  Authorization: Bearer {{bankServiceToken}}
 }
 
 body:json {
@@ -26,6 +27,6 @@ assert {
 }
 
 docs {
-  POR_CLIENTE exige segmento; TODAS no admite segmento.
+  Solo banco (Bearer bankServiceToken). POR_CLIENTE exige segmento; TODAS no admite segmento.
   Respuestas: 400 VALIDATION_ERROR.
 }

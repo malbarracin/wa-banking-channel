@@ -109,7 +109,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "vinculos", "terminos"]
             },
-            "description": "Primer paso obligatorio. Crea un vínculo pendiente nuevo; no es idempotente."
+            "description": "Primer paso obligatorio. Deja el vínculo en PENDIENTE_VERIFICACION. Idempotente por número: si ya existe un pendiente lo reutiliza (mismo id). Respuestas: 201, 400, 409 (número ya ACTIVO o carrera), 500."
           },
           "response": [
             {

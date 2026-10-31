@@ -78,7 +78,10 @@ Si el documento ya existe, H1 responde **409**; usar ese mismo cliente o cambiar
 ## 1. Aceptar términos — `POST /api/v1/vinculos/terminos`
 
 Primer paso obligatorio. No pide datos de identificación y deja el vínculo en
-`PENDIENTE_VERIFICACION`. Cada llamada crea un registro pendiente nuevo (no es idempotente).
+`PENDIENTE_VERIFICACION`. **Es idempotente por número**: si el número ya tiene un vínculo pendiente,
+la llamada reutiliza ese registro y devuelve el mismo `id`; no crea duplicados. La unicidad se
+garantiza además con un índice parcial en la base (`uq_vinculo_numero_pendiente`), por lo que una
+carrera concurrente responde **409** `CONFLICT` sin dejar dos pendientes.
 
 ```bash
 curl -s -X POST http://localhost:8081/api/v1/vinculos/terminos \
@@ -104,7 +107,8 @@ curl -s -X POST http://localhost:8081/api/v1/vinculos/terminos \
 }
 ```
 
-Errores: **400** número ausente o fuera de E.164 (`VALIDATION_ERROR`); **500** error interno.
+Errores: **400** número ausente o fuera de E.164 (`VALIDATION_ERROR`); **409** el número ya tiene un
+vínculo `ACTIVO` o se perdió una carrera de creación del pendiente (`CONFLICT`); **500** error interno.
 
 ---
 

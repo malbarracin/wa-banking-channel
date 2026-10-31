@@ -1,5 +1,5 @@
 meta {
-  name: Consulta inexistente — 404 NOT_FOUND
+  name: Consulta inexistente sin rol — 403 FORBIDDEN
   type: http
   seq: 3
 }
@@ -11,9 +11,10 @@ get {
 }
 
 assert {
-  res.status: eq 404
+  res.status: eq 403
 }
 
 docs {
-  Sin PII en el error. Esperado: code NOT_FOUND.
+  Sin principal o rol USERS_FULL_READ la consulta responde 403 FORBIDDEN sin PII, aunque el documento no
+  exista. Con el rol, el caso inexistente responde 404 NOT_FOUND (cubierto por tests de integración).
 }

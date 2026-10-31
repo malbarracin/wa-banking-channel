@@ -38,5 +38,8 @@ script:post-response {
 }
 
 docs {
-  Crea un usuario ACTIVE. Respuestas: 201 creado, 400 datos inválidos, 409 documento repetido.
+  Crea un usuario ACTIVE. La respuesta 201 incluye el header Location con la ruta canónica del recurso
+  (/api/v1/users/{tipo}/{numero}); Postman lo verifica con un test. Las altas rechazadas por validación
+  quedan auditadas como RECHAZADO cuando el documento es identificable.
+  Respuestas: 201 creado, 400 datos inválidos, 409 documento repetido.
 }

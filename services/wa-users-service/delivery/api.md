@@ -22,6 +22,7 @@ Todas las respuestas de error usan:
 |------|--------|--------|
 | 400 | `VALIDATION_ERROR` | Bean Validation (`@Valid`) |
 | 400 | `BAD_REQUEST` | JSON ilegible, transición de estado inválida, campo no editable |
+| 403 | `FORBIDDEN` | Consulta completa sin principal autenticado o sin rol `USERS_FULL_READ` |
 | 404 | `NOT_FOUND` | Usuario inexistente (mensaje genérico, sin PII) |
 | 409 | `CONFLICT` | Documento duplicado en el alta |
 | 500 | `INTERNAL_ERROR` | Error inesperado (sin stacktrace) |
@@ -49,7 +50,11 @@ curl -s -X POST http://localhost:8080/api/v1/users \
   }'
 ```
 
-**201 Created**
+**201 Created** — incluye el header `Location` con la ruta canónica del recurso:
+
+```text
+Location: /api/v1/users/DNI/30111222
+```
 
 ```json
 {
@@ -66,19 +71,37 @@ curl -s -X POST http://localhost:8080/api/v1/users \
 }
 ```
 
-Errores: **400** datos incompletos; **409** documento ya registrado.
+Errores: **400** datos incompletos; **409** documento ya registrado. Un alta rechazada por
+Bean Validation queda auditada como `ALTA` / `RECHAZADO` cuando el body trae un documento
+identificable (tipo y número no vacíos y de hasta 255 caracteres).
 
 ---
 
 ## 2. Consulta — `GET /api/v1/users/{tipo}/{numero}`
 
+Requiere un principal autenticado con el rol de servidor `USERS_FULL_READ`. La aplicación no
+configura el mecanismo de autenticación: por defecto la consulta completa queda denegada con **403**,
+incluso para documentos inexistentes. Headers como `X-Profile`, `X-User` o `X-Role` no otorgan acceso.
+
 ```bash
 curl -s http://localhost:8080/api/v1/users/DNI/30111222
 ```
 
-**200** — mismo cuerpo que el alta (UserResponse completo de este hito).
+**403** — respuesta por defecto sin autenticación configurada:
 
-**404**
+```json
+{
+  "code": "FORBIDDEN",
+  "message": "Acceso no autorizado a la consulta completa",
+  "details": [],
+  "timestamp": "2026-10-26T12:00:00Z"
+}
+```
+
+**200** — con principal y rol `USERS_FULL_READ`: mismo cuerpo que el alta (UserResponse completo
+de este hito, provisional hasta la proyección por perfil de Compliance).
+
+**404** — con principal y rol, si el usuario no existe:
 
 ```json
 {

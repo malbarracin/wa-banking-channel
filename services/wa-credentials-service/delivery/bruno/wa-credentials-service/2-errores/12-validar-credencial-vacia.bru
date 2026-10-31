@@ -1,0 +1,30 @@
+meta {
+  name: Validar con credencial vacía
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/validar
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "credencial": ""
+  }
+}
+
+assert {
+  res.status: eq 400
+  res.body.code: eq VALIDATION_ERROR
+}
+
+docs {
+  El body se valida antes de procesar: credencial vacía devuelve 400 VALIDATION_ERROR, no 401.
+}

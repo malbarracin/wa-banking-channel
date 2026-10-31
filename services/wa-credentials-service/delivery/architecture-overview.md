@@ -18,17 +18,19 @@ Identidad Maven: `com.bcra:wa-credentials-service` · paquete base `com.bcra.cre
 com.bcra.credentials.ws/
 ├── CredentialsApplication.java
 ├── credencial/
-│   ├── controller/     # CredencialController (/api/v1/credenciales)
+│   ├── controller/     # CredencialController + RenovacionController (/api/v1/credenciales)
 │   ├── service/        # CredencialService, ValidacionService, RenovacionService,
 │   │                   # RevocacionMasivaService, HistorialCredencialService,
 │   │                   # CredencialAuditService, JwtService
-│   ├── repository/     # CredencialRepository, CredencialAuditLogRepository
+│   ├── repository/     # CredencialRepository, CredencialAuditLogRepository,
+│   │                   # EntregaRenovacionRepository
 │   ├── mapper/         # CredencialMapper (MapStruct)
-│   ├── entity/         # CredencialSesion, CredencialAuditLog y enums
+│   ├── entity/         # CredencialSesion, CredencialAuditLog, EntregaRenovacion y enums
 │   ├── dto/            # Request / Response
 │   ├── client/         # UsersServiceClient (H1) + adaptador REST
 │   └── exception/      # excepciones de dominio
-├── config/             # OpenApiConfig, JwtConfig, RestClientConfig, RenovacionConfig
+├── config/             # OpenApiConfig, JwtConfig, RestClientConfig, RenovacionConfig,
+│                       # CallerSecurityConfig, CallerAuthorization
 └── exception/          # ErrorResponse, FieldError, ErrorCode, GlobalExceptionHandler
 ```
 
@@ -48,9 +50,16 @@ HTTP → CredencialController → Service → Repository → Entity
 - **Validación**: `ValidacionService` verifica el JWT con `JwtService`, la credencial persistida por
   `jti`, la correspondencia de identidad/vencimiento y el estado del cliente en H1. Todo rechazo se
   audita como `VALIDACION_FALLIDA` y se responde **401** uniforme.
-- **Renovación**: `RenovacionService` corre con `@Scheduled` (solo si
-  `credencial.renovacion.habilitada=true`), rota cada credencial próxima a expirar en una transacción
-  propia y audita `REVOCACION`/`REEMPLAZO` y `RENOVACION`/`RENOVACION`.
+- **Renovación**: `RenovacionService` prepara entregas en dos fases. El job `@Scheduled` (solo si
+  `credencial.renovacion.habilitada=true`) guarda en `entrega_renovacion` el `jti` y las fechas del
+  reemplazo, sin persistir el JWT; la credencial anterior sigue activa. H3 llama a
+  `POST /renovacion/obtener` (200 con el JWT derivado, `Cache-Control: no-store`; 404 si aún no hay
+  entrega) y a `POST /renovacion/confirmar` (204 idempotente), que activa el reemplazo y revoca el
+  anterior con `REEMPLAZO` en una sola transacción.
+- **Autenticación servicio a servicio**: `CallerSecurityConfig` registra `CallerAuthorization` para
+  `emitir`/`revocar` (`CREDENTIAL_H3_SERVICE_TOKEN`) y `revocarMasivamente`
+  (`CREDENTIAL_BANK_SERVICE_TOKEN`), con comparación en tiempo constante; sin credencial 401, actor
+  equivocado 403. `validar`, historial y renovación no llevan secreto de servicio.
 - **Revocación masiva**: `RevocacionMasivaService` revoca en una sola transacción y genera una
   auditoría por credencial; ante cualquier fallo se revierte el lote completo.
 - **Historial**: `HistorialCredencialService` es de solo lectura; calcula `EXPIRADA` en la respuesta
@@ -64,9 +73,12 @@ HTTP → CredencialController → Service → Repository → Entity
 | POST | `/api/v1/credenciales/validar` | Autoriza o rechaza una credencial presentada |
 | POST | `/api/v1/credenciales/{numero}/revocacion` | Revocación inmediata de una credencial |
 | POST | `/api/v1/credenciales/revocacion-masiva` | Revocación por política/riesgo (todas o por cliente) |
+| POST | `/api/v1/credenciales/renovacion/obtener` | Entrega a H3 el JWT sustituto ya preparado |
+| POST | `/api/v1/credenciales/renovacion/confirmar` | Activa el reemplazo y revoca el anterior |
 | GET | `/api/v1/credenciales/{numero}/historial` | Estado efectivo y eventos del número |
 
-La renovación no tiene endpoint.
+`emitir`, `{numero}/revocacion` y `revocacion-masiva` exigen `Authorization: Bearer` con el secreto de
+servicio del actor. `validar`, renovación e historial no usan ese mecanismo.
 
 ## Modelo y estados
 
@@ -115,8 +127,10 @@ finitos (`WA_USERS_SERVICE_CONNECT_TIMEOUT`, `WA_USERS_SERVICE_READ_TIMEOUT`), s
 404 → `ClienteNoEncontradoException`; error HTTP, de transporte o respuesta inválida →
 `UsersServiceUnavailableException`. Una falla nunca se interpreta como cliente activo.
 
-H2 **no** llama a H3: H3 solicita emisión y revocación. La renovación es interna y no entrega el JWT a
-H3 (entrega fiable/outbox fuera de este hito).
+H2 **no** llama a H3: H3 solicita emisión, renovación y revocación con `Authorization: Bearer` usando
+`CREDENTIAL_H3_SERVICE_TOKEN`. En la renovación, H3 consulta la entrega preparada y confirma la
+recepción; el JWT no viaja por la red salvo en esas respuestas puntuales (`no-store`). El banco usa
+`CREDENTIAL_BANK_SERVICE_TOKEN` solo para la revocación masiva.
 
 ## Contrato de error
 
@@ -127,8 +141,10 @@ stacktraces ni detalles internos. Códigos propios de H2: `UNAUTHORIZED` (401), 
 
 ## Decisiones relevantes
 
-- Una sola credencial `ACTIVA` por número, reforzada por índice parcial; la emisión y la renovación
-  actualizan la anterior antes del `INSERT`.
+- Una sola credencial `ACTIVA` por número, reforzada por índice parcial; la emisión y la confirmación
+  de renovación actualizan la anterior antes del `INSERT`.
+- La entrega de renovación es durable y sin secreto (`entrega_renovacion`: `jti` y fechas); el JWT se
+  deriva del `jti` y solo en `obtener`/`confirmar`.
 - El JWT es el mecanismo de credencial (decisión de arquitectura, fuera de la fuente funcional).
 - La emisión confía en las confirmaciones de H3 (`vinculoActivo`, `identidadVerificada`) y verifica el
   estado del cliente en H1; no consulta el vínculo a H3.
@@ -141,7 +157,7 @@ Fuera de alcance: alta de usuarios (H1), flujo de verificación y gestión del v
 productos (H4–H6), formato externo de la credencial.
 
 Pendiente de definición de negocio: valor definitivo de vigencia y ventana de renovación, criterio
-concreto de "señal de riesgo" y de "señal de fraude", alcance fino de la revocación masiva y
-mecanismo de entrega del JWT renovado a H3 (hoy el job es solo interno). Ver
+concreto de "señal de riesgo" y de "señal de fraude", alcance fino de la revocación masiva y estrategia
+de reintentos de H3 si `obtener` devuelve 404/409. Ver
 [`specs/acceso-sesion/spec.md`](../../../specs/acceso-sesion/spec.md) y
 [`specs/acceso-sesion/arquitectura.md`](../../../specs/acceso-sesion/arquitectura.md).

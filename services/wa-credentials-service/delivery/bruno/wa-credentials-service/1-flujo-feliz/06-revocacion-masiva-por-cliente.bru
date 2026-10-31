@@ -12,6 +12,7 @@ post {
 
 headers {
   Content-Type: application/json
+  Authorization: Bearer {{bankServiceToken}}
 }
 
 body:json {
@@ -30,6 +31,7 @@ assert {
 }
 
 docs {
+  Solo banco (Bearer bankServiceToken = CREDENTIAL_BANK_SERVICE_TOKEN).
   Revoca todas las credenciales ACTIVA del cliente. Devuelve la cantidad revocada; la operación es idempotente.
-  Respuestas: 200 revocadas, 400 criterio o segmento inválido, 500 error inesperado del lote.
+  Respuestas: 200 revocadas, 400 criterio o segmento inválido, 401 sin autenticar, 403 actor distinto del banco, 500 error inesperado del lote.
 }

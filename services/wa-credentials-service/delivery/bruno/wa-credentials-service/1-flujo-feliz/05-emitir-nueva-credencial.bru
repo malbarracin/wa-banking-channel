@@ -12,6 +12,7 @@ post {
 
 headers {
   Content-Type: application/json
+  Authorization: Bearer {{h3ServiceToken}}
 }
 
 body:json {
@@ -35,5 +36,5 @@ script:post-response {
 }
 
 docs {
-  Deja una credencial ACTIVA nueva para probar la revocación masiva.
+  Solo H3 (Bearer h3ServiceToken). Deja una credencial ACTIVA nueva para probar la revocación masiva.
 }

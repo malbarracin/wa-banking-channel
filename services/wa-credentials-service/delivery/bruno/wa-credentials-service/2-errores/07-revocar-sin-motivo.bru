@@ -12,6 +12,7 @@ post {
 
 headers {
   Content-Type: application/json
+  Authorization: Bearer {{h3ServiceToken}}
 }
 
 body:json {
@@ -26,6 +27,6 @@ assert {
 }
 
 docs {
-  El motivo es obligatorio.
+  Solo H3 (Bearer h3ServiceToken). El motivo es obligatorio.
   Respuestas: 400 VALIDATION_ERROR.
 }

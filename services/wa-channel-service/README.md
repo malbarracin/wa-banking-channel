@@ -106,6 +106,7 @@ ambos tokens y reintenta la confirmación. Obtener el reemplazo no revoca el JWT
 | `SPRING_PROFILES_ACTIVE` | Perfil Spring | — (`dev`, `docker`, `prod`, `test`) |
 | `WA_USERS_SERVICE_BASE_URL` | Base URL de H1 | `http://localhost:8080` |
 | `CREDENCIALES_SERVICE_BASE_URL` | Base URL de H2 | `http://localhost:8082` |
+| `CREDENTIAL_H3_SERVICE_TOKEN` | Secreto de servicio que H3 envía a H2 (mismo valor que en H2; obligatorio en `prod`) | vacío |
 | `VERIFICACION_MAX_INTENTOS` / `vinculo.verificacion.max-intentos` | Intentos fallidos permitidos por ventana | `3` |
 | `VERIFICACION_VENTANA_MINUTOS` / `vinculo.verificacion.ventana-minutos` | Ventana de conteo y pausa | `15` |
 | `CLIENTS_CONNECT_TIMEOUT` | Timeout de conexión a H1/H2 | `1s` |
@@ -122,7 +123,7 @@ Perfiles: `dev` (H2 en memoria, `ddl-auto=update`, consola H2), `docker` (JDBC a
 
 | Método | Ruta | Qué hace | Respuestas |
 |---|---|---|---|
-| POST | `/api/v1/vinculos/terminos` | Aceptación explícita; crea vínculo pendiente | 201, 400, 500 |
+| POST | `/api/v1/vinculos/terminos` | Aceptación explícita; crea o reutiliza el pendiente del número | 201, 400, 409, 500 |
 | POST | `/api/v1/vinculos/{numero}/verificaciones` | Verifica identidad y activa o re-vincula | 200, 400, 404, 409, 423, 500 |
 | GET | `/api/v1/vinculos/{numero}/estado` | Anti-duplicados, sin datos del cliente | 200, 500 |
 | GET | `/api/v1/vinculos/{numero}/perfil` | Perfil permitido + preferencias | 200, 401, 409, 500 |

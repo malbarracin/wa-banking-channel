@@ -12,6 +12,7 @@ post {
 
 headers {
   Content-Type: application/json
+  Authorization: Bearer {{bankServiceToken}}
 }
 
 body:json {
@@ -30,5 +31,5 @@ assert {
 }
 
 docs {
-  Repite el mismo alcance: no quedan credenciales ACTIVA y devuelve 0.
+  Solo banco (Bearer bankServiceToken). Repite el mismo alcance: no quedan credenciales ACTIVA y devuelve 0.
 }

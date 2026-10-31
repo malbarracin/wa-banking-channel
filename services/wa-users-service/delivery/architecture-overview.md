@@ -14,7 +14,7 @@ Identidad Maven: `com.bcra:wa-users-service` · paquete base `com.bcra.users.ws`
 com.bcra.users.ws/
 ├── UserApplication.java
 ├── user/
-│   ├── controller/     # HTTP (/api/v1/users)
+│   ├── controller/     # UserController + UserCreateExceptionHandler (auditoría de altas inválidas)
 │   ├── service/        # UserService, AuditService
 │   ├── repository/     # UserRepository, AuditLogRepository
 │   ├── mapper/         # UserMapper (MapStruct)
@@ -38,14 +38,16 @@ HTTP → UserController → UserService → UserRepository → Entity
 
 Tras commit/rollback de alta, actualización o cambio de estado, `AuditService` persiste en
 `REQUIRES_NEW` (referencia por documento, sin FK a User) para conservar auditoría si la operación
-principal se revierte.
+principal se revierte. Las altas rechazadas por Bean Validation las audita
+`UserCreateExceptionHandler` como `ALTA` / `RECHAZADO` cuando el body trae un documento identificable
+(tipo y número no vacíos), antes de devolver el `VALIDATION_ERROR` del contrato global.
 
 ## Endpoints
 
 | Método | Ruta | Responsabilidad |
 |--------|------|-----------------|
-| POST | `/api/v1/users` | Alta ACTIVE; unicidad por documento |
-| GET | `/api/v1/users/{tipo}/{numero}` | Consulta completa (provisional) |
+| POST | `/api/v1/users` | Alta ACTIVE; unicidad por documento; responde `Location` |
+| GET | `/api/v1/users/{tipo}/{numero}` | Consulta completa; exige rol `USERS_FULL_READ` |
 | GET | `/api/v1/users/{tipo}/{numero}/status` | Documento + estado (H3) |
 | PATCH | `/api/v1/users/{tipo}/{numero}` | Datos permitidos |
 | PATCH | `/api/v1/users/{tipo}/{numero}/status` | Transiciones de estado |
@@ -75,9 +77,15 @@ Transición inválida → HTTP **400** `BAD_REQUEST` (contrato explícito; no 40
 - Identificador único de negocio: documento (tipo + número).
 - Contacto: email **o** teléfono (`@ContactoPresente`); sin formato cerrado.
 - Tipos de documento: catálogo abierto (string).
-- Consulta: UserResponse completo hasta política de Compliance.
+- Alta **201** con header `Location: /api/v1/users/{tipo}/{numero}`.
+- Consulta completa: exige principal autenticado con rol de servidor `USERS_FULL_READ`; sin él
+  responde **403** `FORBIDDEN` sin PII. El servicio no configura autenticación en este hito: con la
+  configuración del repo esa consulta responde 403; con el rol (p. ej. gateway) se expone el
+  `UserResponse` completo hasta que Compliance defina la proyección por perfil.
 - PATCH actualización: `JsonAnySetter` rechaza propiedades desconocidas.
-- Auditoría interna sin endpoint HTTP.
+- Auditoría interna sin endpoint HTTP; altas inválidas con documento identificable quedan en `RECHAZADO`.
+- Helm: el chart no trae `DB_PASSWORD` por defecto; hay que pasarlo explícitamente (ver
+  `helm/wa-users-service/README.md`).
 
 ## Alcance H1 / fuera de alcance
 
@@ -86,7 +94,8 @@ credenciales de sesión (H2), productos (H4–H6), cambios de datos legales sens
 
 ## Limitaciones conocidas (preguntas abiertas de la spec)
 
-1. **Filtrado de campos por perfil** — pendiente de Compliance; hoy se expone el response completo.
+1. **Proyección de campos por perfil** — pendiente de Compliance; hoy, con rol `USERS_FULL_READ`,
+   se expone el response completo.
 2. **Catálogo de tipos de documento** — no cerrado; se acepta cualquier tipo no vacío.
 3. **Formato de email/teléfono** — no cerrado; solo se exige presencia de al menos uno en el alta.
 4. **Reactivación desde baja lógica** — no soportada en H1 (`LOGICAL_DELETE` no tiene salidas).

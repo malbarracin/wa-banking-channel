@@ -85,11 +85,15 @@ Perfiles: `dev` (ddl `update`), `docker` (JDBC a host `postgres`), `prod` (vars 
 
 | Método | Ruta | Qué hace | Respuestas |
 |---|---|---|---|
-| POST | `/api/v1/users` | Alta ACTIVE | 201, 400, 409 |
-| GET | `/api/v1/users/{tipo}/{numero}` | Consulta completa | 200, 404 |
+| POST | `/api/v1/users` | Alta ACTIVE; devuelve `Location` del recurso | 201, 400, 409 |
+| GET | `/api/v1/users/{tipo}/{numero}` | Consulta completa (rol `USERS_FULL_READ`) | 200, 403, 404 |
 | GET | `/api/v1/users/{tipo}/{numero}/status` | Documento + estado | 200, 404 |
 | PATCH | `/api/v1/users/{tipo}/{numero}` | Datos permitidos | 200, 400, 404 |
 | PATCH | `/api/v1/users/{tipo}/{numero}/status` | Cambio de estado | 200, 400, 404 |
+
+El alta responde **201** con el header `Location` apuntando a
+`/api/v1/users/{tipo}/{numero}`. Las altas rechazadas por Bean Validation quedan auditadas
+como `RECHAZADO` cuando el body trae un documento identificable (tipo y número no vacíos).
 
 Guía con curl y flujo típico: [`delivery/api.md`](delivery/api.md).
 
@@ -109,6 +113,7 @@ Contrato único (`code`, `message`, `details`, `timestamp` UTC); sin stacktraces
 | HTTP | `code` |
 |------|--------|
 | 400 | `VALIDATION_ERROR` / `BAD_REQUEST` |
+| 403 | `FORBIDDEN` (consulta completa sin principal o rol `USERS_FULL_READ`) |
 | 404 | `NOT_FOUND` |
 | 409 | `CONFLICT` (documento duplicado) |
 | 500 | `INTERNAL_ERROR` |
@@ -131,7 +136,9 @@ Fuente: [`specs/usuarios/spec.md`](../../specs/usuarios/spec.md).
 
 ### Limitaciones conocidas
 
-1. Filtrado de campos de consulta por perfil: pendiente de Compliance (hoy se expone el response completo).
+1. Proyección de campos por perfil: pendiente de Compliance. Hasta entonces la consulta completa exige
+   principal autenticado y rol `USERS_FULL_READ` y devuelve el response completo; sin ese rol responde
+   **403**.
 2. Catálogo de tipos de documento: no cerrado (string libre).
 3. Formato de email/teléfono: no cerrado (solo se exige al menos un contacto en el alta).
 4. Reactivación desde `LOGICAL_DELETE`: no soportada en este hito.
@@ -179,5 +186,6 @@ por cada perfil aprobado antes de habilitar otros consultantes.
 | [`delivery/api.md`](delivery/api.md) | Uso de la API con curl |
 | [`delivery/architecture-overview.md`](delivery/architecture-overview.md) | Capas, decisiones y flujo |
 | [`delivery/qa-manual.md`](delivery/qa-manual.md) | Postman / Bruno |
+| [`helm/wa-users-service/README.md`](helm/wa-users-service/README.md) | Despliegue Helm y credencial de BD obligatoria |
 | [`../../delivery/devops-local.md`](../../delivery/devops-local.md) | Docker, CI, Helm |
 | [`specs/usuarios/spec.md`](../../specs/usuarios/spec.md) | Requisitos de negocio |

@@ -242,7 +242,10 @@ class CreateUserIntegrationTest {
         mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
                         .content(solicitud.toString()))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details[0].field").isNotEmpty())
+                .andExpect(jsonPath("$.details[0].message").isNotEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
 
         assertThat(userRepository.count()).isZero();
         assertThat(auditLogRepository.findAll()).singleElement().satisfies(registro -> {

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -44,19 +45,50 @@ class CallerSecurityIntegrationTest {
         String body = "{\"vinculoActivo\":true,\"identidadVerificada\":true}";
         mockMvc.perform(post("/api/v1/credenciales" + path)
                         .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+                .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isArray());
         mockMvc.perform(post("/api/v1/credenciales" + path)
                         .header("Authorization", "Bearer unknown")
                         .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isArray());
         mockMvc.perform(post("/api/v1/credenciales" + path)
                         .header("Authorization", "Bearer " + forbidden)
                         .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"));
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.details").isArray());
         mockMvc.perform(post("/api/v1/credenciales" + path)
                         .header("Authorization", "Bearer " + allowed)
                         .contentType(MediaType.APPLICATION_JSON).content("{"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"Basic h3-test-token", "Bearer ", "Bearer h3-test-token extra"})
+    @DisplayName("Rechaza cabeceras inválidas antes de deserializar un body malformado")
+    void rechazaCabeceraInvalidaAntesDelBody(String header) throws Exception {
+        mockMvc.perform(post("/api/v1/credenciales/emitir")
+                        .header("Authorization", header)
+                        .contentType(MediaType.APPLICATION_JSON).content("{"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isArray());
+    }
+
+    @Test
+    @DisplayName("Configurar un solo actor no habilita las operaciones del actor ausente")
+    void deniegaActorSinSecretoConfigurado() {
+        var onlyH3 = new CallerAuthorization("h3", "");
+        var onlyBank = new CallerAuthorization("", "bank");
+        assertThatThrownBy(() -> onlyH3.requireActor("Bearer ", true))
+                .isInstanceOf(UnauthorizedException.class);
+        assertThatThrownBy(() -> onlyBank.requireActor("Bearer ", false))
+                .isInstanceOf(UnauthorizedException.class);
+        assertThatThrownBy(() -> onlyH3.requireActor("Bearer h3", true))
+                .isInstanceOf(com.bcra.credentials.ws.exception.CallerForbiddenException.class);
+        assertThatThrownBy(() -> onlyBank.requireActor("Bearer bank", false))
+                .isInstanceOf(com.bcra.credentials.ws.exception.CallerForbiddenException.class);
     }
 
     @Test

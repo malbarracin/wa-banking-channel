@@ -1,0 +1,31 @@
+meta {
+  name: Aceptar términos
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/vinculos/terminos
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "numeroWhatsapp": "{{numeroWhatsapp}}"
+  }
+}
+
+assert {
+  res.status: eq 201
+}
+
+docs {
+  Primer paso obligatorio. Deja el vínculo en PENDIENTE_VERIFICACION. Es idempotente por número:
+  si ya hay un pendiente lo reutiliza (mismo id) en lugar de crear un duplicado.
+  Respuestas: 201 creado o reutilizado, 400 número inválido, 409 número ya ACTIVO o carrera, 500 error interno.
+}

@@ -1,0 +1,971 @@
+{
+  "info": {
+    "name": "wa-channel-service",
+    "description": "API H3 del canal WhatsApp. Orden sugerido: 0. Preparación H1 (opcional pero necesaria para verificar) → 1. Onboarding y verificación → 2. Consultas y errores → 3. Salud. La carpeta 0 genera docNumber y numeroWhatsapp únicos por corrida. Con el verificador por defecto la verificación nunca activa el vínculo: se observan fallos y 423.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "credencialSesion", "value": "" },
+    { "key": "baseUrl", "value": "http://localhost:8081" },
+    { "key": "h1BaseUrl", "value": "http://localhost:8080" },
+    { "key": "docTipo", "value": "DNI" },
+    { "key": "docNumber", "value": "30111222" },
+    { "key": "numeroWhatsapp", "value": "+5491112345678" },
+    { "key": "numeroLibre", "value": "+5491100000099" },
+    { "key": "numeroSinVinculo", "value": "+5491100000098" }
+  ],
+  "item": [
+    {
+      "name": "0. Preparación H1",
+      "description": "Crea un cliente ACTIVE en wa-users-service (H1) con documento y número únicos por corrida. Requiere H1 en h1BaseUrl.",
+      "item": [
+        {
+          "name": "Crear cliente ACTIVE en H1",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const suffix = String(10000000 + (Date.now() % 90000000));",
+                  "pm.collectionVariables.set('docNumber', suffix);",
+                  "pm.collectionVariables.set('numeroWhatsapp', '+54911' + suffix);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('cliente ACTIVE', () => pm.expect(body.estado).to.eql('ACTIVE'));",
+                  "pm.test('documento generado', () => pm.expect(body.documento.numero).to.eql(pm.collectionVariables.get('docNumber')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": { \"tipo\": \"{{docTipo}}\", \"numero\": \"{{docNumber}}\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana.{{docNumber}}@example.test\",\n  \"telefono\": \"5551234\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{h1BaseUrl}}/api/v1/users",
+              "host": ["{{h1BaseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "Alta en H1. Si se omite esta carpeta, el documento de docNumber debe existir y estar ACTIVE en H1."
+          },
+          "response": [
+            {
+              "name": "201 - cliente creado",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"id\": \"b7c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e\",\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"48112233\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana.48112233@example.test\",\n  \"telefono\": \"5551234\",\n  \"nombreTratamiento\": null,\n  \"preferencias\": null,\n  \"estado\": \"ACTIVE\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Onboarding y verificación",
+      "description": "Aceptar términos, consultar estado, agotar intentos y consultar historial. Ejecutar la carpeta 0 antes para tener un cliente ACTIVE y un número nuevo.",
+      "item": [
+        {
+          "name": "Aceptar términos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.test('PENDIENTE_VERIFICACION', () => pm.expect(body.estado).to.eql('PENDIENTE_VERIFICACION'));",
+                  "pm.test('sin fecha de activación', () => pm.expect(body.fechaActivacion).to.eql(null));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numeroWhatsapp\": \"{{numeroWhatsapp}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/terminos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "terminos"]
+            },
+            "description": "Primer paso obligatorio. Deja el vínculo en PENDIENTE_VERIFICACION. Idempotente por número: si ya existe un pendiente lo reutiliza (mismo id). Respuestas: 201, 400, 409 (número ya ACTIVO o carrera), 500."
+          },
+          "response": [
+            {
+              "name": "201 - términos aceptados",
+              "status": "Created",
+              "code": 201,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"id\": \"3f2b6c1e-8a4d-4f7b-9c2e-1d5a7b8c9e01\",\n  \"numeroWhatsapp\": \"+5491112345678\",\n  \"estado\": \"PENDIENTE_VERIFICACION\",\n  \"fechaActivacion\": null,\n  \"preferencias\": {\n    \"idioma\": null,\n    \"notificacionesHabilitadas\": false,\n    \"horarioPreferido\": null\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Estado del número - vinculado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('vinculado', () => pm.expect(body.vinculado).to.eql(true));",
+                  "pm.test('PENDIENTE_VERIFICACION', () => pm.expect(body.estado).to.eql('PENDIENTE_VERIFICACION'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/estado",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "estado"]
+            },
+            "description": "Anti-duplicados sin datos del cliente. Nunca responde 404."
+          },
+          "response": [
+            {
+              "name": "200 - vinculado",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"numeroWhatsapp\": \"+5491112345678\",\n  \"vinculado\": true,\n  \"estado\": \"PENDIENTE_VERIFICACION\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verificación 1 - falla, quedan 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('no exitosa', () => pm.expect(body.exitosa).to.eql(false));",
+                  "pm.test('quedan 2 intentos', () => pm.expect(body.intentosRestantes).to.eql(2));",
+                  "pm.test('sigue pendiente', () => pm.expect(body.estadoVinculo).to.eql('PENDIENTE_VERIFICACION'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentoTipo\": \"{{docTipo}}\",\n  \"documentoNumero\": \"{{docNumber}}\",\n  \"datosVerificacion\": { \"codigo\": \"123456\" }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/verificaciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "verificaciones"]
+            },
+            "description": "Con el verificador por defecto toda prueba se rechaza; el intento queda auditado."
+          },
+          "response": [
+            {
+              "name": "200 - fallida con 2 intentos",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"exitosa\": false,\n  \"vinculoId\": \"3f2b6c1e-8a4d-4f7b-9c2e-1d5a7b8c9e01\",\n  \"numeroWhatsapp\": \"+5491112345678\",\n  \"documentoTipo\": \"DNI\",\n  \"documentoNumero\": \"30111222\",\n  \"estadoVinculo\": \"PENDIENTE_VERIFICACION\",\n  \"intentosRestantes\": 2,\n  \"verificadoEn\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verificación 2 - falla, queda 1",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('no exitosa', () => pm.expect(body.exitosa).to.eql(false));",
+                  "pm.test('queda 1 intento', () => pm.expect(body.intentosRestantes).to.eql(1));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentoTipo\": \"{{docTipo}}\",\n  \"documentoNumero\": \"{{docNumber}}\",\n  \"datosVerificacion\": { \"codigo\": \"123456\" }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/verificaciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "verificaciones"]
+            },
+            "description": "Segundo fallo de la ventana."
+          },
+          "response": [
+            {
+              "name": "200 - fallida con 1 intento",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"exitosa\": false,\n  \"vinculoId\": \"3f2b6c1e-8a4d-4f7b-9c2e-1d5a7b8c9e01\",\n  \"numeroWhatsapp\": \"+5491112345678\",\n  \"documentoTipo\": \"DNI\",\n  \"documentoNumero\": \"30111222\",\n  \"estadoVinculo\": \"PENDIENTE_VERIFICACION\",\n  \"intentosRestantes\": 1,\n  \"verificadoEn\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verificación 3 - falla, quedan 0",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('no exitosa', () => pm.expect(body.exitosa).to.eql(false));",
+                  "pm.test('quedan 0 intentos', () => pm.expect(body.intentosRestantes).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentoTipo\": \"{{docTipo}}\",\n  \"documentoNumero\": \"{{docNumber}}\",\n  \"datosVerificacion\": { \"codigo\": \"123456\" }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/verificaciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "verificaciones"]
+            },
+            "description": "Tercer fallo de la ventana; el siguiente intento queda bloqueado."
+          },
+          "response": [
+            {
+              "name": "200 - fallida con 0 intentos",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"exitosa\": false,\n  \"vinculoId\": \"3f2b6c1e-8a4d-4f7b-9c2e-1d5a7b8c9e01\",\n  \"numeroWhatsapp\": \"+5491112345678\",\n  \"documentoTipo\": \"DNI\",\n  \"documentoNumero\": \"30111222\",\n  \"estadoVinculo\": \"PENDIENTE_VERIFICACION\",\n  \"intentosRestantes\": 0,\n  \"verificadoEn\": null\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verificación 4 - 423 LOCKED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('423 Locked', () => pm.response.to.have.status(423));",
+                  "pm.test('code LOCKED', () => pm.expect(pm.response.json().code).to.eql('LOCKED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentoTipo\": \"{{docTipo}}\",\n  \"documentoNumero\": \"{{docNumber}}\",\n  \"datosVerificacion\": { \"codigo\": \"123456\" }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/verificaciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "verificaciones"]
+            },
+            "description": "Intentos agotados en la ventana: se pausa la verificación y se deriva a soporte."
+          },
+          "response": [
+            {
+              "name": "423 - verificación pausada",
+              "status": "Locked",
+              "code": 423,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"LOCKED\",\n  \"message\": \"Verificación pausada temporalmente. Contacte a soporte\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Historial del número",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('trae eventos', () => pm.expect(body.eventos.length).to.be.above(0));",
+                  "pm.test('estado pendiente', () => pm.expect(body.estadoActual).to.eql('PENDIENTE_VERIFICACION'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/historial",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "historial"]
+            },
+            "description": "Historial resumido para soporte, del evento más reciente al más antiguo."
+          },
+          "response": [
+            {
+              "name": "200 - historial",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"numeroWhatsapp\": \"+5491112345678\",\n  \"documentoTipo\": \"DNI\",\n  \"documentoNumero\": \"30111222\",\n  \"estadoActual\": \"PENDIENTE_VERIFICACION\",\n  \"eventos\": [\n    { \"accion\": \"VERIFICACION_FALLIDA\", \"resultado\": \"RECHAZADO\", \"fecha\": \"2026-10-26T12:03:00Z\" },\n    { \"accion\": \"ACEPTACION_TERMINOS\", \"resultado\": \"EXITOSO\", \"fecha\": \"2026-10-26T12:00:00Z\" }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Consultas y errores",
+      "description": "Consultas y errores alcanzables con el servicio por defecto. El número de la carpeta 1 queda PENDIENTE_VERIFICACION y sin intentos, por eso perfil/preferencias/bloqueo/desvinculación responden 409. Para los 200 de vínculo ACTIVO ver delivery/qa-manual.md.",
+      "item": [
+        {
+          "name": "Estado de un número libre",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('no vinculado', () => pm.expect(body.vinculado).to.eql(false));",
+                  "pm.test('sin estado', () => pm.expect(body.estado).to.eql(undefined));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroLibre}}/estado",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroLibre}}", "estado"]
+            },
+            "description": "Número sin vínculo: 200 con vinculado=false, nunca 404."
+          },
+          "response": [
+            {
+              "name": "200 - libre",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"numeroWhatsapp\": \"+5491100000099\",\n  \"vinculado\": false\n}"
+            }
+          ]
+        },
+        {
+          "name": "Perfil sin credencial - 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('code UNAUTHORIZED', () => pm.expect(pm.response.json().code).to.eql('UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/perfil",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "perfil"]
+            },
+            "description": "H3 exige el contexto de credencial propagado por H2/H0.2; no valida el token."
+          },
+          "response": [
+            {
+              "name": "401 - sin credencial",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"Se requiere una credencial válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Perfil con credencial y vínculo no activo - 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('code CONFLICT', () => pm.expect(pm.response.json().code).to.eql('CONFLICT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Canal-Credencial-Token", "value": "{{credencialSesion}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/perfil",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "perfil"]
+            },
+            "description": "El vínculo del onboarding sigue PENDIENTE_VERIFICACION."
+          },
+          "response": [
+            {
+              "name": "409 - sin vínculo activo",
+              "status": "Conflict",
+              "code": 409,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"El vínculo no está activo para esta operación\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Preferencias sin headers - 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('code UNAUTHORIZED', () => pm.expect(pm.response.json().code).to.eql('UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idioma\": \"es\",\n  \"notificacionesHabilitadas\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/preferencias",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "preferencias"]
+            },
+            "description": "Sin X-Credencial-Documento-Tipo/Numero el servicio responde 401 antes de buscar el vínculo."
+          },
+          "response": [
+            {
+              "name": "401 - sin contexto",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"Se requiere una credencial válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Preferencias sobre vínculo no activo - 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('code CONFLICT', () => pm.expect(pm.response.json().code).to.eql('CONFLICT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Credencial-Documento-Tipo", "value": "{{docTipo}}" },
+              { "key": "X-Credencial-Documento-Numero", "value": "{{docNumber}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"idioma\": \"es\",\n  \"notificacionesHabilitadas\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/preferencias",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "preferencias"]
+            },
+            "description": "El vínculo existe pero no está ACTIVO."
+          },
+          "response": [
+            {
+              "name": "409 - no activo",
+              "status": "Conflict",
+              "code": 409,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"El vínculo no está activo para esta operación\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Preferencias con propiedad desconocida - 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('code VALIDATION_ERROR', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Credencial-Documento-Tipo", "value": "{{docTipo}}" },
+              { "key": "X-Credencial-Documento-Numero", "value": "{{docNumber}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"color\": \"azul\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/preferencias",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "preferencias"]
+            },
+            "description": "El body se rechaza al deserializar: solo idioma, notificacionesHabilitadas y horarioPreferido."
+          },
+          "response": [
+            {
+              "name": "400 - propiedad no permitida",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"La solicitud tiene propiedades no permitidas\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Bloqueo solicitud cliente sin credencial - 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('code UNAUTHORIZED', () => pm.expect(pm.response.json().code).to.eql('UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"SOLICITUD_CLIENTE\",\n  \"confirmacion\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/bloqueo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "bloqueo"]
+            },
+            "description": "El motivo SOLICITUD_CLIENTE exige X-Canal-Credencial-Token: {{credencialSesion}}."
+          },
+          "response": [
+            {
+              "name": "401 - sin credencial",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"Se requiere una credencial válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Bloqueo política banco sobre no activo - 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('code CONFLICT', () => pm.expect(pm.response.json().code).to.eql('CONFLICT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"POLITICA_BANCO\",\n  \"confirmacion\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/bloqueo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "bloqueo"]
+            },
+            "description": "POLITICA_BANCO es una llamada interna sin credencial de cliente; el vínculo debe estar ACTIVO."
+          },
+          "response": [
+            {
+              "name": "409 - estado incompatible",
+              "status": "Conflict",
+              "code": 409,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"El vínculo no admite la operación en su estado actual\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Desvinculación sin credencial - 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('code UNAUTHORIZED', () => pm.expect(pm.response.json().code).to.eql('UNAUTHORIZED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmacion\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/desvinculacion",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "desvinculacion"]
+            },
+            "description": "La desvinculación siempre exige X-Canal-Credencial-Token: {{credencialSesion}}."
+          },
+          "response": [
+            {
+              "name": "401 - sin credencial",
+              "status": "Unauthorized",
+              "code": 401,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"message\": \"Se requiere una credencial válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Desvinculación sobre no activo - 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('code CONFLICT', () => pm.expect(pm.response.json().code).to.eql('CONFLICT'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Canal-Credencial-Token", "value": "{{credencialSesion}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"confirmacion\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/desvinculacion",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroWhatsapp}}", "desvinculacion"]
+            },
+            "description": "Solo se desvincula desde ACTIVO o BLOQUEADO."
+          },
+          "response": [
+            {
+              "name": "409 - estado incompatible",
+              "status": "Conflict",
+              "code": 409,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"El vínculo no admite la operación en su estado actual\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verificación sin términos - 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('code NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('NOT_FOUND'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentoTipo\": \"{{docTipo}}\",\n  \"documentoNumero\": \"{{docNumber}}\",\n  \"datosVerificacion\": { \"codigo\": \"123456\" }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroSinVinculo}}/verificaciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroSinVinculo}}", "verificaciones"]
+            },
+            "description": "Número sin aceptación de términos: no se consulta H1."
+          },
+          "response": [
+            {
+              "name": "404 - sin términos",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"NOT_FOUND\",\n  \"message\": \"Debe aceptar los términos antes de verificar su identidad\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Historial sin vínculo - 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('code NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('NOT_FOUND'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/{{numeroSinVinculo}}/historial",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "{{numeroSinVinculo}}", "historial"]
+            },
+            "description": "Número sin ningún vínculo registrado."
+          },
+          "response": [
+            {
+              "name": "404 - sin vínculo",
+              "status": "Not Found",
+              "code": 404,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"NOT_FOUND\",\n  \"message\": \"No existe un vínculo registrado para el número consultado\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Aceptar términos sin número - 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('code VALIDATION_ERROR', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/terminos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "terminos"]
+            },
+            "description": "Falta el campo obligatorio numeroWhatsapp."
+          },
+          "response": [
+            {
+              "name": "400 - validación",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"La solicitud tiene datos inválidos\",\n  \"details\": [\n    { \"field\": \"numeroWhatsapp\", \"message\": \"El número de WhatsApp es obligatorio\" }\n  ],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Aceptar términos con número inválido - 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('code VALIDATION_ERROR', () => pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numeroWhatsapp\": \"12345\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/vinculos/terminos",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "vinculos", "terminos"]
+            },
+            "description": "El número debe cumplir E.164 con prefijo +."
+          },
+          "response": [
+            {
+              "name": "400 - formato E.164",
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"La solicitud tiene datos inválidos\",\n  \"details\": [\n    { \"field\": \"numeroWhatsapp\", \"message\": \"El número debe estar en formato E.164\" }\n  ],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Salud",
+      "description": "Actuator health.",
+      "item": [
+        {
+          "name": "Actuator health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Health del servicio."
+          },
+          "response": [
+            {
+              "name": "200 - UP",
+              "status": "OK",
+              "code": 200,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"status\": \"UP\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

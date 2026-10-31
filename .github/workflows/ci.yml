@@ -1,0 +1,171 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [wa-users-service, wa-channel-service, wa-credentials-service, wa-accounts-service, wa-insurance-service, wa-cards-service]
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: services/${{ matrix.service }}/pom.xml
+
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw
+
+      - name: Build and verify (JaCoCo ≥ 80%)
+        run: ./mvnw -B clean verify
+
+  build-test-platform:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [wa-event-platform, wa-channel-orchestrator]
+    defaults:
+      run:
+        working-directory: platform/${{ matrix.component }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: platform/${{ matrix.component }}/pom.xml
+
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw
+
+      - name: Build and verify (JaCoCo ≥ 80%)
+        run: ./mvnw -B clean verify
+
+  build-test-gateway:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [wa-twilio-gateway]
+    defaults:
+      run:
+        working-directory: gateway/${{ matrix.component }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: gateway/${{ matrix.component }}/pom.xml
+
+      - name: Make Maven Wrapper executable
+        run: chmod +x mvnw
+
+      - name: Build and verify (JaCoCo ≥ 80%)
+        run: ./mvnw -B clean verify
+
+  verify-integracion-script:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Unit tests de scripts/verify_integracion.py
+        run: python -m unittest discover -s scripts -p "test_*.py"
+
+  docker:
+    needs: build-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [wa-users-service, wa-channel-service, wa-credentials-service, wa-accounts-service, wa-insurance-service, wa-cards-service]
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t ${{ matrix.service }}:${{ github.sha }} .
+
+  docker-platform:
+    needs: build-test-platform
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [wa-event-platform, wa-channel-orchestrator]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -f platform/${{ matrix.component }}/Dockerfile -t ${{ matrix.component }}:${{ github.sha }} .
+
+  docker-gateway:
+    needs: build-test-gateway
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [wa-twilio-gateway]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -f gateway/${{ matrix.component }}/Dockerfile -t ${{ matrix.component }}:${{ github.sha }} .
+
+  helm-lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - service: wa-users-service
+            chart: services/wa-users-service/helm/wa-users-service
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"
+          - service: wa-channel-service
+            chart: services/wa-channel-service/helm/wa-channel-service
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder --set-string env.CREDENTIAL_H3_SERVICE_TOKEN=lint-only-h3-token"
+          - service: wa-credentials-service
+            chart: services/wa-credentials-service/helm/wa-credentials-service
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder --set-string env.CREDENTIAL_JWT_SECRET=lint-only-jwt-secret-at-least-32b --set-string env.CREDENTIAL_H3_SERVICE_TOKEN=lint-only-h3-token --set-string env.CREDENTIAL_BANK_SERVICE_TOKEN=lint-only-bank-token"
+          - service: wa-accounts-service
+            chart: services/wa-accounts-service/helm/wa-accounts-service
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"
+          - service: wa-insurance-service
+            chart: services/wa-insurance-service/helm/wa-insurance-service
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"
+          - service: wa-cards-service
+            chart: services/wa-cards-service/helm/wa-cards-service
+            extra_set: "--set-string env.DB_PASSWORD=lint-only-placeholder"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Helm lint
+        run: helm lint ${{ matrix.chart }} ${{ matrix.extra_set }}

@@ -1,0 +1,23 @@
+meta {
+  name: Consumos recientes
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/consumos?dias=30&limit=5
+  body: none
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Página ordenada por fecha e id descendentes; reenviar `cursor` para la siguiente. Respuestas: 200, 400, 401, 403, 404.
+}

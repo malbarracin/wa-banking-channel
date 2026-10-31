@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: wa-insurance-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/wa_insurance}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+
+server:
+  port: ${PORT:8085}
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  api-docs.path: /v3/api-docs
+  swagger-ui.path: /swagger-ui.html
+  swagger-ui.operationsSorter: method
+  default-produces-media-type: application/json
+
+clients:
+  wa-credentials-service:
+    base-url: ${CREDENTIALS_SERVICE_BASE_URL:http://localhost:8082}
+    connect-timeout: ${CREDENTIALS_SERVICE_CONNECT_TIMEOUT:2s}
+    read-timeout: ${CREDENTIALS_SERVICE_READ_TIMEOUT:3s}
+
+insurance:
+  siniestros:
+    ventana-duplicado-dias: ${SINIESTROS_VENTANA_DUPLICADO_DIAS:30}

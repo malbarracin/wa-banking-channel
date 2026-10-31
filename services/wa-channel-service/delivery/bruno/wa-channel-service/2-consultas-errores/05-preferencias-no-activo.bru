@@ -1,0 +1,32 @@
+meta {
+  name: Preferencias sobre vínculo no activo - 409
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/preferencias
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Credencial-Documento-Tipo: {{docTipo}}
+  X-Credencial-Documento-Numero: {{docNumber}}
+}
+
+body:json {
+  {
+    "idioma": "es",
+    "notificacionesHabilitadas": true
+  }
+}
+
+assert {
+  res.status: eq 409
+}
+
+docs {
+  El vínculo existe pero no está ACTIVO. Esperado: code CONFLICT.
+}

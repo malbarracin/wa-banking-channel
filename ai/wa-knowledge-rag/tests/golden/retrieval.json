@@ -1,0 +1,19 @@
+{
+  "description": "Corpus sintético, vectores ortogonales de 768 dimensiones sin modelo externo. Evalúa SQL real y contrato; no calibra embeddings de producción.",
+  "sources": [
+    {"key": 1, "title": "Tarjetas", "content": "Tarjetas: requisitos y documentación para solicitar tarjetas.", "audience": "public"},
+    {"key": 2, "title": "Horarios", "content": "Horarios de atención en sucursales y horarios del banco.", "audience": "public"},
+    {"key": 3, "title": "Seguros", "content": "Seguros: coberturas disponibles y exclusiones de seguros.", "audience": "public"},
+    {"key": 4, "title": "Cuentas", "content": "Cuentas: apertura de cuentas y documentación requerida.", "audience": "public"},
+    {"key": 5, "title": "Soporte", "content": "Soporte: canales de soporte y ayuda del banco.", "audience": "public"},
+    {"key": 6, "title": "Escalamiento interno", "content": "Escalamiento interno: procedimiento reservado de derivación.", "audience": "internal"}
+  ],
+  "queries": [
+    {"query": "tarjeta", "axis": 1, "expected": [1]},
+    {"query": "horario", "axis": 2, "expected": [2]},
+    {"query": "seguro", "axis": 3, "expected": [3]},
+    {"query": "cuenta", "axis": 4, "expected": [4]},
+    {"query": "soporte", "axis": 5, "expected": [5]}
+  ],
+  "outside": ["astronomía", "recetas culinarias", "escalamiento interno"]
+}

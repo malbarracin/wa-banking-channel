@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "wa-credentials-service.fullname" . }}-config
+  labels:
+    {{- include "wa-credentials-service.labels" . | nindent 4 }}
+data:
+  DB_URL: {{ .Values.env.DB_URL | quote }}
+  WA_USERS_SERVICE_BASE_URL: {{ .Values.env.WA_USERS_SERVICE_BASE_URL | quote }}

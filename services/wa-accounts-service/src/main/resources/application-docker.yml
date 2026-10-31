@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      # Local compose sin migraciones Flyway: JPA crea/actualiza el esquema
+      ddl-auto: update
+
+server:
+  port: ${APP_PORT:8084}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+clients:
+  wa-credentials-service:
+    base-url: ${CREDENTIALS_SERVICE_BASE_URL:http://host.docker.internal:8082}

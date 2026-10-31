@@ -1,0 +1,67 @@
+outbox:
+  enabled: ${OUTBOX_ENABLED:true}
+  poll-interval-ms: ${OUTBOX_POLL_INTERVAL_MS:250}
+  max-attempts: ${OUTBOX_MAX_ATTEMPTS:3}
+  backoff-ms: ${OUTBOX_BACKOFF_MS:1000}
+  send-timeout-ms: ${OUTBOX_SEND_TIMEOUT_MS:10000}
+h9:
+  base-url: ${H9_BASE_URL:http://localhost:8099}
+  service-token: ${H9_SERVICE_TOKEN:}
+  connect-timeout-ms: ${H9_CONNECT_TIMEOUT_MS:1000}
+  timeout-ms: ${H9_TIMEOUT_MS:5000}
+  max-retries: ${H9_MAX_RETRIES:2}
+  backoff-ms: ${H9_BACKOFF_MS:200}
+spring:
+  application:
+    name: wa-channel-orchestrator
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/wa_orchestrator}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    security:
+      protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+    consumer:
+      group-id: wa-channel-orchestrator
+      enable-auto-commit: false
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      max-poll-records: 10
+    producer:
+      acks: all
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+    listener:
+      ack-mode: manual_immediate
+      concurrency: 3
+server:
+  port: ${SERVER_PORT:8091}
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+logging:
+  structured:
+    format:
+      console: ecs

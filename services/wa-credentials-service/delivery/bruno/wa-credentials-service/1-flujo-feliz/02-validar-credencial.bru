@@ -1,0 +1,33 @@
+meta {
+  name: Validar credencial
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/validar
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "credencial": "{{jwt}}"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.vigente: eq true
+  res.body.numeroWhatsapp: isString
+  res.body.fechaExpiracion: isString
+}
+
+docs {
+  Usa el JWT guardado por la emisión. Verifica firma, expiración, jti, estado persistido y cliente en H1.
+  Respuestas: 200 vigente, 400 JSON ilegible, 401 credencial rechazada.
+}

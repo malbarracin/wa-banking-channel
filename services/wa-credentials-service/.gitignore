@@ -1,0 +1,9 @@
+target/
+*.log
+.idea/
+*.iml
+.vscode/
+.DS_Store
+.env
+.maven-task27/
+.maven-task164/

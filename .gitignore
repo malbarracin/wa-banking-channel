@@ -1,0 +1,35 @@
+.maven-cache/
+.env
+**/.env
+
+# >>> opensoma: agentes y configuración de soma (no van al repositorio) >>>
+.opensoma/
+.opencode/
+.github/agents/
+.github/skills/
+.claude/agents/
+.claude/skills/
+.claude/settings.local.json
+.cursor/agents/
+.cursor/skills/
+.cursor/rules/team-*.mdc
+.cursor/mcp.json
+.kiro/agents/
+.kiro/skills/
+.codex/agents/
+.agents/skills/
+.agents/opensoma/
+.mcp.json
+.gemini/settings.json
+.qwen/settings.json
+.factory/mcp.json
+kilo.json
+.agents/mcp_config.json
+opencode.json
+AGENTS.md
+team.yaml
+project.yaml
+backlog/
+packs/
+mimocode.json
+# <<< opensoma <<<

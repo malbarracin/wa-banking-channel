@@ -1,0 +1,20 @@
+meta {
+  name: Consulta inexistente sin rol — 403 FORBIDDEN
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/DNI/00000000
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 403
+}
+
+docs {
+  Sin principal o rol USERS_FULL_READ la consulta responde 403 FORBIDDEN sin PII, aunque el documento no
+  exista. Con el rol, el caso inexistente responde 404 NOT_FOUND (cubierto por tests de integración).
+}

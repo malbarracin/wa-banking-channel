@@ -1,0 +1,20 @@
+meta {
+  name: Historial del número
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/historial
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Historial resumido para soporte: estadoActual y eventos del más reciente al más antiguo.
+  No incluye motivos libres ni datos de verificación. Respuestas: 200, 404, 500.
+}

@@ -1,0 +1,23 @@
+meta {
+  name: Consumos con dias=0 — 400
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/consumos?dias=0
+  body: none
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  dias y limit deben ser positivos → 400 BAD_REQUEST.
+}

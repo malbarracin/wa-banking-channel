@@ -1,0 +1,31 @@
+meta {
+  name: Desbloqueo de tarjeta con bloqueo definitivo — 409
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tarjetas/44444444-4444-4444-8444-444444444444/desbloquear/temporal
+  body: json
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "tarjetaId": "44444444-4444-4444-8444-444444444444",
+    "validacionAdicional": true
+  }
+}
+
+assert {
+  res.status: eq 409
+}
+
+docs {
+  El bloqueo definitivo no se revierte por chat → 409 CONFLICT. Usa la tarjeta en BLOQUEO_DEFINITIVO del seed.
+}

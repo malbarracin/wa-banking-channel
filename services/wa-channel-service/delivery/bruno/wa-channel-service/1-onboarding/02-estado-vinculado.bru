@@ -1,0 +1,20 @@
+meta {
+  name: Estado del número - vinculado
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/estado
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Anti-duplicados sin datos del cliente: vinculado=true y estado PENDIENTE_VERIFICACION.
+  Este endpoint nunca responde 404.
+}

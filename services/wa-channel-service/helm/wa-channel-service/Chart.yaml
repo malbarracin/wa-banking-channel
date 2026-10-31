@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wa-channel-service
+description: Helm chart for wa-channel-service (H3 Servicio Canal WhatsApp)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

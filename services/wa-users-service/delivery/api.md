@@ -1,162 +1,196 @@
 # API — wa-users-service
 
-Base: `http://localhost:8080` · Prefijo: `/api/v1/users` · Content-Type: `application/json`
+Uso de los endpoints HTTP de H1 con `curl`. Base: `http://localhost:8080`.
+Los mismos ejemplos están en Swagger (`/swagger-ui.html`), Postman y Bruno.
 
-Los ejemplos usan el mismo usuario ficticio coherente con Swagger, Postman y Bruno
-(`Ana Pérez`, DNI `30111222`, id `550e8400-e29b-41d4-a716-446655440000`).
+## Contrato de error único
 
-## Contrato de errores
-
-Toda respuesta de error usa:
+Todas las respuestas de error usan:
 
 ```json
 {
   "code": "VALIDATION_ERROR",
   "message": "La solicitud tiene datos inválidos",
-  "details": [{ "field": "documentType", "message": "no debe estar vacío" }],
-  "timestamp": "2026-10-05T14:30:00Z"
+  "details": [
+    { "field": "nombre", "message": "El nombre es obligatorio" }
+  ],
+  "timestamp": "2026-10-26T12:00:00Z"
 }
 ```
 
-| HTTP | code | Cuándo |
-|------|------|--------|
-| 400 | `VALIDATION_ERROR` | Datos inválidos o contacto incompleto |
-| 400 | `BAD_REQUEST` | Formato, campo no permitido, params ausentes |
-| 404 | `NOT_FOUND` | Usuario inexistente |
-| 409 | `CONFLICT` | Duplicado, transición inválida, update en baja lógica |
-| 500 | `INTERNAL_ERROR` | Error inesperado |
+| HTTP | `code` | Cuándo |
+|------|--------|--------|
+| 400 | `VALIDATION_ERROR` | Bean Validation (`@Valid`) |
+| 400 | `BAD_REQUEST` | JSON ilegible, transición de estado inválida, campo no editable |
+| 403 | `FORBIDDEN` | Consulta completa sin principal autenticado o sin rol `USERS_FULL_READ` |
+| 404 | `NOT_FOUND` | Usuario inexistente (mensaje genérico, sin PII) |
+| 409 | `CONFLICT` | Documento duplicado en el alta |
+| 500 | `INTERNAL_ERROR` | Error inesperado (sin stacktrace) |
+
+`details` nunca es `null` (lista vacía si no aplica).
+
+## Flujo típico
+
+Alta → consulta → actualización → consulta de estado → cambio de estado.
 
 ---
 
-## POST `/api/v1/users` — Alta
-
-Crea un usuario en estado `ACTIVE`. Unicidad: tipo + número de documento. Al menos un contacto.
+## 1. Alta — `POST /api/v1/users`
 
 ```bash
 curl -s -X POST http://localhost:8080/api/v1/users \
   -H "Content-Type: application/json" \
   -d '{
-    "documentType": "DNI",
-    "documentNumber": "30111222",
-    "displayName": "Ana Pérez",
-    "email": "ana@example.com",
-    "birthDate": "1990-01-02"
+    "documento": { "tipo": "DNI", "numero": "30111222" },
+    "nombre": "Ana",
+    "apellido": "Pérez",
+    "fechaNacimiento": "1990-05-15",
+    "email": "ana@example.test",
+    "telefono": "5551234"
   }'
 ```
 
-**201 Created**
+**201 Created** — incluye el header `Location` con la ruta canónica del recurso:
+
+```text
+Location: /api/v1/users/DNI/30111222
+```
 
 ```json
 {
-  "id": "550e8400-e29b-41d4-a716-446655440000",
-  "documentType": "DNI",
-  "documentNumber": "30111222",
-  "displayName": "Ana Pérez",
-  "email": "ana@example.com",
-  "phone": null,
-  "birthDate": "1990-01-02",
-  "status": "ACTIVE",
-  "preferences": {},
-  "channelLinkEligible": true
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "documento": { "tipo": "DNI", "numero": "30111222" },
+  "nombre": "Ana",
+  "apellido": "Pérez",
+  "fechaNacimiento": "1990-05-15",
+  "email": "ana@example.test",
+  "telefono": "5551234",
+  "nombreTratamiento": null,
+  "preferencias": null,
+  "estado": "ACTIVE"
 }
 ```
 
-| Error | Ejemplo |
-|-------|---------|
-| 400 `VALIDATION_ERROR` | Falta `birthDate` o email/phone |
-| 409 `CONFLICT` | Mismo DNI+número ya registrado |
+Errores: **400** datos incompletos; **409** documento ya registrado. Un alta rechazada por
+Bean Validation queda auditada como `ALTA` / `RECHAZADO` cuando el body trae un documento
+identificable (tipo y número no vacíos y de hasta 255 caracteres).
 
 ---
 
-## GET `/api/v1/users/{id}` — Consulta por ID
+## 2. Consulta — `GET /api/v1/users/{tipo}/{numero}`
+
+Requiere un principal autenticado con el rol de servidor `USERS_FULL_READ`. La aplicación no
+configura el mecanismo de autenticación: por defecto la consulta completa queda denegada con **403**,
+incluso para documentos inexistentes. Headers como `X-Profile`, `X-User` o `X-Role` no otorgan acceso.
 
 ```bash
-curl -s http://localhost:8080/api/v1/users/550e8400-e29b-41d4-a716-446655440000
+curl -s http://localhost:8080/api/v1/users/DNI/30111222
 ```
 
-**200 OK** — mismos campos autorizados que el alta, más `channelLinkEligible`.
+**403** — respuesta por defecto sin autenticación configurada:
 
-| Error | Ejemplo |
-|-------|---------|
-| 400 `BAD_REQUEST` | UUID mal formado |
-| 404 `NOT_FOUND` | Id inexistente |
-
----
-
-## GET `/api/v1/users` — Consulta por documento
-
-Ambos query params son obligatorios.
-
-```bash
-curl -s "http://localhost:8080/api/v1/users?documentType=DNI&documentNumber=30111222"
+```json
+{
+  "code": "FORBIDDEN",
+  "message": "Acceso no autorizado a la consulta completa",
+  "details": [],
+  "timestamp": "2026-10-26T12:00:00Z"
+}
 ```
 
-**200 OK** — mismo cuerpo que la consulta por ID.
+**200** — con principal y rol `USERS_FULL_READ`: mismo cuerpo que el alta (UserResponse completo
+de este hito, provisional hasta la proyección por perfil de Compliance).
 
-| Error | Ejemplo |
-|-------|---------|
-| 400 | Params ausentes o `documentType` inválido |
-| 404 `NOT_FOUND` | Documento no registrado |
+**404** — con principal y rol, si el usuario no existe:
+
+```json
+{
+  "code": "NOT_FOUND",
+  "message": "Usuario no encontrado",
+  "details": [],
+  "timestamp": "2026-10-26T12:00:00Z"
+}
+```
 
 ---
 
-## PATCH `/api/v1/users/{id}` — Actualización de datos permitidos
-
-Solo `displayName`, `email`, `phone`, `preferences`. Clave ausente = omitir; `null` = eliminar.
-Tras el patch debe quedar al menos un contacto. No admite update si el usuario está en baja lógica.
+## 3. Estado — `GET /api/v1/users/{tipo}/{numero}/status`
 
 ```bash
-curl -s -X PATCH http://localhost:8080/api/v1/users/550e8400-e29b-41d4-a716-446655440000 \
+curl -s http://localhost:8080/api/v1/users/DNI/30111222/status
+```
+
+**200**
+
+```json
+{
+  "documento": { "tipo": "DNI", "numero": "30111222" },
+  "estado": "ACTIVE"
+}
+```
+
+Pensado para H3: expone estados no habilitantes (`SUSPENDED`, `LOGICAL_DELETE`) sin aplicar la restricción de vínculo aquí.
+
+---
+
+## 4. Actualización — `PATCH /api/v1/users/{tipo}/{numero}`
+
+Solo `email`, `telefono`, `nombreTratamiento`, `preferencias`. Ausentes o `null` conservan el valor.
+
+```bash
+curl -s -X PATCH http://localhost:8080/api/v1/users/DNI/30111222 \
   -H "Content-Type: application/json" \
-  -d '{"displayName":"Nuevo nombre","preferences":{"language":"es"}}'
+  -d '{
+    "email": "nuevo@example.test",
+    "telefono": "555999",
+    "nombreTratamiento": "Anita",
+    "preferencias": "canal:whatsapp"
+  }'
 ```
 
-**200 OK** — `UserResponse` actualizado.
+**200** — UserResponse con los campos actualizados.
 
-| Error | Ejemplo |
-|-------|---------|
-| 400 `BAD_REQUEST` | Propiedad no permitida (p. ej. `documentNumber`) |
-| 400 `VALIDATION_ERROR` | Queda sin email ni phone |
-| 404 `NOT_FOUND` | Id inexistente |
-| 409 `CONFLICT` | Usuario en `LOGICALLY_DELETED` |
+**400** si se envía una propiedad fuera del contrato (ej. `fechaNacimiento`, `documento`, `estado`):
+
+```json
+{
+  "code": "BAD_REQUEST",
+  "message": "El campo no es editable por este servicio",
+  "details": [],
+  "timestamp": "2026-10-26T12:00:00Z"
+}
+```
 
 ---
 
-## PATCH `/api/v1/users/{id}/status` — Cambio de estado
+## 5. Cambio de estado — `PATCH /api/v1/users/{tipo}/{numero}/status`
 
-Transiciones H1:
-
-| Desde | Hacia |
-|-------|-------|
-| ACTIVE | SUSPENDED, LOGICALLY_DELETED |
-| SUSPENDED | ACTIVE, LOGICALLY_DELETED |
-| LOGICALLY_DELETED | *(terminal — ninguna)* |
+Transiciones H1: `ACTIVE`→`SUSPENDED`|`LOGICAL_DELETE`; `SUSPENDED`→`ACTIVE`|`LOGICAL_DELETE`.
+Desde `LOGICAL_DELETE` no hay reactivación.
 
 ```bash
-curl -s -X PATCH http://localhost:8080/api/v1/users/550e8400-e29b-41d4-a716-446655440000/status \
+curl -s -X PATCH http://localhost:8080/api/v1/users/DNI/30111222/status \
   -H "Content-Type: application/json" \
-  -d '{"status":"SUSPENDED"}'
+  -d '{"estado":"SUSPENDED"}'
 ```
 
-**200 OK** — `status: SUSPENDED`, `channelLinkEligible: false`.
+**200**
 
-| Error | Ejemplo |
-|-------|---------|
-| 400 | `status` ausente o inválido |
-| 404 `NOT_FOUND` | Id inexistente |
-| 409 `CONFLICT` | Transición no permitida |
+```json
+{
+  "documento": { "tipo": "DNI", "numero": "30111222" },
+  "estado": "SUSPENDED"
+}
+```
 
----
+**400** transición inválida (`code`: `BAD_REQUEST`). **404** si no existe el usuario.
 
 ## Salud
 
 ```bash
 curl -s http://localhost:8080/actuator/health
-curl -s http://localhost:8080/actuator/info
 ```
 
-## OpenAPI
+## OpenAPI exportado
 
-- UI: http://localhost:8080/swagger-ui.html (desactivada en perfil `prod`)
-- JSON vivo: http://localhost:8080/v3/api-docs
-- Estático (regenerado en `./mvnw verify`): [`openapi/openapi.json`](openapi/openapi.json)
+Copia estática regenerada en cada `./mvnw verify`: `delivery/openapi/openapi.json` y `openapi.yaml`.

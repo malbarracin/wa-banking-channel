@@ -1,0 +1,30 @@
+meta {
+  name: Validar JWT renovado
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/validar
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "credencial": "{{jwtNuevo}}"
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.vigente: eq true
+}
+
+docs {
+  Tras confirmar, el JWT nuevo valida; el anterior responde 401.
+}

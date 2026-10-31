@@ -1,0 +1,21 @@
+meta {
+  name: Consultar usuario (requiere rol USERS_FULL_READ)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 403
+}
+
+docs {
+  La consulta completa exige principal autenticado y rol de servidor USERS_FULL_READ. El servicio no
+  configura autenticación: con la configuración del repo responde 403 FORBIDDEN sin PII. Con el rol
+  devuelve 200 con el UserResponse completo y 404 si no existe (cubierto por tests de integración).
+}

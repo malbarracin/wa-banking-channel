@@ -1,13 +1,6 @@
 target/
 .git/
 .env
-.env.*
-!.env.example
-*.key
-*.pem
-*.p12
-*.jks
-secrets/
 *.md
 delivery/
 backlog/
@@ -19,11 +12,8 @@ specs/
 .kiro/
 .opencode/
 .agents/
-.aws/
-.github/
 .idea/
 .vscode/
 *.iml
-*.log
-team.yaml
-project.yaml
+helm/
+.env.example

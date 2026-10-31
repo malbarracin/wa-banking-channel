@@ -1,21 +1,31 @@
 replicaCount: 1
+
 image:
-  repository: wa-users-service
-  tag: local
+  repository: ghcr.io/example/wa-users-service
+  tag: "0.1.0-SNAPSHOT"
   pullPolicy: IfNotPresent
-imagePullSecrets: []
+
 service:
+  type: ClusterIP
   port: 8080
+
 resources:
   requests:
     cpu: 100m
     memory: 256Mi
   limits:
-    cpu: "1"
+    cpu: 500m
     memory: 512Mi
-database:
-  existingSecret: wa-users-db
-  createSecret: false
-  url: ""
-  username: ""
-  password: ""
+
+spring:
+  profiles:
+    active: prod
+
+env:
+  DB_URL: jdbc:postgresql://postgres:5432/wa_users
+  DB_USERNAME: app
+  # DB_PASSWORD obligatorio: el chart lo usa para crear el Secret (sin valor por defecto).
+
+ingress:
+  enabled: false
+  host: wa-users.example.local

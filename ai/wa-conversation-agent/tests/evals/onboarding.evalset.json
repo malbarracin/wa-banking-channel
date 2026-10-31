@@ -1,0 +1,63 @@
+{
+  "eval_set_id": "onboarding",
+  "name": "onboarding",
+  "eval_cases": [
+    {
+      "eval_id": "onboarding",
+      "session_input": {
+        "app_name": "wa_conversation_agent",
+        "user_id": "eval-user",
+        "state": {
+          "numero_whatsapp": "+12025550152",
+          "correlation_id": "eval-onboarding"
+        }
+      },
+      "conversation": [
+        {
+          "invocation_id": "turn-1",
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "Soy nuevo y quiero verificar mi identidad. En esta prueba sintética uso documento tipo EVAL, número EVAL-IDENTIDAD y datosVerificacion prueba=sintetica. Tras verificar mi vínculo e identidad, completá el alta de acceso."
+              }
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [
+              {
+                "text": "Verificación completada."
+              }
+            ]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {
+                "name": "vinculo_verificar_identidad_v1",
+                "args": {
+                  "parametros": {
+                    "documentoTipo": "EVAL",
+                    "documentoNumero": "EVAL-IDENTIDAD",
+                    "datosVerificacion": {"prueba": "sintetica"}
+                  }
+                }
+              },
+              {
+                "name": "acceso_emitir_credencial_v1",
+                "args": {
+                  "parametros": {
+                    "documentoTipo": "EVAL",
+                    "documentoNumero": "EVAL-IDENTIDAD",
+                    "vinculoActivo": true,
+                    "identidadVerificada": true
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

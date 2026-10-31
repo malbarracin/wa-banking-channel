@@ -1,0 +1,33 @@
+meta {
+  name: Revocar credencial
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/{{numeroWhatsapp}}/revocacion
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{h3ServiceToken}}
+}
+
+body:json {
+  {
+    "motivo": "DESVINCULACION",
+    "solicitadoPor": "CANAL"
+  }
+}
+
+assert {
+  res.status: eq 204
+}
+
+docs {
+  Solo H3 (Bearer h3ServiceToken). Revocación inmediata. Sin credencial activa responde 404.
+  La credencial revocada deja de validar al instante.
+  Respuestas: 204 revocada, 400 body inválido, 401 sin autenticar, 403 actor distinto de H3, 404 sin credencial activa, 500 error inesperado.
+}

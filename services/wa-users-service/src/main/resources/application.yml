@@ -3,12 +3,12 @@ spring:
     name: wa-users-service
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/wa_users}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:validate}
+      ddl-auto: none
   h2:
     console:
       enabled: false
@@ -34,13 +34,48 @@ management:
         enabled: true
 
 springdoc:
-  api-docs.path: /v3/api-docs
-  swagger-ui.path: /swagger-ui.html
-  swagger-ui.operationsSorter: method
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
   default-produces-media-type: application/json
 
-# Los errores de unicidad JDBC incluyen el documento en el mensaje del driver.
-# El handler global registra únicamente el tipo de error inesperado.
-logging:
-  level:
-    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+---
+spring:
+  config:
+    activate:
+      on-profile: test
+  datasource:
+    url: jdbc:h2:mem:users;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+springdoc:
+  swagger-ui:
+    enabled: false

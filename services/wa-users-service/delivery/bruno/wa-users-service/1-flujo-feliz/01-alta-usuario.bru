@@ -10,13 +10,18 @@ post {
   auth: none
 }
 
+headers {
+  Content-Type: application/json
+}
+
 body:json {
   {
-    "documentType": "DNI",
-    "documentNumber": "{{docNumber}}",
-    "displayName": "Ana Pérez",
-    "email": "ana@example.com",
-    "birthDate": "1990-01-02"
+    "documento": { "tipo": "{{docTipo}}", "numero": "{{docNumber}}" },
+    "nombre": "Ana",
+    "apellido": "Pérez",
+    "fechaNacimiento": "1990-05-15",
+    "email": "ana@example.test",
+    "telefono": "5551234"
   }
 }
 
@@ -29,9 +34,12 @@ assert {
 }
 
 script:post-response {
-  bru.setVar("userId", res.body.id);
+  bru.setVar("docNumber", res.body.documento.numero);
 }
 
 docs {
-  Crea un usuario ACTIVE. Genera docNumber único y guarda userId. Respuestas: 201, 400, 409.
+  Crea un usuario ACTIVE. La respuesta 201 incluye el header Location con la ruta canónica del recurso
+  (/api/v1/users/{tipo}/{numero}); Postman lo verifica con un test. Las altas rechazadas por validación
+  quedan auditadas como RECHAZADO cuando el documento es identificable.
+  Respuestas: 201 creado, 400 datos inválidos, 409 documento repetido.
 }

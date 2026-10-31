@@ -1,0 +1,29 @@
+meta {
+  name: Listar tarjetas
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/tarjetas
+  body: none
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+script:post-response {
+  if (Array.isArray(res.body) && res.body.length > 0 && res.body[0].id) {
+    bru.setVar("tarjetaId", res.body[0].id);
+  }
+}
+
+docs {
+  Solo tarjetas del titular autenticado; lista vacía es válido. Respuestas: 200, 401, 403.
+}

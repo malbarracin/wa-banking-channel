@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "vinculo.verificar_identidad.v1",
+  "description": "Capacidad vinculo.verificar_identidad v1; servicio H3; actor agente; handler verificar_identidad; requiere_credencial=False; habilitada=True",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entrada",
+    "salida"
+  ],
+  "properties": {
+    "entrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contexto",
+        "parametros"
+      ],
+      "properties": {
+        "contexto": {
+          "$ref": "_envelope.json#/definitions/contexto"
+        },
+        "parametros": {
+          "additionalProperties": false,
+          "properties": {
+            "numero_whatsapp": {
+              "anyOf": [
+                {
+                  "pattern": "^\\+[1-9][0-9]{6,14}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Numero Whatsapp"
+            },
+            "documentoTipo": {
+              "maxLength": 20,
+              "minLength": 1,
+              "title": "Documentotipo",
+              "type": "string"
+            },
+            "documentoNumero": {
+              "maxLength": 30,
+              "minLength": 1,
+              "title": "Documentonumero",
+              "type": "string"
+            },
+            "datosVerificacion": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "maxProperties": 32,
+              "title": "Datosverificacion",
+              "type": "object"
+            }
+          },
+          "required": [
+            "documentoTipo",
+            "documentoNumero",
+            "datosVerificacion"
+          ],
+          "title": "Verificacion",
+          "type": "object"
+        }
+      }
+    },
+    "salida": {
+      "oneOf": [
+        {
+          "$ref": "_envelope.json#/definitions/salida_exito"
+        },
+        {
+          "$ref": "_envelope.json#/definitions/salida_error"
+        }
+      ]
+    }
+  },
+  "x-mcp": {
+    "nombre": "vinculo.verificar_identidad",
+    "version": 1,
+    "servicio": "H3",
+    "actor": "agente",
+    "handler": "verificar_identidad",
+    "requiere_credencial": false,
+    "habilitada": true,
+    "tool_name": "vinculo_verificar_identidad_v1"
+  }
+}

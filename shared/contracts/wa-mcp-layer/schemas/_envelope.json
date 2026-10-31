@@ -1,0 +1,128 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "McpEnvelope",
+  "description": "Sobre comun de entrada/salida de capacidades H7",
+  "definitions": {
+    "contexto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "numero_whatsapp",
+        "correlation_id"
+      ],
+      "properties": {
+        "numero_whatsapp": {
+          "type": "string",
+          "pattern": "^\\+[1-9][0-9]{6,14}$",
+          "description": "Numero E.164 del canal; no proviene del LLM"
+        },
+        "credencial": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "x-sensible": true,
+          "description": "JWT H2 opaco; nunca en logs ni prompt"
+        },
+        "correlation_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[\\w.-]+$"
+        }
+      }
+    },
+    "auditoria": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capacidad",
+        "version",
+        "correlation_id",
+        "timestamp"
+      ],
+      "properties": {
+        "capacidad": {
+          "type": "string"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "correlation_id": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codigo",
+        "mensaje"
+      ],
+      "properties": {
+        "codigo": {
+          "type": "string"
+        },
+        "mensaje": {
+          "type": "string"
+        },
+        "reintentable": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "salida_exito": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resultado",
+        "auditoria"
+      ],
+      "properties": {
+        "resultado": true,
+        "auditoria": {
+          "$ref": "#/definitions/auditoria"
+        }
+      }
+    },
+    "salida_error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "error",
+        "auditoria"
+      ],
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/error"
+        },
+        "auditoria": {
+          "$ref": "#/definitions/auditoria"
+        }
+      }
+    },
+    "entrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contexto",
+        "parametros"
+      ],
+      "properties": {
+        "contexto": {
+          "$ref": "#/definitions/contexto"
+        },
+        "parametros": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

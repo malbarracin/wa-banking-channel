@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "wa-credentials-service.fullname" . }}
+  labels:
+    {{- include "wa-credentials-service.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "wa-credentials-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "wa-credentials-service.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: wa-credentials-service
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: {{ .Values.spring.profiles.active | quote }}
+            - name: PORT
+              value: {{ .Values.service.port | quote }}
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "wa-credentials-service.fullname" . }}-config
+                  key: DB_URL
+            - name: WA_USERS_SERVICE_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "wa-credentials-service.fullname" . }}-config
+                  key: WA_USERS_SERVICE_BASE_URL
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wa-credentials-service.fullname" . }}-secret
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wa-credentials-service.fullname" . }}-secret
+                  key: DB_PASSWORD
+            - name: CREDENTIAL_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wa-credentials-service.fullname" . }}-secret
+                  key: CREDENTIAL_JWT_SECRET
+            - name: CREDENTIAL_H3_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wa-credentials-service.fullname" . }}-secret
+                  key: CREDENTIAL_H3_SERVICE_TOKEN
+            - name: CREDENTIAL_BANK_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wa-credentials-service.fullname" . }}-secret
+                  key: CREDENTIAL_BANK_SERVICE_TOKEN
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 40
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

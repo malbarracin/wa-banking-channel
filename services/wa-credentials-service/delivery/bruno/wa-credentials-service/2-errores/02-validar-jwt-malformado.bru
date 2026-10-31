@@ -1,0 +1,31 @@
+meta {
+  name: Validar JWT malformado
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/validar
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "credencial": "no-es-un-jwt"
+  }
+}
+
+assert {
+  res.status: eq 401
+  res.body.code: eq UNAUTHORIZED
+}
+
+docs {
+  Credencial con formato inválido: rechazo uniforme 401.
+  Respuestas: 401 UNAUTHORIZED.
+}

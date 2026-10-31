@@ -1,0 +1,16 @@
+.venv
+.uv-cache
+tests
+.env
+**/.env
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+*.egg-info
+.git
+.gitignore
+README.md

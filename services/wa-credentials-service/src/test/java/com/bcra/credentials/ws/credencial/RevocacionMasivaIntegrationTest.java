@@ -1,0 +1,283 @@
+package com.bcra.credentials.ws.credencial;
+
+import java.time.Instant;
+import java.util.UUID;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import com.bcra.credentials.ws.credencial.entity.AuditAccion;
+import com.bcra.credentials.ws.credencial.entity.AuditResultado;
+import com.bcra.credentials.ws.credencial.entity.CredencialAuditLog;
+import com.bcra.credentials.ws.credencial.entity.CredencialEstado;
+import com.bcra.credentials.ws.credencial.entity.CredencialSesion;
+import com.bcra.credentials.ws.credencial.entity.MotivoRevocacion;
+import com.bcra.credentials.ws.credencial.entity.RevocadaPor;
+import com.bcra.credentials.ws.credencial.repository.CredencialAuditLogRepository;
+import com.bcra.credentials.ws.credencial.repository.CredencialRepository;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class RevocacionMasivaIntegrationTest {
+
+    private static final String ENDPOINT = "/api/v1/credenciales/revocacion-masiva";
+
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private CredencialRepository repository;
+    @MockitoSpyBean
+    private CredencialAuditLogRepository auditRepository;
+
+    @BeforeEach
+    void prepararCredenciales() {
+        auditRepository.deleteAll();
+        repository.deleteAll();
+        guardar("+5491111111111", "12345678", CredencialEstado.ACTIVA);
+        guardar("+5491122222222", "12345678", CredencialEstado.ACTIVA);
+        guardar("+5491133333333", "87654321", CredencialEstado.ACTIVA);
+        guardar("+5491144444444", "12345678", CredencialEstado.EXPIRADA);
+        guardar("+5491155555555", "12345678", CredencialEstado.REVOCADA);
+    }
+
+    @Test
+    @DisplayName("TODAS revoca solamente las activas y repetir no duplica auditoría")
+    void revocaTodasConAuditoriaIdempotente() throws Exception {
+        revocar("{\"criterio\":\"TODAS\"}", 3);
+        revocar("{\"criterio\":\"TODAS\"}", 0);
+
+        assertThat(repository.findAll()).filteredOn(c -> c.getFechaRevocacion() != null)
+                .hasSize(3).allSatisfy(c -> {
+                    assertThat(c.getEstado()).isEqualTo(CredencialEstado.REVOCADA);
+                    assertThat(c.getMotivoRevocacion()).isEqualTo(MotivoRevocacion.REVOCACION_MASIVA);
+                    assertThat(c.getRevocadaPor()).isEqualTo(RevocadaPor.BANCO);
+                });
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.EXPIRADA).hasSize(1);
+        assertThat(auditRepository.findAll()).hasSize(3).allSatisfy(a -> {
+            assertThat(a.getAccion()).isEqualTo(AuditAccion.REVOCACION);
+            assertThat(a.getResultado()).isEqualTo(AuditResultado.EXITOSO);
+            assertThat(a.getMotivo()).isEqualTo("REVOCACION_MASIVA");
+            assertThat(a.getJti()).isNotBlank();
+            assertThat(a.getFecha()).isNotNull();
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "Bearer desconocido", "Bearer h3-test-token"})
+    @DisplayName("Sin actor banco autorizado no revoca credenciales ni genera auditorías")
+    void rechazaRevocacionSinActorBanco(String authorization) throws Exception {
+        var request = post(ENDPOINT).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"criterio\":\"TODAS\"}");
+        if (!authorization.isEmpty()) {
+            request.header("Authorization", authorization);
+        }
+        boolean actorH3 = "Bearer h3-test-token".equals(authorization);
+
+        mockMvc.perform(request)
+                .andExpect(status().is(actorH3 ? 403 : 401))
+                .andExpect(jsonPath("$.code").value(actorH3 ? "FORBIDDEN" : "UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        assertThat(repository.findAll()).hasSize(5)
+                .allSatisfy(credencial -> {
+                    assertThat(credencial.getFechaRevocacion()).isNull();
+                    assertThat(credencial.getMotivoRevocacion()).isNull();
+                    assertThat(credencial.getRevocadaPor()).isNull();
+                });
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.ACTIVA).hasSize(3);
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.EXPIRADA).hasSize(1);
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.REVOCADA).hasSize(1);
+        assertThat(auditRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("POR_CLIENTE alcanza todos sus números y respeta a otros clientes y tipos documentales")
+    void revocaSoloClienteSeleccionado() throws Exception {
+        revocar("""
+                {"criterio":"POR_CLIENTE","segmento":{"documentoTipo":"PASAPORTE","documentoNumero":"12345678"}}
+                """, 0);
+        String request = """
+                {"criterio":"POR_CLIENTE","segmento":{"documentoTipo":"DNI","documentoNumero":"12345678"}}
+                """;
+        revocar(request, 2);
+        revocar(request, 0);
+
+        assertThat(repository.findByNumeroWhatsappAndEstado("+5491133333333", CredencialEstado.ACTIVA)).isPresent();
+        assertThat(auditRepository.findAll()).hasSize(2)
+                .allSatisfy(a -> assertThat(a.getDocumentoNumero()).isEqualTo("12345678"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "{}", "{\"criterio\":\"OTRO\"}", "{\"criterio\":\"POR_CLIENTE\"}",
+        "{\"criterio\":\"POR_CLIENTE\",\"segmento\":{}}",
+        "{\"criterio\":\"TODAS\",\"segmento\":{\"documentoTipo\":\"DNI\",\"documentoNumero\":\"12345678\"}}"
+    })
+    @DisplayName("Rechaza alcances inválidos con contrato 400 sin modificar credenciales")
+    void validaAlcanceSinAmpliarlo(String request) throws Exception {
+        mockMvc.perform(post(ENDPOINT)
+                .header("Authorization", "Bearer bank-test-token").contentType(MediaType.APPLICATION_JSON).content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists());
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.ACTIVA).hasSize(3);
+        assertThat(auditRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Si falla una auditoría se revierten todas las revocaciones")
+    void revierteSiFallaAuditoria() throws Exception {
+        doThrow(new org.springframework.dao.DataIntegrityViolationException("fallo de prueba"))
+                .when(auditRepository).save(any(CredencialAuditLog.class));
+
+        mockMvc.perform(post(ENDPOINT)
+                .header("Authorization", "Bearer bank-test-token").contentType(MediaType.APPLICATION_JSON).content("{\"criterio\":\"TODAS\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"));
+
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.ACTIVA).hasSize(3);
+        assertThat(auditRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Un fallo posterior a una auditoría persistida revierte todo el lote")
+    void revierteLoteConAuditoriaYaPersistida() throws Exception {
+        int[] intentos = {0};
+        doAnswer(invocacion -> {
+            if (++intentos[0] == 2) {
+                throw new org.springframework.dao.DataIntegrityViolationException("fallo de prueba");
+            }
+            CredencialAuditLog auditoria = invocacion.getArgument(0);
+            return auditRepository.saveAndFlush(auditoria);
+        }).when(auditRepository).save(any(CredencialAuditLog.class));
+
+        mockMvc.perform(post(ENDPOINT)
+                .header("Authorization", "Bearer bank-test-token").contentType(MediaType.APPLICATION_JSON).content("{\"criterio\":\"TODAS\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        assertThat(intentos[0]).isEqualTo(2);
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.ACTIVA)
+                .hasSize(3).allSatisfy(c -> {
+                    assertThat(c.getFechaRevocacion()).isNull();
+                    assertThat(c.getMotivoRevocacion()).isNull();
+                    assertThat(c.getRevocadaPor()).isNull();
+                });
+        assertThat(auditRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("Cada auditoría conserva la identidad y la fecha de la credencial revocada")
+    void conservaTrazabilidadPorCredencial() throws Exception {
+        revocar("{\"criterio\":\"TODAS\"}", 3);
+
+        assertThat(auditRepository.findAll()).hasSize(3).allSatisfy(auditoria -> {
+            CredencialSesion credencial = repository.findByJti(auditoria.getJti()).orElseThrow();
+            assertThat(auditoria.getNumeroWhatsapp()).isEqualTo(credencial.getNumeroWhatsapp());
+            assertThat(auditoria.getDocumentoTipo()).isEqualTo(credencial.getDocumentoTipo());
+            assertThat(auditoria.getDocumentoNumero()).isEqualTo(credencial.getDocumentoNumero());
+            assertThat(auditoria.getFecha()).isEqualTo(credencial.getFechaRevocacion());
+        });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"documentoTipo", "documentoNumero"})
+    @DisplayName("Rechaza documentos que exceden el límite sin revocar ni auditar")
+    void rechazaDocumentoDemasiadoLargo(String campo) throws Exception {
+        String tipo = "documentoTipo".equals(campo) ? "D".repeat(31) : "DNI";
+        String numero = "documentoNumero".equals(campo) ? "1".repeat(51) : "12345678";
+        String request = """
+                {"criterio":"POR_CLIENTE","segmento":{"documentoTipo":"%s","documentoNumero":"%s"}}
+                """.formatted(tipo, numero);
+
+        mockMvc.perform(post(ENDPOINT)
+                .header("Authorization", "Bearer bank-test-token").contentType(MediaType.APPLICATION_JSON).content(request))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details[*].field").value(
+                        org.hamcrest.Matchers.hasItem("segmento." + campo)))
+                .andExpect(jsonPath("$.timestamp").exists());
+
+        assertThat(repository.findAll()).filteredOn(c -> c.getEstado() == CredencialEstado.ACTIVA).hasSize(3);
+        assertThat(auditRepository.count()).isZero();
+    }
+
+    @Test
+    @DisplayName("La revocación masiva preserva la individual y su repetición devuelve 404 auditado")
+    void conservaRevocacionIndividualAlRevocarMasivamente() throws Exception {
+        String numero = "+5491111111111";
+        String solicitud = """
+                {"motivo":"DESVINCULACION","solicitadoPor":"CANAL"}
+                """;
+        mockMvc.perform(post("/api/v1/credenciales/{numero}/revocacion", numero)
+                .header("Authorization", "Bearer h3-test-token")
+                .contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isNoContent());
+        CredencialSesion individual = repository.findByNumeroWhatsappAndEstado(numero, CredencialEstado.REVOCADA)
+                .orElseThrow();
+
+        revocar("{\"criterio\":\"TODAS\"}", 2);
+
+        CredencialSesion conservada = repository.findById(individual.getId()).orElseThrow();
+        assertThat(conservada.getFechaRevocacion()).isEqualTo(individual.getFechaRevocacion());
+        assertThat(conservada.getMotivoRevocacion()).isEqualTo(MotivoRevocacion.DESVINCULACION);
+        assertThat(conservada.getRevocadaPor()).isEqualTo(RevocadaPor.CANAL);
+        mockMvc.perform(post("/api/v1/credenciales/{numero}/revocacion", numero)
+                .header("Authorization", "Bearer h3-test-token")
+                .contentType(MediaType.APPLICATION_JSON).content(solicitud))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.trace").doesNotExist());
+        assertThat(repository.findAll()).noneMatch(c -> c.getEstado() == CredencialEstado.ACTIVA);
+        assertThat(auditRepository.findAll()).hasSize(4)
+                .filteredOn(a -> a.getResultado() == AuditResultado.EXITOSO).hasSize(3)
+                .filteredOn(a -> a.getJti().equals(individual.getJti())).singleElement().satisfies(a -> {
+                    assertThat(a.getAccion()).isEqualTo(AuditAccion.REVOCACION);
+                    assertThat(a.getMotivo()).isEqualTo("DESVINCULACION");
+                });
+        assertThat(auditRepository.findAll()).filteredOn(a -> a.getResultado() == AuditResultado.RECHAZADO)
+                .singleElement().satisfies(a -> {
+                    assertThat(a.getAccion()).isEqualTo(AuditAccion.REVOCACION);
+                    assertThat(a.getNumeroWhatsapp()).isEqualTo(numero);
+                    assertThat(a.getMotivo()).contains("DESVINCULACION");
+                });
+    }
+
+    private void revocar(String request, int cantidad) throws Exception {
+        mockMvc.perform(post(ENDPOINT)
+                .header("Authorization", "Bearer bank-test-token").contentType(MediaType.APPLICATION_JSON).content(request))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.revocadas").value(cantidad));
+    }
+
+    private void guardar(String numero, String documento, CredencialEstado estado) {
+        repository.saveAndFlush(CredencialSesion.builder().jti(UUID.randomUUID().toString())
+                .numeroWhatsapp(numero).documentoTipo("DNI").documentoNumero(documento)
+                .vinculoId(UUID.randomUUID()).estado(estado).fechaEmision(Instant.now())
+                .fechaExpiracion(Instant.now().plusSeconds(3600)).build());
+    }
+}

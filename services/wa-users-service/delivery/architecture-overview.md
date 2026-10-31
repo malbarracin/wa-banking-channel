@@ -1,62 +1,101 @@
-# Arquitectura — wa-users-service (H1)
+# Arquitectura — wa-users-service
 
-Vista técnica del servicio integrado. Fuente funcional: `specs/usuarios/spec.md`. Plan: `specs/arquitectura/plan.md`.
+## Qué es
 
-## Responsabilidad
+Microservicio Spring Boot 3 (Java 21) que administra usuarios bancarios del canal (hito H1):
+alta, consulta por documento, actualización de datos permitidos y cambio de estado.
+Es la base de identidad para H2/H3; **no** gestiona WhatsApp, verificación de identidad ni sesiones.
 
-Identidad bancaria mínima para el canal WhatsApp: alta, consulta, patch de campos permitidos y máquina
-de estados. **No** incluye vínculo WhatsApp (H3), sesiones (H2), productos ni API pública de auditoría.
+Identidad Maven: `com.bcra:wa-users-service` · paquete base `com.bcra.users.ws` (`project.yaml`).
 
-## Capas (MVC por módulo)
+## Capas (módulo `user`)
 
 ```
-Request → UserController (@Valid) → UserService (@Transactional)
-              ↓                         ↓
-         UserMapper              UserRepository / AuditService
-              ↓                         ↓
-         UserResponse                 User / AuditLog
+com.bcra.users.ws/
+├── UserApplication.java
+├── user/
+│   ├── controller/     # UserController + UserCreateExceptionHandler (auditoría de altas inválidas)
+│   ├── service/        # UserService, AuditService
+│   ├── repository/     # UserRepository, AuditLogRepository
+│   ├── mapper/         # UserMapper (MapStruct)
+│   ├── entity/         # User, Documento, UserStatus, Audit*
+│   ├── dto/            # Request / Response
+│   ├── exception/      # dominio (NotFound, Duplicate, …)
+│   └── validation/     # ContactoPresente
+├── config/             # OpenApiConfig
+└── exception/          # ErrorResponse + GlobalExceptionHandler
 ```
 
-| Capa | Paquete | Rol |
-|------|---------|-----|
-| Controller | `user.controller` | HTTP, validación, status codes |
-| Service | `user.service` | Unicidad, contacto, transiciones, aptitud |
-| Repository | `user.repository` | JPA |
-| Mapper | `user.mapper` | MapStruct Entity ↔ DTO |
-| Entity / DTO | `user.entity` / `user.dto` | Persistencia / contrato API |
-| Audit | `audit.*` | Escritura de `AuditLog` (sin controller) |
-| Exception | `exception` + `user.exception` | Contrato global de error |
+## Flujo de una petición
 
-Base package: `com.bank.users` (`project.yaml`).
+```
+HTTP → UserController → UserService → UserRepository → Entity
+                ↓              ↓
+           UserMapper ←———— UserMapper
+                ↓
+           DTO Response
+```
 
-## Dominio relevante
+Tras commit/rollback de alta, actualización o cambio de estado, `AuditService` persiste en
+`REQUIRES_NEW` (referencia por documento, sin FK a User) para conservar auditoría si la operación
+principal se revierte. Las altas rechazadas por Bean Validation las audita
+`UserCreateExceptionHandler` como `ALTA` / `RECHAZADO` cuando el body trae un documento identificable
+(tipo y número no vacíos), antes de devolver el `VALIDATION_ERROR` del contrato global.
 
-- **User**: id UUID, documento (tipo+número único), displayName, email/phone, birthDate, status, preferences.
-- **UserStatus**: `ACTIVE` | `SUSPENDED` | `LOGICALLY_DELETED` (terminal).
-- **channelLinkEligible**: `true` solo si `status == ACTIVE` (derivado en el mapper; sin endpoint aparte).
-- **DocumentType**: `DNI`, `PASSPORT`, `LC`, `LE`, `CUIT`.
+## Endpoints
 
-## Auditoría
+| Método | Ruta | Responsabilidad |
+|--------|------|-----------------|
+| POST | `/api/v1/users` | Alta ACTIVE; unicidad por documento; responde `Location` |
+| GET | `/api/v1/users/{tipo}/{numero}` | Consulta completa; exige rol `USERS_FULL_READ` |
+| GET | `/api/v1/users/{tipo}/{numero}/status` | Documento + estado (H3) |
+| PATCH | `/api/v1/users/{tipo}/{numero}` | Datos permitidos |
+| PATCH | `/api/v1/users/{tipo}/{numero}/status` | Transiciones de estado |
 
-Cada alta, actualización relevante de datos y cambio de estado registra un `AuditLog` en la **misma
-transacción** que el cambio de usuario (`AuditService` desde `UserService`):
+## Estados y transiciones (H1)
 
-| Acción | Momento |
-|--------|---------|
-| `USER_CREATED` | Tras persistir el alta |
-| `USER_UPDATED` | Si cambió al menos un campo permitido |
-| `STATUS_CHANGED` | Tras aplicar la transición |
+| Desde | Hacia permitidos |
+|-------|------------------|
+| ACTIVE | SUSPENDED, LOGICAL_DELETE |
+| SUSPENDED | ACTIVE, LOGICAL_DELETE |
+| LOGICAL_DELETE | *(ninguna — sin reactivación en este hito)* |
 
-Sin endpoints de lectura de auditoría en H1.
-
-## Contrato HTTP
-
-Todo bajo `/api/v1/users` (sin paquetes versionados). Errores: `{code, message, details, timestamp}`
-vía `GlobalExceptionHandler`. Detalle por operación: [`api.md`](api.md) y [`openapi/`](openapi/).
+Transición inválida → HTTP **400** `BAD_REQUEST` (contrato explícito; no 409).
 
 ## Persistencia y perfiles
 
-- Runtime: PostgreSQL; tests: H2 (perfil `test`).
-- `spring.jpa.open-in-view: false`.
-- Actuator: `/actuator/health`, `/actuator/info`.
-- Operación local/CI: [`devops-local.md`](devops-local.md).
+| Perfil | BD | `ddl-auto` |
+|--------|-----|------------|
+| default | PostgreSQL (`DB_URL`, …) | `none` |
+| `dev` | PostgreSQL | `update` |
+| `docker` | PostgreSQL en Compose (`postgres:5432`) | `update` |
+| `test` | H2 in-memory (MODE=PostgreSQL) | `create-drop` |
+| `prod` | PostgreSQL (vars obligatorias) | `validate` |
+
+## Decisiones relevantes
+
+- Identificador único de negocio: documento (tipo + número).
+- Contacto: email **o** teléfono (`@ContactoPresente`); sin formato cerrado.
+- Tipos de documento: catálogo abierto (string).
+- Alta **201** con header `Location: /api/v1/users/{tipo}/{numero}`.
+- Consulta completa: exige principal autenticado con rol de servidor `USERS_FULL_READ`; sin él
+  responde **403** `FORBIDDEN` sin PII. El servicio no configura autenticación en este hito: con la
+  configuración del repo esa consulta responde 403; con el rol (p. ej. gateway) se expone el
+  `UserResponse` completo hasta que Compliance defina la proyección por perfil.
+- PATCH actualización: `JsonAnySetter` rechaza propiedades desconocidas.
+- Auditoría interna sin endpoint HTTP; altas inválidas con documento identificable quedan en `RECHAZADO`.
+- Helm: el chart no trae `DB_PASSWORD` por defecto; hay que pasarlo explícitamente (ver
+  `helm/wa-users-service/README.md`).
+
+## Alcance H1 / fuera de alcance
+
+Ver `specs/usuarios/spec.md`. Fuera: vínculo WhatsApp (H3), verificación de identidad (H3),
+credenciales de sesión (H2), productos (H4–H6), cambios de datos legales sensibles.
+
+## Limitaciones conocidas (preguntas abiertas de la spec)
+
+1. **Proyección de campos por perfil** — pendiente de Compliance; hoy, con rol `USERS_FULL_READ`,
+   se expone el response completo.
+2. **Catálogo de tipos de documento** — no cerrado; se acepta cualquier tipo no vacío.
+3. **Formato de email/teléfono** — no cerrado; solo se exige presencia de al menos uno en el alta.
+4. **Reactivación desde baja lógica** — no soportada en H1 (`LOGICAL_DELETE` no tiene salidas).

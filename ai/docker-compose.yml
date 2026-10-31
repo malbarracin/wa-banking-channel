@@ -1,0 +1,425 @@
+# Stack local de IA (H7) + H1–H6 + infra H8/H9.
+# Desde ai/: docker compose --env-file .env up -d --build
+# Secretos solo vía .env (copiar desde .env.example). Nunca valores reales en este archivo.
+
+services:
+  wa-mcp-layer:
+    build:
+      context: ./wa-mcp-layer
+      dockerfile: Dockerfile
+    image: wa-mcp-layer:local
+    container_name: wa-mcp-layer
+    ports:
+      - "${MCP_HOST_PORT:-8101}:8101"
+    env_file:
+      - .env
+    environment:
+      PORT: "8101"
+      USERS_SERVICE_BASE_URL: http://wa-users-service:8080
+      CREDENTIALS_SERVICE_BASE_URL: http://wa-credentials-service:8082
+      CHANNEL_SERVICE_BASE_URL: http://wa-channel-service:8081
+      ACCOUNTS_SERVICE_BASE_URL: http://wa-accounts-service:8084
+      CARDS_SERVICE_BASE_URL: http://wa-cards-service:8086
+      INSURANCE_SERVICE_BASE_URL: http://wa-insurance-service:8085
+    depends_on:
+      wa-users-service:
+        condition: service_healthy
+      wa-credentials-service:
+        condition: service_healthy
+      wa-channel-service:
+        condition: service_healthy
+      wa-accounts-service:
+        condition: service_healthy
+      wa-cards-service:
+        condition: service_healthy
+      wa-insurance-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8101/health', timeout=2)",
+        ]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+  wa-knowledge-rag:
+    build:
+      context: ./wa-knowledge-rag
+      dockerfile: Dockerfile
+    image: wa-knowledge-rag:local
+    container_name: wa-knowledge-rag
+    ports:
+      - "${RAG_HOST_PORT:-8102}:8102"
+    env_file:
+      - .env
+    environment:
+      PORT: "8102"
+      DATABASE_URL: postgresql://${DB_USERNAME}:${DB_PASSWORD}@kb-postgres:5432/${KB_DB_NAME:-wa_knowledge}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-004}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-768}
+      RAG_TOP_K: ${RAG_TOP_K:-5}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      kb-postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8102/health', timeout=2)",
+        ]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+  wa-conversation-agent:
+    build:
+      context: ./wa-conversation-agent
+    image: wa-conversation-agent:local
+    ports:
+      - "${AGENT_HOST_PORT:-8103}:8103"
+    env_file:
+      - .env
+    environment:
+      AGENT_PORT: "8103"
+      AGENT_MODEL: ${AGENT_MODEL:-gemini-2.5-flash}
+      AGENT_MCP_URL: http://wa-mcp-layer:8101/mcp
+      AGENT_RAG_URL: http://wa-knowledge-rag:8102
+      AGENT_REDIS_URL: redis://agent-redis:6379
+      AGENT_MEMORY_SERVER_URL: http://agent-memory-server:8000
+      AGENT_MEMORY_KEY_SECRET: ${AGENT_MEMORY_KEY_SECRET:-}
+      AGENT_SERVICE_TOKEN: ${AGENT_SERVICE_TOKEN:-}
+      AGENT_SESSION_TTL_MINUTES: ${AGENT_SESSION_TTL_MINUTES:-30}
+    depends_on:
+      agent-redis:
+        condition: service_healthy
+      agent-memory-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8103/health', timeout=2)"]
+      interval: 30s
+      timeout: 3s
+      start_period: 10s
+      retries: 3
+
+  # --- H1–H6 (Java / Spring Boot) ---
+
+  wa-users-service:
+    build:
+      context: ../services/wa-users-service
+    image: wa-users-service:local
+    container_name: wa-users-service
+    ports:
+      - "${USERS_HOST_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      APP_PORT: "8080"
+      DB_NAME: ${USERS_DB_NAME:-wa_users}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://users-postgres:5432/${USERS_DB_NAME:-wa_users}
+    depends_on:
+      users-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 40s
+      retries: 3
+
+  users-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${USERS_DB_NAME:-wa_users}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - users-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wa-credentials-service:
+    build:
+      context: ../services/wa-credentials-service
+    image: wa-credentials-service:local
+    container_name: wa-credentials-service
+    ports:
+      - "${CREDENTIALS_HOST_PORT:-8082}:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      PORT: "8082"
+      APP_PORT: "8082"
+      DB_NAME: ${CREDENTIALS_DB_NAME:-wa_credentials}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      CREDENTIAL_JWT_SECRET: ${CREDENTIAL_JWT_SECRET}
+      WA_USERS_SERVICE_BASE_URL: http://wa-users-service:8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://credentials-postgres:5432/${CREDENTIALS_DB_NAME:-wa_credentials}
+    depends_on:
+      credentials-postgres:
+        condition: service_healthy
+      wa-users-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 40s
+      retries: 3
+
+  credentials-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${CREDENTIALS_DB_NAME:-wa_credentials}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - credentials-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wa-channel-service:
+    build:
+      context: ../services/wa-channel-service
+    image: wa-channel-service:local
+    container_name: wa-channel-service
+    ports:
+      - "${CHANNEL_HOST_PORT:-8081}:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      PORT: "8081"
+      APP_PORT: "8081"
+      DB_NAME: ${CHANNEL_DB_NAME:-wa_channel}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      WA_USERS_SERVICE_BASE_URL: http://wa-users-service:8080
+      CREDENCIALES_SERVICE_BASE_URL: http://wa-credentials-service:8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://channel-postgres:5432/${CHANNEL_DB_NAME:-wa_channel}
+    depends_on:
+      channel-postgres:
+        condition: service_healthy
+      wa-users-service:
+        condition: service_healthy
+      wa-credentials-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 40s
+      retries: 3
+
+  channel-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${CHANNEL_DB_NAME:-wa_channel}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - channel-postgres-data:/var/lib/postgresql/data
+      - ../services/wa-channel-service/src/main/resources/db/postgresql/V001__vinculo.sql:/docker-entrypoint-initdb.d/V001__vinculo.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wa-accounts-service:
+    build:
+      context: ../services/wa-accounts-service
+    image: wa-accounts-service:local
+    container_name: wa-accounts-service
+    ports:
+      - "${ACCOUNTS_HOST_PORT:-8084}:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      PORT: "8084"
+      APP_PORT: "8084"
+      DB_NAME: ${ACCOUNTS_DB_NAME:-wa_accounts}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      CREDENTIALS_SERVICE_BASE_URL: http://wa-credentials-service:8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://accounts-postgres:5432/${ACCOUNTS_DB_NAME:-wa_accounts}
+    depends_on:
+      accounts-postgres:
+        condition: service_healthy
+      wa-credentials-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 40s
+      retries: 3
+
+  accounts-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${ACCOUNTS_DB_NAME:-wa_accounts}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - accounts-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wa-cards-service:
+    build:
+      context: ../services/wa-cards-service
+    image: wa-cards-service:local
+    container_name: wa-cards-service
+    ports:
+      - "${CARDS_HOST_PORT:-8086}:8086"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      PORT: "8086"
+      APP_PORT: "8086"
+      DB_NAME: ${CARDS_DB_NAME:-wa_cards}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      CREDENTIALS_SERVICE_BASE_URL: http://wa-credentials-service:8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://cards-postgres:5432/${CARDS_DB_NAME:-wa_cards}
+    depends_on:
+      cards-postgres:
+        condition: service_healthy
+      wa-credentials-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8086/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 40s
+      retries: 3
+
+  cards-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${CARDS_DB_NAME:-wa_cards}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - cards-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  wa-insurance-service:
+    build:
+      context: ../services/wa-insurance-service
+    image: wa-insurance-service:local
+    container_name: wa-insurance-service
+    ports:
+      - "${INSURANCE_HOST_PORT:-8085}:8085"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      PORT: "8085"
+      APP_PORT: "8085"
+      DB_NAME: ${INSURANCE_DB_NAME:-wa_insurance}
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      CREDENTIALS_SERVICE_BASE_URL: http://wa-credentials-service:8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://insurance-postgres:5432/${INSURANCE_DB_NAME:-wa_insurance}
+    depends_on:
+      insurance-postgres:
+        condition: service_healthy
+      wa-credentials-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8085/actuator/health"]
+      interval: 30s
+      timeout: 3s
+      start_period: 40s
+      retries: 3
+
+  insurance-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${INSURANCE_DB_NAME:-wa_insurance}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - insurance-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Infra H8/H9 (pgvector, Redis, Agent Memory Server) ---
+
+  kb-postgres:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_DB: ${KB_DB_NAME:-wa_knowledge}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${KB_DB_HOST_PORT:-5438}:5432"
+    volumes:
+      - kb-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  agent-redis:
+    image: redis:8.4
+    ports:
+      - "${AGENT_REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - agent-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  agent-memory-server:
+    image: redislabs/agent-memory-server:0.15.2
+    ports:
+      - "${AGENT_MEMORY_HOST_PORT:-8000}:8000"
+    environment:
+      REDIS_URL: redis://agent-redis:6379
+      DISABLE_AUTH: "true"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    depends_on:
+      agent-redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+volumes:
+  users-postgres-data:
+  credentials-postgres-data:
+  channel-postgres-data:
+  accounts-postgres-data:
+  cards-postgres-data:
+  insurance-postgres-data:
+  kb-postgres-data:
+  agent-redis-data:

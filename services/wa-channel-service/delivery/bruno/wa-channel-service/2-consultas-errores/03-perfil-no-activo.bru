@@ -1,0 +1,24 @@
+meta {
+  name: Perfil con credencial y vínculo no activo - 409
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/perfil
+  body: none
+  auth: none
+}
+
+headers {
+  X-Canal-Credencial-Token: {{credencialSesion}}
+}
+
+assert {
+  res.status: eq 409
+}
+
+docs {
+  El vínculo del onboarding sigue PENDIENTE_VERIFICACION.
+  Esperado: code CONFLICT, mensaje "El vínculo no está activo para esta operación".
+}

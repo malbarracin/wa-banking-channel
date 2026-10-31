@@ -1,0 +1,121 @@
+name: AI
+
+on:
+  push:
+    paths:
+      - "ai/**"
+      - ".github/workflows/ai.yml"
+  pull_request:
+    paths:
+      - "ai/**"
+      - ".github/workflows/ai.yml"
+  workflow_dispatch:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [wa-mcp-layer, wa-knowledge-rag, wa-conversation-agent]
+    defaults:
+      run:
+        working-directory: ai/${{ matrix.component }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.6"
+          enable-cache: true
+          cache-dependency-glob: ai/${{ matrix.component }}/uv.lock
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync (frozen)
+        run: uv sync --frozen
+
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Ruff format
+        run: uv run ruff format --check .
+
+      - name: Mypy
+        run: uv run mypy src
+
+      - name: Pytest
+        run: uv run pytest -q --cov=src --cov-fail-under=80 -m "not evals"
+
+      - name: pip-audit
+        run: |
+          uv export --frozen --no-dev -o /tmp/requirements.txt
+          uvx pip-audit -r /tmp/requirements.txt
+
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.6"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Gate ai/verify.py
+        run: python ai/verify.py
+
+  docker:
+    needs: [quality, verify]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [wa-mcp-layer, wa-knowledge-rag, wa-conversation-agent]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t ${{ matrix.component }}:${{ github.sha }} ./ai/${{ matrix.component }}
+
+      - name: Compose config
+        working-directory: ai
+        run: |
+          cp .env.example .env
+          docker compose config >/dev/null
+          docker compose -f wa-knowledge-rag/docker-compose.yml config >/dev/null
+          docker compose -f wa-conversation-agent/docker-compose.yml config --quiet
+
+  evals:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        component: [wa-knowledge-rag, wa-conversation-agent]
+    defaults:
+      run:
+        working-directory: ai/${{ matrix.component }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.6"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Evals (manual con modelo real)
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          uv sync --frozen
+          uv run pytest -q -m evals

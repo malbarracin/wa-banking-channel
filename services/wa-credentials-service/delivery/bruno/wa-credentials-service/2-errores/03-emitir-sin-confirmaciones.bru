@@ -1,0 +1,36 @@
+meta {
+  name: Emitir sin confirmaciones
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/emitir
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{h3ServiceToken}}
+}
+
+body:json {
+  {
+    "numeroWhatsapp": "{{numeroWhatsapp}}",
+    "documentoTipo": "{{docTipo}}",
+    "documentoNumero": "{{docNumber}}",
+    "vinculoActivo": true,
+    "identidadVerificada": false
+  }
+}
+
+assert {
+  res.status: eq 403
+  res.body.code: eq FORBIDDEN
+}
+
+docs {
+  Solo H3 (Bearer h3ServiceToken). identidadVerificada=false: la emisión se rechaza sin crear credencial.
+  Respuestas: 403 FORBIDDEN.
+}

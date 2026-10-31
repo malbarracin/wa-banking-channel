@@ -1,0 +1,32 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/example/wa-accounts-service
+  tag: "0.1.0-SNAPSHOT"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8084
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+spring:
+  profiles:
+    active: prod
+
+env:
+  DB_URL: jdbc:postgresql://postgres:5432/wa_accounts
+  DB_USERNAME: app
+  # DB_PASSWORD via Secret (obligatorio; sin default)
+  CREDENTIALS_SERVICE_BASE_URL: http://wa-credentials-service:8082
+
+ingress:
+  enabled: false
+  host: wa-accounts.example.local

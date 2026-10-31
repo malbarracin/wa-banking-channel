@@ -1,0 +1,21 @@
+springdoc:
+  default-produces-media-type: application/json
+
+clients:
+  wa-credentials-service:
+    base-url: http://localhost:8082
+    connect-timeout: 2s
+    read-timeout: 5s
+
+spring:
+  profiles:
+    active: test
+  datasource:
+    url: jdbc:h2:mem:wa_cards;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: create-drop

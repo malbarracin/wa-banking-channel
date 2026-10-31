@@ -1,0 +1,31 @@
+meta {
+  name: Verificación 2 - falla, queda 1
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/verificaciones
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "documentoTipo": "{{docTipo}}",
+    "documentoNumero": "{{docNumber}}",
+    "datosVerificacion": { "codigo": "123456" }
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Segundo fallo de la ventana: exitosa=false, intentosRestantes=1.
+}

@@ -1,0 +1,19 @@
+meta {
+  name: Estado de un número libre
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroLibre}}/estado
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Número sin vínculo: 200 con vinculado=false, nunca 404.
+}

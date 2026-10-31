@@ -1,0 +1,71 @@
+spring:
+  application:
+    name: wa-channel-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/wa_channel}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+  h2:
+    console:
+      enabled: false
+  mvc:
+    problemdetails:
+      enabled: false
+
+server:
+  port: ${PORT:8081}
+  error:
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+clients:
+  connect-timeout: ${CLIENTS_CONNECT_TIMEOUT:1s}
+  read-timeout: ${CLIENTS_READ_TIMEOUT:2s}
+  wa-users-service:
+    base-url: ${WA_USERS_SERVICE_BASE_URL:http://localhost:8080}
+  credenciales-service:
+    base-url: ${CREDENCIALES_SERVICE_BASE_URL:http://localhost:8082}
+
+vinculo:
+  verificacion:
+    max-intentos: ${VERIFICACION_MAX_INTENTOS:3}
+    ventana-minutos: ${VERIFICACION_VENTANA_MINUTOS:15}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+  default-produces-media-type: application/json
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+springdoc:
+  swagger-ui:
+    enabled: false

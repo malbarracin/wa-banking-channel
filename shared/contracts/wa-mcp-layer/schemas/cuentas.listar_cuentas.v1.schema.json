@@ -1,0 +1,52 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "cuentas.listar_cuentas.v1",
+  "description": "Capacidad cuentas.listar_cuentas v1; servicio H4; actor agente; handler listar_cuentas; requiere_credencial=True; habilitada=True",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entrada",
+    "salida"
+  ],
+  "properties": {
+    "entrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contexto",
+        "parametros"
+      ],
+      "properties": {
+        "contexto": {
+          "$ref": "_envelope.json#/definitions/contexto"
+        },
+        "parametros": {
+          "additionalProperties": false,
+          "properties": {},
+          "title": "Parametros",
+          "type": "object"
+        }
+      }
+    },
+    "salida": {
+      "oneOf": [
+        {
+          "$ref": "_envelope.json#/definitions/salida_exito"
+        },
+        {
+          "$ref": "_envelope.json#/definitions/salida_error"
+        }
+      ]
+    }
+  },
+  "x-mcp": {
+    "nombre": "cuentas.listar_cuentas",
+    "version": 1,
+    "servicio": "H4",
+    "actor": "agente",
+    "handler": "listar_cuentas",
+    "requiere_credencial": true,
+    "habilitada": true,
+    "tool_name": "cuentas_listar_cuentas_v1"
+  }
+}

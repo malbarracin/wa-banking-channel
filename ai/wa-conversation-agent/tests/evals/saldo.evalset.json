@@ -1,0 +1,53 @@
+{
+  "eval_set_id": "saldo",
+  "name": "saldo",
+  "eval_cases": [
+    {
+      "eval_id": "saldo",
+      "session_input": {
+        "app_name": "wa_conversation_agent",
+        "user_id": "eval-user",
+        "state": {
+          "numero_whatsapp": "+12025550152",
+          "correlation_id": "eval-saldo",
+          "vinculo_activo": true,
+          "credencial_valida": true,
+          "credencial": "EVAL-SENTINEL-NO-VALIDA-EN-PRODUCCION"
+        }
+      },
+      "conversation": [
+        {
+          "invocation_id": "turn-1",
+          "user_content": {
+            "role": "user",
+            "parts": [
+              {
+                "text": "¿Cuál es el saldo de mi cuenta de prueba EVAL-CUENTA?"
+              }
+            ]
+          },
+          "final_response": {
+            "role": "model",
+            "parts": [
+              {
+                "text": "El saldo disponible es de 100 pesos."
+              }
+            ]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {
+                "name": "cuentas_consultar_saldo_v1",
+                "args": {
+                  "parametros": {
+                    "numero": "EVAL-CUENTA"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

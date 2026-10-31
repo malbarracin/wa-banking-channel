@@ -1,0 +1,31 @@
+meta {
+  name: Bloqueo política banco sobre no activo - 409
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/vinculos/{{numeroWhatsapp}}/bloqueo
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "motivo": "POLITICA_BANCO",
+    "confirmacion": true
+  }
+}
+
+assert {
+  res.status: eq 409
+}
+
+docs {
+  POLITICA_BANCO es una llamada interna sin credencial de cliente; el vínculo debe estar ACTIVO.
+  Esperado: code CONFLICT.
+}

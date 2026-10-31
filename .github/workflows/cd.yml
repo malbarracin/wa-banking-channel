@@ -1,0 +1,65 @@
+# Template de CD: no despliega a prod hasta tener cluster y credenciales.
+# Usar workflow_dispatch cuando exista el entorno.
+name: CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Servicio a desplegar"
+        required: true
+        default: "wa-credentials-service"
+        type: choice
+        options:
+          - wa-users-service
+          - wa-channel-service
+          - wa-credentials-service
+          - wa-accounts-service
+          - wa-insurance-service
+          - wa-cards-service
+      environment:
+        description: "Entorno de destino (dev|prod)"
+        required: true
+        default: "dev"
+        type: choice
+        options:
+          - dev
+          - prod
+      image_tag:
+        description: "Tag de imagen a desplegar"
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      # Gated: descomentar y configurar kubeconfig / secrets cuando haya cluster.
+      # - name: Configure kubeconfig
+      #   run: |
+      #     mkdir -p ~/.kube
+      #     echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+      #
+      # - name: Helm upgrade
+      #   run: |
+      #     helm upgrade --install ${{ inputs.service }} \
+      #       services/${{ inputs.service }}/helm/${{ inputs.service }} \
+      #       -f services/${{ inputs.service }}/helm/${{ inputs.service }}/values-${{ inputs.environment }}.yaml \
+      #       --set image.tag=${{ inputs.image_tag }} \
+      #       --set-string env.DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+      #       --set-string env.CREDENTIAL_JWT_SECRET=${{ secrets.CREDENTIAL_JWT_SECRET }} \
+      #       --set-string env.CREDENTIAL_H3_SERVICE_TOKEN=${{ secrets.CREDENTIAL_H3_SERVICE_TOKEN }} \
+      #       --set-string env.CREDENTIAL_BANK_SERVICE_TOKEN=${{ secrets.CREDENTIAL_BANK_SERVICE_TOKEN }} \
+      #       -n ${{ inputs.environment }} --create-namespace
+
+      - name: Placeholder
+        run: |
+          echo "CD template listo. Configurar secrets KUBE_CONFIG / DB_PASSWORD / CREDENTIAL_JWT_SECRET / CREDENTIAL_H3_SERVICE_TOKEN / CREDENTIAL_BANK_SERVICE_TOKEN y descomentar el deploy."
+          echo "service=${{ inputs.service }} environment=${{ inputs.environment }} image_tag=${{ inputs.image_tag }}"

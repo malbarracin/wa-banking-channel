@@ -1,57 +1,56 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "wa-users.fullname" . }}
+  name: {{ include "wa-users-service.fullname" . }}
   labels:
-    {{- include "wa-users.labels" . | nindent 4 }}
+    {{- include "wa-users-service.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "wa-users.labels" . | nindent 6 }}
+      {{- include "wa-users-service.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "wa-users.labels" . | nindent 8 }}
-      annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- include "wa-users-service.selectorLabels" . | nindent 8 }}
     spec:
-      automountServiceAccountToken: false
-      {{- with .Values.imagePullSecrets }}
-      imagePullSecrets:
-        {{- toYaml . | nindent 8 }}
-      {{- end }}
       containers:
-        - name: app
-          image: {{ printf "%s:%s" .Values.image.repository .Values.image.tag | quote }}
+        - name: wa-users-service
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 8080
-          envFrom:
-            - configMapRef:
-                name: {{ include "wa-users.fullname" . }}
-            - secretRef:
-                name: {{ include "wa-users.secret" . }}
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop: ["ALL"]
-          startupProbe:
-            httpGet:
-              path: /actuator/health
-              port: http
-            failureThreshold: 30
-            periodSeconds: 5
-          readinessProbe:
-            httpGet:
-              path: /actuator/health
-              port: http
-            periodSeconds: 10
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: {{ .Values.spring.profiles.active | quote }}
+            - name: DB_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "wa-users-service.fullname" . }}-config
+                  key: DB_URL
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wa-users-service.fullname" . }}-secret
+                  key: DB_USERNAME
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "wa-users-service.fullname" . }}-secret
+                  key: DB_PASSWORD
           livenessProbe:
             httpGet:
               path: /actuator/health
               port: http
-            periodSeconds: 20
+            initialDelaySeconds: 40
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

@@ -1,22 +1,13 @@
 {
   "info": {
     "name": "wa-users-service",
-    "description": "API H1 de usuarios. Orden: 1 Flujo feliz → 2 Errores → 3 Salud. El alta genera docNumber único y guarda userId.",
+    "description": "API H1 de usuarios bancarios. Orden sugerido: 1. Flujo feliz → 2. Errores → 3. Salud. El alta genera docNumber único.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:8080"
-    },
-    {
-      "key": "userId",
-      "value": ""
-    },
-    {
-      "key": "docNumber",
-      "value": ""
-    }
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "docTipo", "value": "DNI" },
+    { "key": "docNumber", "value": "30111222" }
   ],
   "item": [
     {
@@ -40,108 +31,103 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.test('Location del recurso', () => pm.expect(pm.response.headers.get('Location')).to.include('/api/v1/users/'));",
                   "const body = pm.response.json();",
-                  "pm.test('status ACTIVE', () => pm.expect(body.status).to.eql('ACTIVE'));",
-                  "pm.test('channelLinkEligible', () => pm.expect(body.channelLinkEligible).to.be.true);",
-                  "pm.collectionVariables.set('userId', body.id);"
+                  "pm.test('estado ACTIVE', () => pm.expect(body.estado).to.eql('ACTIVE'));",
+                  "pm.test('devuelve id', () => pm.expect(body.id).to.be.a('string'));"
                 ]
               }
             }
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "users"
-              ]
-            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"{{docNumber}}\",\n  \"displayName\": \"Ana Pérez\",\n  \"email\": \"ana@example.com\",\n  \"birthDate\": \"1990-01-02\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"documento\": { \"tipo\": \"{{docTipo}}\", \"numero\": \"{{docNumber}}\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\",\n  \"telefono\": \"5551234\"\n}",
+              "options": { "raw": { "language": "json" } }
             },
-            "description": "Crea usuario ACTIVE. Genera docNumber único. Guarda userId."
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "Crea usuario ACTIVE. Obligatorios: documento, nombre, apellido, fechaNacimiento y email o teléfono."
           },
           "response": [
             {
               "name": "201 - creado",
               "originalRequest": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/users",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "users"
-                  ]
-                },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"{{docNumber}}\",\n  \"displayName\": \"Ana Pérez\",\n  \"email\": \"ana@example.com\",\n  \"birthDate\": \"1990-01-02\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+                  "raw": "{\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\",\n  \"telefono\": \"5551234\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users"]
                 }
               },
               "status": "Created",
               "code": 201,
               "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
+                { "key": "Location", "value": "/api/v1/users/DNI/30111222" },
+                { "key": "Content-Type", "value": "application/json" }
               ],
               "_postman_previewlanguage": "json",
-              "body": "{\n  \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"30111222\",\n  \"displayName\": \"Ana Pérez\",\n  \"email\": \"ana@example.com\",\n  \"phone\": \"+5491112345678\",\n  \"birthDate\": \"1990-01-02\",\n  \"status\": \"ACTIVE\",\n  \"preferences\": {},\n  \"channelLinkEligible\": true\n}"
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\",\n  \"telefono\": \"5551234\",\n  \"nombreTratamiento\": null,\n  \"preferencias\": null,\n  \"estado\": \"ACTIVE\"\n}"
             }
           ]
         },
         {
-          "name": "Consultar por ID",
+          "name": "Consultar usuario (requiere rol USERS_FULL_READ)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 sin principal o rol', () => pm.response.to.have.status(403));",
+                  "pm.test('code FORBIDDEN', () => pm.expect(pm.response.json().code).to.eql('FORBIDDEN'));",
+                  "pm.test('sin PII en el error', () => pm.expect(pm.response.json().documento).to.be.undefined);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "users",
-                "{{userId}}"
-              ]
+              "raw": "{{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{docTipo}}", "{{docNumber}}"]
             },
-            "description": "GET por id interno guardado en userId."
+            "description": "Consulta completa provisional. Exige principal autenticado y rol de servidor USERS_FULL_READ; el servicio no configura autenticación, por lo que con la configuración del repo responde 403. Con rol devuelve el UserResponse completo y 404 si no existe."
           },
+          "response": [
+            {
+              "name": "403 - sin autorización",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/30111222",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "30111222"]
+                }
+              },
+              "status": "Forbidden",
+              "code": 403,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "_postman_previewlanguage": "json",
+              "body": "{\n  \"code\": \"FORBIDDEN\",\n  \"message\": \"Acceso no autorizado a la consulta completa\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Consultar estado",
           "event": [
             {
               "listen": "test",
@@ -149,157 +135,43 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('mismo id', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('userId')));"
+                  "pm.test('estado presente', () => pm.expect(pm.response.json().estado).to.be.a('string'));"
                 ]
               }
             }
           ],
-          "response": [
-            {
-              "name": "200 - encontrado",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "users",
-                    "{{userId}}"
-                  ]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "_postman_previewlanguage": "json",
-              "body": "{\n  \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"30111222\",\n  \"displayName\": \"Ana Pérez\",\n  \"email\": \"ana@example.com\",\n  \"phone\": \"+5491112345678\",\n  \"birthDate\": \"1990-01-02\",\n  \"status\": \"ACTIVE\",\n  \"preferences\": {},\n  \"channelLinkEligible\": true\n}"
-            }
-          ]
-        },
-        {
-          "name": "Consultar por documento",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/users?documentType=DNI&documentNumber={{docNumber}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "users"
-              ],
-              "query": [
-                {
-                  "key": "documentType",
-                  "value": "DNI"
-                },
-                {
-                  "key": "documentNumber",
-                  "value": "{{docNumber}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{docTipo}}", "{{docNumber}}", "status"]
             },
-            "description": "GET con documentType y documentNumber."
+            "description": "Documento + estado para H3."
           },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('documento', () => pm.expect(pm.response.json().documentNumber).to.eql(pm.collectionVariables.get('docNumber')));"
-                ]
-              }
-            }
-          ],
           "response": [
             {
-              "name": "200 - encontrado",
+              "name": "200 - estado",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/users?documentType=DNI&documentNumber={{docNumber}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "users"
-                  ],
-                  "query": [
-                    {
-                      "key": "documentType",
-                      "value": "DNI"
-                    },
-                    {
-                      "key": "documentNumber",
-                      "value": "{{docNumber}}"
-                    }
-                  ]
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/30111222/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "30111222", "status"]
                 }
               },
               "status": "OK",
               "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "_postman_previewlanguage": "json",
-              "body": "{\n  \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"30111222\",\n  \"displayName\": \"Ana Pérez\",\n  \"email\": \"ana@example.com\",\n  \"phone\": \"+5491112345678\",\n  \"birthDate\": \"1990-01-02\",\n  \"status\": \"ACTIVE\",\n  \"preferences\": {},\n  \"channelLinkEligible\": true\n}"
+              "body": "{\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"estado\": \"ACTIVE\"\n}"
             }
           ]
         },
         {
           "name": "Actualizar datos permitidos",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "users",
-                "{{userId}}"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"displayName\": \"Nuevo nombre\",\n  \"preferences\": {\n    \"language\": \"es\"\n  }\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "PATCH displayName y preferences."
-          },
           "event": [
             {
               "listen": "test",
@@ -307,91 +179,52 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('displayName', () => pm.expect(pm.response.json().displayName).to.eql('Nuevo nombre'));"
+                  "pm.test('email actualizado', () => pm.expect(pm.response.json().email).to.eql('nuevo@example.test'));"
                 ]
               }
             }
           ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nuevo@example.test\",\n  \"telefono\": \"555999\",\n  \"nombreTratamiento\": \"Anita\",\n  \"preferencias\": \"canal:whatsapp\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{docTipo}}", "{{docNumber}}"]
+            },
+            "description": "Solo email, telefono, nombreTratamiento, preferencias."
+          },
           "response": [
             {
               "name": "200 - actualizado",
               "originalRequest": {
                 "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "users",
-                    "{{userId}}"
-                  ]
-                },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"displayName\": \"Nuevo nombre\",\n  \"preferences\": {\n    \"language\": \"es\"\n  }\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+                  "raw": "{\n  \"email\": \"nuevo@example.test\",\n  \"telefono\": \"555999\",\n  \"nombreTratamiento\": \"Anita\",\n  \"preferencias\": \"canal:whatsapp\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/30111222",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "30111222"]
                 }
               },
               "status": "OK",
               "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "_postman_previewlanguage": "json",
-              "body": "{\n  \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"30111222\",\n  \"displayName\": \"Nuevo nombre\",\n  \"email\": \"ana@example.com\",\n  \"phone\": \"+5491112345678\",\n  \"birthDate\": \"1990-01-02\",\n  \"status\": \"ACTIVE\",\n  \"preferences\": {\n    \"language\": \"es\"\n  },\n  \"channelLinkEligible\": true\n}"
+              "body": "{\n  \"id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\",\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"nuevo@example.test\",\n  \"telefono\": \"555999\",\n  \"nombreTratamiento\": \"Anita\",\n  \"preferencias\": \"canal:whatsapp\",\n  \"estado\": \"ACTIVE\"\n}"
             }
           ]
         },
         {
-          "name": "Suspender usuario",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "users",
-                "{{userId}}",
-                "status"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"SUSPENDED\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "ACTIVE → SUSPENDED; channelLinkEligible false."
-          },
+          "name": "Cambiar estado a SUSPENDED",
           "event": [
             {
               "listen": "test",
@@ -399,242 +232,47 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('SUSPENDED', () => pm.expect(pm.response.json().status).to.eql('SUSPENDED'));",
-                  "pm.test('no apto', () => pm.expect(pm.response.json().channelLinkEligible).to.be.false);"
+                  "pm.test('SUSPENDED', () => pm.expect(pm.response.json().estado).to.eql('SUSPENDED'));"
                 ]
               }
             }
           ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"SUSPENDED\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{docTipo}}", "{{docNumber}}", "status"]
+            },
+            "description": "ACTIVE→SUSPENDED. Desde LOGICAL_DELETE no hay reactivación en H1."
+          },
           "response": [
             {
               "name": "200 - suspendido",
               "originalRequest": {
                 "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "users",
-                    "{{userId}}",
-                    "status"
-                  ]
-                },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"SUSPENDED\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+                  "raw": "{\n  \"estado\": \"SUSPENDED\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/30111222/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "30111222", "status"]
                 }
               },
               "status": "OK",
               "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "_postman_previewlanguage": "json",
-              "body": "{\n  \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"30111222\",\n  \"displayName\": \"Ana Pérez\",\n  \"email\": \"ana@example.com\",\n  \"phone\": \"+5491112345678\",\n  \"birthDate\": \"1990-01-02\",\n  \"status\": \"SUSPENDED\",\n  \"preferences\": {},\n  \"channelLinkEligible\": false\n}"
-            }
-          ]
-        },
-        {
-          "name": "Reactivar usuario",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "users",
-                "{{userId}}",
-                "status"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"ACTIVE\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "SUSPENDED → ACTIVE."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('ACTIVE', () => pm.expect(pm.response.json().status).to.eql('ACTIVE'));"
-                ]
-              }
-            }
-          ],
-          "response": [
-            {
-              "name": "200 - reactivado",
-              "originalRequest": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "users",
-                    "{{userId}}",
-                    "status"
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"status\": \"ACTIVE\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "_postman_previewlanguage": "json",
-              "body": "{\n  \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"30111222\",\n  \"displayName\": \"Ana Pérez\",\n  \"email\": \"ana@example.com\",\n  \"phone\": \"+5491112345678\",\n  \"birthDate\": \"1990-01-02\",\n  \"status\": \"ACTIVE\",\n  \"preferences\": {},\n  \"channelLinkEligible\": true\n}"
-            }
-          ]
-        },
-        {
-          "name": "Baja lógica",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "users",
-                "{{userId}}",
-                "status"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"LOGICALLY_DELETED\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "ACTIVE → LOGICALLY_DELETED (terminal)."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
-                  "pm.test('baja', () => pm.expect(pm.response.json().status).to.eql('LOGICALLY_DELETED'));"
-                ]
-              }
-            }
-          ],
-          "response": [
-            {
-              "name": "200 - baja lógica",
-              "originalRequest": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "users",
-                    "{{userId}}",
-                    "status"
-                  ]
-                },
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"status\": \"LOGICALLY_DELETED\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "_postman_previewlanguage": "json",
-              "body": "{\n  \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"30111222\",\n  \"displayName\": \"Ana Pérez\",\n  \"email\": \"ana@example.com\",\n  \"phone\": \"+5491112345678\",\n  \"birthDate\": \"1990-01-02\",\n  \"status\": \"LOGICALLY_DELETED\",\n  \"preferences\": {},\n  \"channelLinkEligible\": false\n}"
+              "body": "{\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"estado\": \"SUSPENDED\"\n}"
             }
           ]
         }
@@ -644,37 +282,7 @@
       "name": "2. Errores",
       "item": [
         {
-          "name": "Alta sin contacto (400)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "users"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"99999001\",\n  \"displayName\": \"Sin Contacto\",\n  \"birthDate\": \"1990-01-02\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Falta email y phone."
-          },
+          "name": "Alta sin nombre — 400 VALIDATION_ERROR",
           "event": [
             {
               "listen": "test",
@@ -687,83 +295,47 @@
               }
             }
           ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"99900001\" },\n  \"nombre\": \"\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "Validación Bean Validation."
+          },
           "response": [
             {
               "name": "400 - validación",
               "originalRequest": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/users",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "users"
-                  ]
-                },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"99999001\",\n  \"displayName\": \"Sin Contacto\",\n  \"birthDate\": \"1990-01-02\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+                  "raw": "{\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"99900001\" },\n  \"nombre\": \"\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"ana@example.test\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users"]
                 }
               },
               "status": "Bad Request",
               "code": 400,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "_postman_previewlanguage": "json",
-              "body": "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"La solicitud tiene datos inválidos\",\n  \"details\": [\n    {\n      \"field\": \"contactPresent\",\n      \"message\": \"Debe indicar al menos email o teléfono\"\n    }\n  ],\n  \"timestamp\": \"2026-10-05T14:30:00Z\"\n}"
+              "body": "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"message\": \"La solicitud tiene datos inválidos\",\n  \"details\": [\n    { \"field\": \"nombre\", \"message\": \"El nombre es obligatorio\" }\n  ],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
             }
           ]
         },
         {
-          "name": "Alta documento duplicado (409)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "users"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"{{docNumber}}\",\n  \"displayName\": \"Duplicado\",\n  \"email\": \"dup@example.com\",\n  \"birthDate\": \"1990-01-02\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Reusa docNumber del flujo feliz → CONFLICT."
-          },
+          "name": "Alta documento duplicado — 409 CONFLICT",
           "event": [
             {
               "listen": "test",
@@ -776,147 +348,92 @@
               }
             }
           ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documento\": { \"tipo\": \"{{docTipo}}\", \"numero\": \"{{docNumber}}\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"otra@example.test\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"]
+            },
+            "description": "Requiere haber corrido el flujo feliz antes (mismo docNumber)."
+          },
           "response": [
             {
               "name": "409 - duplicado",
               "originalRequest": {
                 "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/users",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "users"
-                  ]
-                },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"{{docNumber}}\",\n  \"displayName\": \"Duplicado\",\n  \"email\": \"dup@example.com\",\n  \"birthDate\": \"1990-01-02\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+                  "raw": "{\n  \"documento\": { \"tipo\": \"DNI\", \"numero\": \"30111222\" },\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Pérez\",\n  \"fechaNacimiento\": \"1990-05-15\",\n  \"email\": \"otra@example.test\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users"]
                 }
               },
               "status": "Conflict",
               "code": 409,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "_postman_previewlanguage": "json",
-              "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"Ya existe un usuario con ese documento\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-05T14:30:00Z\"\n}"
+              "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"Ya existe un usuario con ese documento (duplicado)\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
             }
           ]
         },
         {
-          "name": "Consultar ID inexistente (404)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users/00000000-0000-0000-0000-000000000099",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "users",
-                "00000000-0000-0000-0000-000000000099"
-              ]
-            },
-            "description": "UUID válido pero sin fila."
-          },
+          "name": "Consulta inexistente sin rol — 403 FORBIDDEN",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('404', () => pm.response.to.have.status(404));",
-                  "pm.test('NOT_FOUND', () => pm.expect(pm.response.json().code).to.eql('NOT_FOUND'));"
+                  "pm.test('403', () => pm.response.to.have.status(403));",
+                  "pm.test('FORBIDDEN', () => pm.expect(pm.response.json().code).to.eql('FORBIDDEN'));",
+                  "pm.test('sin PII', () => pm.expect(pm.response.json().documento).to.be.undefined);"
                 ]
               }
             }
           ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/DNI/00000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "DNI", "00000000"]
+            },
+            "description": "Sin principal o rol la consulta responde 403 aunque el documento no exista, sin PII. Con rol USERS_FULL_READ el caso inexistente responde 404 NOT_FOUND (cubierto por tests de integración)."
+          },
           "response": [
             {
-              "name": "404 - no encontrado",
+              "name": "403 - sin autorización",
               "originalRequest": {
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/users/00000000-0000-0000-0000-000000000099",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "users",
-                    "00000000-0000-0000-0000-000000000099"
-                  ]
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/00000000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "00000000"]
                 }
               },
-              "status": "Not Found",
-              "code": 404,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "status": "Forbidden",
+              "code": 403,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "_postman_previewlanguage": "json",
-              "body": "{\n  \"code\": \"NOT_FOUND\",\n  \"message\": \"No existe el usuario solicitado\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-05T14:30:00Z\"\n}"
+              "body": "{\n  \"code\": \"FORBIDDEN\",\n  \"message\": \"Acceso no autorizado a la consulta completa\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
             }
           ]
         },
         {
-          "name": "Campo no permitido en PATCH (400)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "users",
-                "{{userId}}"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"documentNumber\": \"11111111\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Propiedad documentNumber no actualizable."
-          },
+          "name": "Actualización campo no editable — 400 BAD_REQUEST",
           "event": [
             {
               "listen": "test",
@@ -929,142 +446,123 @@
               }
             }
           ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"nuevo@example.test\",\n  \"fechaNacimiento\": \"1991-01-01\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "{{docTipo}}", "{{docNumber}}"]
+            },
+            "description": "fechaNacimiento no es editable."
+          },
           "response": [
             {
-              "name": "400 - campo no permitido",
+              "name": "400 - no editable",
               "originalRequest": {
                 "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/users/{{userId}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "users",
-                    "{{userId}}"
-                  ]
-                },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"documentNumber\": \"11111111\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+                  "raw": "{\n  \"email\": \"nuevo@example.test\",\n  \"fechaNacimiento\": \"1991-01-01\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/30111222",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "30111222"]
                 }
               },
               "status": "Bad Request",
               "code": 400,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "_postman_previewlanguage": "json",
-              "body": "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"Campo no actualizable\",\n  \"details\": [\n    {\n      \"field\": \"documentNumber\",\n      \"message\": \"Campo no actualizable\"\n    }\n  ],\n  \"timestamp\": \"2026-10-05T14:30:00Z\"\n}"
+              "body": "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"El campo no es editable por este servicio\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
             }
           ]
         },
         {
-          "name": "Transición inválida (409)",
-          "request": {
-            "method": "PATCH",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "users",
-                "{{userId}}",
-                "status"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"status\": \"ACTIVE\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "description": "Desde LOGICALLY_DELETED no se reactiva."
-          },
+          "name": "Transición inválida desde LOGICAL_DELETE — 400",
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const n = '88' + String(Date.now()).slice(-6);",
+                  "pm.collectionVariables.set('badDoc', n);",
+                  "const base = pm.environment.get('baseUrl') || pm.collectionVariables.get('baseUrl');",
+                  "pm.sendRequest({",
+                  "  url: base + '/api/v1/users',",
+                  "  method: 'POST',",
+                  "  header: { 'Content-Type': 'application/json' },",
+                  "  body: { mode: 'raw', raw: JSON.stringify({",
+                  "    documento: { tipo: 'DNI', numero: n },",
+                  "    nombre: 'Luis', apellido: 'Gómez', fechaNacimiento: '1985-03-10',",
+                  "    email: 'luis@example.test'",
+                  "  })}",
+                  "}, (err, res) => {",
+                  "  pm.sendRequest({",
+                  "    url: base + '/api/v1/users/DNI/' + n + '/status',",
+                  "    method: 'PATCH',",
+                  "    header: { 'Content-Type': 'application/json' },",
+                  "    body: { mode: 'raw', raw: '{\"estado\":\"LOGICAL_DELETE\"}' }",
+                  "  }, () => {});",
+                  "});"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('409', () => pm.response.to.have.status(409));",
-                  "pm.test('CONFLICT', () => pm.expect(pm.response.json().code).to.eql('CONFLICT'));"
+                  "pm.test('400', () => pm.response.to.have.status(400));",
+                  "pm.test('BAD_REQUEST', () => pm.expect(pm.response.json().code).to.eql('BAD_REQUEST'));"
                 ]
               }
             }
           ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"ACTIVE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users/DNI/{{badDoc}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users", "DNI", "{{badDoc}}", "status"]
+            },
+            "description": "LOGICAL_DELETE no admite reactivación en H1 → 400 BAD_REQUEST."
+          },
           "response": [
             {
-              "name": "409 - transición inválida",
+              "name": "400 - transición inválida",
               "originalRequest": {
                 "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/users/{{userId}}/status",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "users",
-                    "{{userId}}",
-                    "status"
-                  ]
-                },
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"status\": \"ACTIVE\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
+                  "raw": "{\n  \"estado\": \"ACTIVE\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/users/DNI/88000001/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "users", "DNI", "88000001", "status"]
                 }
               },
-              "status": "Conflict",
-              "code": 409,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "status": "Bad Request",
+              "code": 400,
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "_postman_previewlanguage": "json",
-              "body": "{\n  \"code\": \"CONFLICT\",\n  \"message\": \"La transición de estado solicitada no está permitida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-05T14:30:00Z\"\n}"
+              "body": "{\n  \"code\": \"BAD_REQUEST\",\n  \"message\": \"La solicitud no es válida\",\n  \"details\": [],\n  \"timestamp\": \"2026-10-26T12:00:00Z\"\n}"
             }
           ]
         }
@@ -1075,21 +573,6 @@
       "item": [
         {
           "name": "Actuator health",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/actuator/health",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "actuator",
-                "health"
-              ]
-            },
-            "description": "GET /actuator/health"
-          },
           "event": [
             {
               "listen": "test",
@@ -1102,6 +585,16 @@
               }
             }
           ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Healthcheck."
+          },
           "response": [
             {
               "name": "200 - UP",
@@ -1110,83 +603,15 @@
                 "header": [],
                 "url": {
                   "raw": "{{baseUrl}}/actuator/health",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "actuator",
-                    "health"
-                  ]
+                  "host": ["{{baseUrl}}"],
+                  "path": ["actuator", "health"]
                 }
               },
               "status": "OK",
               "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
               "_postman_previewlanguage": "json",
               "body": "{\n  \"status\": \"UP\"\n}"
-            }
-          ]
-        },
-        {
-          "name": "Actuator info",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/actuator/info",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "actuator",
-                "info"
-              ]
-            },
-            "description": "GET /actuator/info"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('200', () => pm.response.to.have.status(200));"
-                ]
-              }
-            }
-          ],
-          "response": [
-            {
-              "name": "200 - info",
-              "originalRequest": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/actuator/info",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "actuator",
-                    "info"
-                  ]
-                }
-              },
-              "status": "OK",
-              "code": 200,
-              "header": [
-                {
-                  "key": "Content-Type",
-                  "value": "application/json"
-                }
-              ],
-              "_postman_previewlanguage": "json",
-              "body": "{}"
             }
           ]
         }

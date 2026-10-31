@@ -1,0 +1,62 @@
+spring:
+  application:
+    name: wa-credentials-service
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/wa_credentials}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+
+server:
+  port: ${PORT:8082}
+  error:
+    include-stacktrace: never
+    include-message: never
+
+credencial:
+  jwt:
+    secret: ${CREDENTIAL_JWT_SECRET}
+  vigencia-minutos: ${CREDENTIAL_VIGENCIA_MINUTOS:1440}
+  renovacion-ventana-minutos: ${CREDENTIAL_RENOVACION_VENTANA_MINUTOS:30}
+  renovacion:
+    habilitada: ${CREDENTIAL_RENOVACION_HABILITADA:true}
+    intervalo-ms: ${CREDENTIAL_RENOVACION_INTERVALO_MS:60000}
+
+clients:
+  wa-users-service:
+    base-url: ${WA_USERS_SERVICE_BASE_URL:http://localhost:8080}
+    connect-timeout: ${WA_USERS_SERVICE_CONNECT_TIMEOUT:1s}
+    read-timeout: ${WA_USERS_SERVICE_READ_TIMEOUT:2s}
+
+info:
+  version: '@project.version@'
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+  default-produces-media-type: application/json
+  override-with-generic-response: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+  jpa:
+    show-sql: false

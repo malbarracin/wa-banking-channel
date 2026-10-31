@@ -1,0 +1,35 @@
+meta {
+  name: Revocación masiva repetida
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/revocacion-masiva
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{bankServiceToken}}
+}
+
+body:json {
+  {
+    "criterio": "POR_CLIENTE",
+    "segmento": {
+      "documentoTipo": "{{docTipo}}",
+      "documentoNumero": "{{docNumber}}"
+    }
+  }
+}
+
+assert {
+  res.status: eq 200
+  res.body.revocadas: eq 0
+}
+
+docs {
+  Solo banco (Bearer bankServiceToken). Repite el mismo alcance: no quedan credenciales ACTIVA y devuelve 0.
+}

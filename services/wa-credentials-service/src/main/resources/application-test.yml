@@ -1,0 +1,21 @@
+CREDENTIAL_H3_SERVICE_TOKEN: h3-test-token
+CREDENTIAL_BANK_SERVICE_TOKEN: bank-test-token
+
+credencial:
+  renovacion:
+    habilitada: false
+  jwt:
+    secret: clave-exclusiva-de-tests-de-al-menos-32-bytes
+
+spring:
+  # H2 no soporta el índice único parcial de PostgreSQL; el esquema de test lo genera JPA.
+  flyway:
+    enabled: false
+  datasource:
+    url: jdbc:h2:mem:wa_credentials;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop

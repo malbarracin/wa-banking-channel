@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "seguros.consultar_siniestro.v1",
+  "description": "Capacidad seguros.consultar_siniestro v1; servicio H6; actor agente; handler consultar_siniestro; requiere_credencial=True; habilitada=True",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "entrada",
+    "salida"
+  ],
+  "properties": {
+    "entrada": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contexto",
+        "parametros"
+      ],
+      "properties": {
+        "contexto": {
+          "$ref": "_envelope.json#/definitions/contexto"
+        },
+        "parametros": {
+          "additionalProperties": false,
+          "properties": {
+            "numero_caso": {
+              "maxLength": 64,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_-]+$",
+              "title": "Numero Caso",
+              "type": "string"
+            }
+          },
+          "required": [
+            "numero_caso"
+          ],
+          "title": "Caso",
+          "type": "object"
+        }
+      }
+    },
+    "salida": {
+      "oneOf": [
+        {
+          "$ref": "_envelope.json#/definitions/salida_exito"
+        },
+        {
+          "$ref": "_envelope.json#/definitions/salida_error"
+        }
+      ]
+    }
+  },
+  "x-mcp": {
+    "nombre": "seguros.consultar_siniestro",
+    "version": 1,
+    "servicio": "H6",
+    "actor": "agente",
+    "handler": "consultar_siniestro",
+    "requiere_credencial": true,
+    "habilitada": true,
+    "tool_name": "seguros_consultar_siniestro_v1"
+  }
+}

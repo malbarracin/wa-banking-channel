@@ -1,0 +1,33 @@
+meta {
+  name: Bloquear definitivamente (ROBO)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/tarjetas/{{tarjetaId}}/bloquear/definitivo
+  body: json
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "tarjetaId": "{{tarjetaId}}",
+    "motivo": "ROBO",
+    "confirmarPrimero": "CONFIRMAR",
+    "confirmarSegundo": "CONFIRMAR"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Irreversible por el canal; repetirlo devuelve 409. Correr al final: deja la tarjeta bloqueada. Respuestas: 200, 400, 401, 403, 404, 409.
+}

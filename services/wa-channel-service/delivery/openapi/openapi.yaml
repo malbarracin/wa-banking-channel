@@ -1,0 +1,1080 @@
+openapi: 3.1.0
+info:
+  title: wa-channel-service
+  description: "Servicio Canal WhatsApp (H3): aceptación de términos, verificació\
+    n de identidad, vinculación y re-vinculación, estado anti-duplicados, perfil y\
+    \ preferencias, bloqueo, desvinculación e historial para soporte. No emite credenciales\
+    \ de sesión (H2) ni gestiona mensajes de WhatsApp (H0)."
+  version: 0.1.0-SNAPSHOT
+servers:
+- url: http://localhost:8081
+  description: Local
+tags:
+- name: Vínculos
+  description: Ciclo de vida del vínculo entre un número de WhatsApp y un cliente
+    de H1
+paths:
+  /api/v1/vinculos/{numero}/verificaciones:
+    post:
+      tags:
+      - Vínculos
+      summary: Verificar identidad y vincular o re-vincular
+      description: "Requiere un vínculo PENDIENTE_VERIFICACION creado antes con POST\
+        \ /terminos y que el cliente exista y esté ACTIVE en H1. Cuenta los fallos\
+        \ de la ventana vigente (vinculo.verificacion.max-intentos / ventana-minutos):\
+        \ al agotarlos responde 423 y deriva a soporte. Una re-vinculación (vínculo\
+        \ previo DESVINCULADO o BLOQUEADO) exige el proceso completo y no reutiliza\
+        \ intentos ni credenciales. El servicio por defecto rechaza toda prueba hasta\
+        \ que Compliance entregue el método de verificación; en ese caso responde\
+        \ 200 con exitosa=false. No emite credenciales: el resultado es para H0.2."
+      operationId: verificar
+      parameters:
+      - name: numero
+        in: path
+        description: Número E.164 con prefijo + (en la URL se envía codificado)
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerificarIdentidadRequest"
+            examples:
+              Documento y código:
+                description: Documento y código
+                value:
+                  documentoTipo: DNI
+                  documentoNumero: "30111222"
+                  datosVerificacion:
+                    codigo: "123456"
+              Solo documento:
+                description: Solo documento
+                value:
+                  documentoTipo: DNI
+                  documentoNumero: "30111222"
+                  datosVerificacion:
+                    fechaNacimiento: 1990-05-15
+        required: true
+      responses:
+        "200":
+          description: Intento procesado (éxito o fallo con intentos restantes)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificacionResultadoResponse"
+              examples:
+                Exitosa:
+                  description: Exitosa
+                  value:
+                    exitosa: true
+                    vinculoId: 3f2b6c1e-8a4d-4f7b-9c2e-1d5a7b8c9e01
+                    numeroWhatsapp: "+5491112345678"
+                    documentoTipo: DNI
+                    documentoNumero: "30111222"
+                    estadoVinculo: ACTIVO
+                    intentosRestantes: null
+                    verificadoEn: 2026-10-26T12:00:00Z
+                Fallida:
+                  description: Fallida
+                  value:
+                    exitosa: false
+                    vinculoId: 3f2b6c1e-8a4d-4f7b-9c2e-1d5a7b8c9e01
+                    numeroWhatsapp: "+5491112345678"
+                    documentoTipo: DNI
+                    documentoNumero: "30111222"
+                    estadoVinculo: PENDIENTE_VERIFICACION
+                    intentosRestantes: 2
+                    verificadoEn: null
+        "400":
+          description: Número o body inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                ValidationError:
+                  $ref: "#/components/examples/ValidationError"
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "404":
+          description: Sin términos aceptados o cliente inexistente en H1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFoundTerminos:
+                  $ref: "#/components/examples/NotFoundTerminos"
+                NotFoundCliente:
+                  $ref: "#/components/examples/NotFoundCliente"
+        "409":
+          description: Cliente no activo en H1 o número ya vinculado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                ConflictClienteNoHabilitado:
+                  $ref: "#/components/examples/ConflictClienteNoHabilitado"
+                ConflictNumeroVinculado:
+                  $ref: "#/components/examples/ConflictNumeroVinculado"
+        "423":
+          description: Intentos agotados en la ventana; derivar a soporte
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "500":
+          description: Error interno o fallo de H1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+  /api/v1/vinculos/terminos:
+    post:
+      tags:
+      - Vínculos
+      summary: Aceptar términos del canal
+      description: "Primer paso obligatorio: registra la aceptación explícita sin\
+        \ pedir datos de identificación y deja el vínculo en PENDIENTE_VERIFICACION.\
+        \ Es idempotente por número: si ya existe un pendiente lo reutiliza (mismo\
+        \ id); no crea duplicados. Un índice único parcial refuerza la unicidad ante\
+        \ carreras concurrentes."
+      operationId: aceptarTerminos
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AceptarTerminosRequest"
+            example:
+              numeroWhatsapp: "+5491112345678"
+        required: true
+      responses:
+        "201":
+          description: Términos aceptados; vínculo pendiente creado o reutilizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VinculoResponse"
+              example:
+                id: 3f2b6c1e-8a4d-4f7b-9c2e-1d5a7b8c9e01
+                numeroWhatsapp: "+5491112345678"
+                estado: PENDIENTE_VERIFICACION
+                fechaActivacion: null
+                preferencias:
+                  idioma: null
+                  notificacionesHabilitadas: false
+                  horarioPreferido: null
+        "400":
+          description: Número ausente o fuera de E.164
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                ValidationError:
+                  $ref: "#/components/examples/ValidationError"
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "409":
+          description: Número ya ACTIVO o carrera al crear el pendiente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+  /api/v1/vinculos/{numero}/preferencias:
+    patch:
+      tags:
+      - Vínculos
+      summary: Actualizar preferencias del canal
+      description: "Solo idioma, notificacionesHabilitadas y horarioPreferido. Los\
+        \ campos ausentes o null conservan el valor actual. Exige vínculo ACTIVO y\
+        \ el contexto de credencial propagado por H2/H0.2 en los headers de documento.\
+        \ Una propiedad fuera del contrato responde 400 VALIDATION_ERROR sin aplicar\
+        \ cambios."
+      operationId: actualizarPreferencias
+      parameters:
+      - name: numero
+        in: path
+        description: Número E.164 del vínculo
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      - name: X-Credencial-Documento-Tipo
+        in: header
+        description: Tipo de documento del contexto de credencial
+        required: false
+        schema:
+          type: string
+        example: DNI
+      - name: X-Credencial-Documento-Numero
+        in: header
+        description: Número de documento del contexto de credencial
+        required: false
+        schema:
+          type: string
+        example: 30111222
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ActualizarPreferenciasRequest"
+            examples:
+              Idioma y notificaciones:
+                description: Idioma y notificaciones
+                value:
+                  idioma: es
+                  notificacionesHabilitadas: true
+              Solo horario:
+                description: Solo horario
+                value:
+                  horarioPreferido: 09:00-18:00
+        required: true
+      responses:
+        "200":
+          description: Preferencias actualizadas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VinculoResponse"
+              example:
+                id: 3f2b6c1e-8a4d-4f7b-9c2e-1d5a7b8c9e01
+                numeroWhatsapp: "+5491112345678"
+                estado: ACTIVO
+                fechaActivacion: 2026-10-26T12:00:00Z
+                preferencias:
+                  idioma: es
+                  notificacionesHabilitadas: true
+                  horarioPreferido: 09:00-18:00
+        "400":
+          description: Datos inválidos o propiedad desconocida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                ValidationError:
+                  $ref: "#/components/examples/ValidationError"
+                UnknownProperty:
+                  $ref: "#/components/examples/UnknownProperty"
+        "401":
+          description: Sin contexto de credencial válida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "404":
+          description: Número sin vínculo registrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "409":
+          description: El vínculo no está ACTIVO
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+  /api/v1/vinculos/{numero}/desvinculacion:
+    patch:
+      tags:
+      - Vínculos
+      summary: Desvincular el canal a pedido del cliente
+      description: "Desvincula un vínculo ACTIVO o BLOQUEADO con confirmación explí\
+        cita y contexto de credencial válida. Solicita la revocación de la credencial\
+        \ a H2 de inmediato y de forma best-effort: si H2 no confirma, la desvinculació\
+        n local se mantiene y se audita el rechazo de la solicitud."
+      operationId: desvincular
+      parameters:
+      - name: numero
+        in: path
+        description: Número E.164 del vínculo
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      - name: X-Canal-Credencial-Token
+        in: header
+        description: Token de sesión validado con H2 para el número solicitado
+        required: false
+        schema:
+          type: string
+        example: token-emitido-por-h2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DesvincularRequest"
+            example:
+              confirmacion: true
+        required: true
+      responses:
+        "200":
+          description: Vínculo desvinculado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VinculoResponse"
+              example:
+                id: 3f2b6c1e-8a4d-4f7b-9c2e-1d5a7b8c9e01
+                numeroWhatsapp: "+5491112345678"
+                estado: DESVINCULADO
+                fechaActivacion: 2026-10-26T12:00:00Z
+                preferencias:
+                  idioma: es
+                  notificacionesHabilitadas: true
+                  horarioPreferido: 09:00-18:00
+        "400":
+          description: Confirmación ausente o false
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "401":
+          description: Sin contexto de credencial válida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "404":
+          description: Número sin vínculo registrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "409":
+          description: El vínculo no admite la desvinculación en su estado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+  /api/v1/vinculos/{numero}/bloqueo:
+    patch:
+      tags:
+      - Vínculos
+      summary: Bloquear el vínculo del canal
+      description: "Bloquea un vínculo ACTIVO por solicitud del cliente (SOLICITUD_CLIENTE,\
+        \ exige contexto de credencial válida) o por política/riesgo del banco (POLITICA_BANCO,\
+        \ llamada interna). Solicita la revocación de la credencial a H2 de inmediato\
+        \ y de forma best-effort: si H2 no confirma, el bloqueo local se mantiene\
+        \ y se audita el rechazo de la solicitud."
+      operationId: bloquear
+      parameters:
+      - name: numero
+        in: path
+        description: Número E.164 del vínculo
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      - name: X-Canal-Credencial-Token
+        in: header
+        description: Token validado con H2; obligatorio si el motivo es SOLICITUD_CLIENTE
+        required: false
+        schema:
+          type: string
+        example: token-emitido-por-h2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BloquearVinculoRequest"
+            examples:
+              Solicitud del cliente:
+                description: Solicitud del cliente
+                value:
+                  motivo: SOLICITUD_CLIENTE
+                  confirmacion: true
+              Política del banco:
+                description: Política del banco
+                value:
+                  motivo: POLITICA_BANCO
+                  confirmacion: true
+        required: true
+      responses:
+        "200":
+          description: Vínculo bloqueado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VinculoResponse"
+              example:
+                id: 3f2b6c1e-8a4d-4f7b-9c2e-1d5a7b8c9e01
+                numeroWhatsapp: "+5491112345678"
+                estado: BLOQUEADO
+                fechaActivacion: 2026-10-26T12:00:00Z
+                preferencias:
+                  idioma: es
+                  notificacionesHabilitadas: true
+                  horarioPreferido: 09:00-18:00
+        "400":
+          description: Motivo o confirmación inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "401":
+          description: Solicitud del cliente sin credencial válida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "404":
+          description: Número sin vínculo registrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "409":
+          description: El vínculo no está ACTIVO
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+  /api/v1/vinculos/{numero}/perfil:
+    get:
+      tags:
+      - Vínculos
+      summary: Consultar el perfil permitido del canal
+      description: "Devuelve los datos de contacto de H1 y las preferencias locales\
+        \ del vínculo ACTIVO, sin datos legales sensibles. Exige el contexto de credencial\
+        \ válida que H2/H0.2 propagan; H3 valida vigencia y pertenencia con H2. Sin\
+        \ credencial responde 401 para derivar a verificación; sin vínculo ACTIVO\
+        \ responde 409."
+      operationId: consultarPerfil
+      parameters:
+      - name: numero
+        in: path
+        description: Número E.164 del vínculo
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      - name: X-Canal-Credencial-Token
+        in: header
+        description: Token de sesión validado con H2 para el número solicitado
+        required: false
+        schema:
+          type: string
+        example: token-emitido-por-h2
+      responses:
+        "200":
+          description: Perfil permitido del canal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PerfilCanalResponse"
+              example:
+                nombre: Ana
+                apellido: Pérez
+                nombreTratamiento: Anita
+                email: ana@example.test
+                telefono: "5551234"
+                preferencias:
+                  idioma: es
+                  notificacionesHabilitadas: true
+                  horarioPreferido: 09:00-18:00
+        "401":
+          description: Sin contexto de credencial válida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "409":
+          description: No hay vínculo ACTIVO
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "500":
+          description: Error interno o fallo de H1
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+  /api/v1/vinculos/{numero}/historial:
+    get:
+      tags:
+      - Vínculos
+      summary: Consultar historial resumido para soporte
+      description: "Uso interno del banco (soporte), sin contexto de cliente. Devuelve\
+        \ el estado actual del vínculo más reciente y los eventos de auditoría del\
+        \ número, del más reciente al más antiguo. No incluye motivos libres ni datos\
+        \ de verificación."
+      operationId: consultarHistorial
+      parameters:
+      - name: numero
+        in: path
+        description: Número E.164 consultado
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      responses:
+        "200":
+          description: Historial del número
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HistorialVinculoResponse"
+              example:
+                numeroWhatsapp: "+5491112345678"
+                documentoTipo: DNI
+                documentoNumero: "30111222"
+                estadoActual: ACTIVO
+                eventos:
+                - accion: VINCULACION
+                  resultado: EXITOSO
+                  fecha: 2026-10-26T12:01:00Z
+                - accion: VERIFICACION_EXITOSA
+                  resultado: EXITOSO
+                  fecha: 2026-10-26T12:00:00Z
+                - accion: ACEPTACION_TERMINOS
+                  resultado: EXITOSO
+                  fecha: 2026-10-26T11:58:00Z
+        "404":
+          description: Número sin vínculo registrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+  /api/v1/vinculos/{numero}/estado:
+    get:
+      tags:
+      - Vínculos
+      summary: Consultar si el número ya está vinculado
+      description: "Consulta anti-duplicados y fraude: informa si el número tiene\
+        \ un vínculo en cualquier estado, sin exponer datos del cliente. Un número\
+        \ libre devuelve 200 con vinculado=false; este endpoint nunca responde 404."
+      operationId: consultarEstado
+      parameters:
+      - name: numero
+        in: path
+        description: Número E.164 consultado
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      responses:
+        "200":
+          description: Número vinculado o libre
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VinculoEstadoResponse"
+              examples:
+                Vinculado:
+                  description: Vinculado
+                  value:
+                    numeroWhatsapp: "+5491112345678"
+                    vinculado: true
+                    estado: PENDIENTE_VERIFICACION
+                Libre:
+                  description: Libre
+                  value:
+                    numeroWhatsapp: "+5491112345678"
+                    vinculado: false
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example: null
+components:
+  schemas:
+    VerificarIdentidadRequest:
+      type: object
+      description: Identidad del solicitante y pruebas efímeras; no se persisten ni
+        se registran
+      properties:
+        documentoTipo:
+          type: string
+          description: Tipo de documento del cliente en H1
+          example: DNI
+          maxLength: 255
+          minLength: 0
+        documentoNumero:
+          type: string
+          description: Número de documento del cliente en H1
+          example: 30111222
+          maxLength: 255
+          minLength: 0
+        datosVerificacion:
+          type: object
+          additionalProperties:
+            type: string
+          description: Pruebas según el método aprobado por Compliance (máximo 32
+            claves). El servicio por defecto rechaza toda prueba hasta instalar la
+            estrategia.
+          example:
+            codigo: "123456"
+      required:
+      - datosVerificacion
+      - documentoNumero
+      - documentoTipo
+    VerificacionResultadoResponse:
+      type: object
+      description: Resultado verificable de identidad y vínculo para H0.2; no es una
+        credencial de H2
+      properties:
+        exitosa:
+          type: boolean
+          description: true si la identidad fue validada y el vínculo quedó ACTIVO
+          example: true
+        vinculoId:
+          type: string
+          format: uuid
+          description: Identificador del vínculo involucrado
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        numeroWhatsapp:
+          type: string
+          description: Número E.164 verificado
+          example: "+5491112345678"
+        documentoTipo:
+          type: string
+          description: Tipo de documento informado
+          example: DNI
+        documentoNumero:
+          type: string
+          description: Número de documento informado
+          example: 30111222
+        estadoVinculo:
+          type: string
+          description: "Estado del vínculo tras el intento: ACTIVO si exitosa, PENDIENTE_VERIFICACION\
+            \ si falló"
+          enum:
+          - PENDIENTE_VERIFICACION
+          - ACTIVO
+          - BLOQUEADO
+          - DESVINCULADO
+          example: ACTIVO
+        intentosRestantes:
+          type: integer
+          format: int32
+          description: Intentos disponibles tras un fallo; null si la verificación
+            fue exitosa
+          example: 2
+        verificadoEn:
+          type: string
+          format: date-time
+          description: Instante UTC de la verificación exitosa; null si falló
+          example: 2026-10-26T12:00:00Z
+    ErrorResponse:
+      type: object
+      description: "Error uniforme de la API (code, message, details, timestamp)"
+      properties:
+        code:
+          type: string
+          description: Código estable
+          enum:
+          - VALIDATION_ERROR
+          - BAD_REQUEST
+          - NOT_FOUND
+          - CONFLICT
+          - UNAUTHORIZED
+          - LOCKED
+          - INTERNAL_ERROR
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Mensaje legible sin datos sensibles
+          example: La solicitud tiene datos inválidos
+        details:
+          type: array
+          description: Detalles de validación; nunca null (lista vacía si no aplica)
+          items:
+            $ref: "#/components/schemas/FieldError"
+        timestamp:
+          type: string
+          format: date-time
+          description: Instante UTC ISO-8601
+          example: 2026-10-26T12:00:00Z
+    FieldError:
+      type: object
+      description: Detalle de un campo inválido (sin el valor rechazado)
+      properties:
+        field:
+          type: string
+          description: Nombre del campo
+          example: nombre
+        message:
+          type: string
+          description: Motivo del rechazo
+          example: El nombre es obligatorio
+    AceptarTerminosRequest:
+      type: object
+      description: "Aceptación de términos del canal; solo el número, sin datos de\
+        \ identificación"
+      properties:
+        numeroWhatsapp:
+          type: string
+          description: Número E.164 con prefijo + y hasta 15 dígitos
+          example: "+5491112345678"
+          minLength: 1
+          pattern: "^\\+[1-9][0-9]{1,14}$"
+      required:
+      - numeroWhatsapp
+    PreferenciasResponse:
+      type: object
+      description: Preferencias del canal WhatsApp
+      properties:
+        idioma:
+          type: string
+          description: Idioma del canal
+          example: es
+        notificacionesHabilitadas:
+          type: boolean
+          description: Notificaciones habilitadas
+          example: true
+        horarioPreferido:
+          type: string
+          description: Horario preferido
+          example: 09:00-18:00
+    VinculoResponse:
+      type: object
+      description: Estado público del vínculo del canal
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador del vínculo
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        numeroWhatsapp:
+          type: string
+          description: Número E.164 del canal
+          example: "+5491112345678"
+        estado:
+          type: string
+          description: "Estado actual: PENDIENTE_VERIFICACION, ACTIVO, BLOQUEADO o\
+            \ DESVINCULADO"
+          enum:
+          - PENDIENTE_VERIFICACION
+          - ACTIVO
+          - BLOQUEADO
+          - DESVINCULADO
+          example: PENDIENTE_VERIFICACION
+        fechaActivacion:
+          type: string
+          format: date-time
+          description: Instante UTC de activación; null mientras no esté ACTIVO
+          example: 2026-10-26T12:00:00Z
+        preferencias:
+          $ref: "#/components/schemas/PreferenciasResponse"
+    ActualizarPreferenciasRequest:
+      type: object
+      description: "Solo idioma, notificacionesHabilitadas y horarioPreferido"
+      properties:
+        idioma:
+          type: string
+          description: Idioma preferido; null omite el cambio
+          example: es
+        notificacionesHabilitadas:
+          type: boolean
+          description: Si las notificaciones están habilitadas; null omite el cambio
+          example: true
+        horarioPreferido:
+          type: string
+          description: Horario preferido opcional; null omite el cambio
+          example: 09:00-18:00
+    DesvincularRequest:
+      type: object
+      description: Desvinculación del canal con confirmación explícita del cliente
+      properties:
+        confirmacion:
+          type: boolean
+          description: Debe ser true; false o ausente → 400 VALIDATION_ERROR
+          example: true
+      required:
+      - confirmacion
+    BloquearVinculoRequest:
+      type: object
+      description: "Bloqueo del vínculo: motivo y confirmación explícita"
+      properties:
+        motivo:
+          type: string
+          description: "Motivo: SOLICITUD_CLIENTE (requiere credencial válida), POLITICA_BANCO\
+            \ o INTENTOS_AGOTADOS"
+          enum:
+          - SOLICITUD_CLIENTE
+          - POLITICA_BANCO
+          - INTENTOS_AGOTADOS
+          example: SOLICITUD_CLIENTE
+        confirmacion:
+          type: boolean
+          description: Debe ser true; false o ausente → 400 VALIDATION_ERROR
+          example: true
+      required:
+      - confirmacion
+      - motivo
+    PerfilCanalResponse:
+      type: object
+      description: "Perfil permitido del canal: datos de contacto de H1 y preferencias\
+        \ locales"
+      properties:
+        nombre:
+          type: string
+          description: Nombre de pila
+          example: Ana
+        apellido:
+          type: string
+          description: Apellido
+          example: Pérez
+        nombreTratamiento:
+          type: string
+          description: Forma de tratamiento; puede ser null
+          example: Anita
+        email:
+          type: string
+          description: Email de contacto; puede ser null
+          example: ana@example.test
+        telefono:
+          type: string
+          description: Teléfono de contacto; puede ser null
+          example: 5551234
+        preferencias:
+          $ref: "#/components/schemas/PreferenciasResponse"
+    EventoHistorialResponse:
+      type: object
+      description: Evento resumido de auditoría; no incluye motivos libres ni datos
+        de verificación
+      properties:
+        accion:
+          type: string
+          description: Acción auditada
+          enum:
+          - ACEPTACION_TERMINOS
+          - VERIFICACION_EXITOSA
+          - VERIFICACION_FALLIDA
+          - VINCULACION
+          - REVINCULACION
+          - BLOQUEO
+          - DESVINCULACION
+          example: VERIFICACION_EXITOSA
+        resultado:
+          type: string
+          description: Resultado de la acción
+          enum:
+          - EXITOSO
+          - RECHAZADO
+          example: EXITOSO
+        fecha:
+          type: string
+          format: date-time
+          description: Instante UTC del evento
+          example: 2026-10-26T12:00:00Z
+    HistorialVinculoResponse:
+      type: object
+      description: "Historial resumido para soporte: estado actual y eventos del má\
+        s reciente al más antiguo"
+      properties:
+        numeroWhatsapp:
+          type: string
+          description: Número consultado
+          example: "+5491112345678"
+        documentoTipo:
+          type: string
+          description: Tipo de documento del titular; puede ser null
+          example: DNI
+        documentoNumero:
+          type: string
+          description: Número de documento del titular; puede ser null
+          example: 30111222
+        estadoActual:
+          type: string
+          description: Estado actual del vínculo
+          enum:
+          - PENDIENTE_VERIFICACION
+          - ACTIVO
+          - BLOQUEADO
+          - DESVINCULADO
+          example: ACTIVO
+        eventos:
+          type: array
+          items:
+            $ref: "#/components/schemas/EventoHistorialResponse"
+    VinculoEstadoResponse:
+      type: object
+      description: Consulta anti-duplicados sin datos del cliente; nunca devuelve
+        404
+      properties:
+        numeroWhatsapp:
+          type: string
+          description: Número consultado
+          example: "+5491112345678"
+        vinculado:
+          type: boolean
+          description: true si existe un vínculo en cualquier estado
+          example: true
+        estado:
+          type: string
+          description: Estado del vínculo más reciente; se omite si no hay vínculo
+          enum:
+          - PENDIENTE_VERIFICACION
+          - ACTIVO
+          - BLOQUEADO
+          - DESVINCULADO
+          example: PENDIENTE_VERIFICACION
+  examples:
+    ValidationError:
+      value: |-
+        {
+          "code": "VALIDATION_ERROR",
+          "message": "La solicitud tiene datos inválidos",
+          "details": [
+            { "field": "numeroWhatsapp", "message": "El número de WhatsApp es obligatorio" }
+          ],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }
+    BadRequest:
+      value: |-
+        {
+          "code": "BAD_REQUEST",
+          "message": "La solicitud no es válida",
+          "details": [],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }
+    UnknownProperty:
+      value: |-
+        {
+          "code": "VALIDATION_ERROR",
+          "message": "La solicitud tiene propiedades no permitidas",
+          "details": [],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }
+    NotFoundVinculo:
+      value: |-
+        {
+          "code": "NOT_FOUND",
+          "message": "No existe un vínculo registrado para el número consultado",
+          "details": [],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }
+    NotFoundTerminos:
+      value: |-
+        {
+          "code": "NOT_FOUND",
+          "message": "Debe aceptar los términos antes de verificar su identidad",
+          "details": [],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }
+    NotFoundCliente:
+      value: |-
+        {
+          "code": "NOT_FOUND",
+          "message": "Para operar por WhatsApp primero debe ser cliente del banco por otro canal",
+          "details": [],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }
+    ConflictClienteNoHabilitado:
+      value: |-
+        {
+          "code": "CONFLICT",
+          "message": "El cliente no está habilitado para operar por este canal",
+          "details": [],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }
+    ConflictNumeroVinculado:
+      value: |-
+        {
+          "code": "CONFLICT",
+          "message": "El número ya está vinculado. Contacte a soporte",
+          "details": [],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }
+    ConflictEstado:
+      value: |-
+        {
+          "code": "CONFLICT",
+          "message": "El vínculo no admite la operación en su estado actual",
+          "details": [],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }
+    ConflictNoActivo:
+      value: |-
+        {
+          "code": "CONFLICT",
+          "message": "El vínculo no está activo para esta operación",
+          "details": [],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }
+    Unauthorized:
+      value: |-
+        {
+          "code": "UNAUTHORIZED",
+          "message": "Se requiere una credencial válida",
+          "details": [],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }
+    Locked:
+      value: |-
+        {
+          "code": "LOCKED",
+          "message": "Verificación pausada temporalmente. Contacte a soporte",
+          "details": [],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }
+    InternalError:
+      value: |-
+        {
+          "code": "INTERNAL_ERROR",
+          "message": "Error interno",
+          "details": [],
+          "timestamp": "2026-10-26T12:00:00Z"
+        }

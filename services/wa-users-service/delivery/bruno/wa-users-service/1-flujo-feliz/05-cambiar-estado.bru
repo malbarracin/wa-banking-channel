@@ -1,0 +1,29 @@
+meta {
+  name: Cambiar estado a SUSPENDED
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}/status
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "estado": "SUSPENDED"
+  }
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  ACTIVE→SUSPENDED. Desde LOGICAL_DELETE no hay reactivación en H1.
+}

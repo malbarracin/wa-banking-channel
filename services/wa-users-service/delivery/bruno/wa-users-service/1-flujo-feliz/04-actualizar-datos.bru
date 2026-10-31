@@ -5,15 +5,21 @@ meta {
 }
 
 patch {
-  url: {{baseUrl}}/api/v1/users/{{userId}}
+  url: {{baseUrl}}/api/v1/users/{{docTipo}}/{{docNumber}}
   body: json
   auth: none
 }
 
+headers {
+  Content-Type: application/json
+}
+
 body:json {
   {
-    "displayName": "Nuevo nombre",
-    "preferences": { "language": "es" }
+    "email": "nuevo@example.test",
+    "telefono": "555999",
+    "nombreTratamiento": "Anita",
+    "preferencias": "canal:whatsapp"
   }
 }
 
@@ -22,5 +28,5 @@ assert {
 }
 
 docs {
-  PATCH de displayName y preferences. Respuestas: 200, 400, 404, 409.
+  Solo email, telefono, nombreTratamiento, preferencias. Propiedades desconocidas → 400.
 }

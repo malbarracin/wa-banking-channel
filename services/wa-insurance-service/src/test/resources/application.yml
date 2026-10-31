@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: wa-insurance-service
+  datasource:
+    url: jdbc:h2:mem:wa_insurance;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: create-drop
+server:
+  port: 8085
+  error:
+    include-stacktrace: never
+    include-message: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+clients:
+  wa-credentials-service:
+    base-url: http://localhost:8082
+    connect-timeout: 2s
+    read-timeout: 3s
+
+insurance:
+  siniestros:
+    ventana-duplicado-dias: 30

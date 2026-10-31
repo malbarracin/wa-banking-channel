@@ -1,0 +1,31 @@
+meta {
+  name: Validar credencial revocada
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/validar
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "credencial": "{{jwt}}"
+  }
+}
+
+assert {
+  res.status: eq 401
+  res.body.code: eq UNAUTHORIZED
+}
+
+docs {
+  El JWT de la última emisión quedó revocado por la revocación masiva.
+  Respuestas: 401 UNAUTHORIZED.
+}

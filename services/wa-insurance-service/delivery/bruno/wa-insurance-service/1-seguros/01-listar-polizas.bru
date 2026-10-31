@@ -1,0 +1,29 @@
+﻿meta {
+  name: Listar pólizas vigentes
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/v1/seguros
+  body: none
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+script:post-response {
+  if (Array.isArray(res.body) && res.body.length > 0 && res.body[0].id) {
+    bru.setVar("polizaId", res.body[0].id);
+  }
+}
+
+docs {
+  Lista pólizas vigentes autorizadas. Respuestas: 200, 401.
+}

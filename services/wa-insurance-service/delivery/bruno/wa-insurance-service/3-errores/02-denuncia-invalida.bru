@@ -1,0 +1,33 @@
+﻿meta {
+  name: Denuncia inválida (400)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/v1/siniestros
+  body: json
+  auth: none
+}
+
+headers {
+  X-Credencial-Sesion: {{credencial}}
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "polizaId": "{{polizaId}}",
+    "tipoSiniestro": "AUTO",
+    "fechaSiniestro": "2026-10-20",
+    "descripcion": ""
+  }
+}
+
+assert {
+  res.status: eq 400
+}
+
+docs {
+  descripcion vacía → 400 VALIDATION_ERROR.
+}

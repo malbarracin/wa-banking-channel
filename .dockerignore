@@ -1,0 +1,27 @@
+.git
+.opensoma
+.opencode
+.claude
+.cursor
+.codex
+.kiro
+.agents
+.idea
+.vscode
+**/.env
+**/target
+**/helm
+services/
+# gateway/ y platform/ no se excluyen: builds de integración usan contexto raíz
+# (Dockerfile copia el componente + shared/contracts/events).
+gateway/**/data/
+ai/
+docs/
+specs/
+delivery/
+backlog/
+packs/
+*.md
+!shared/contracts/events/**
+platform/wa-event-platform/handoff.md
+platform/wa-event-platform/README.md

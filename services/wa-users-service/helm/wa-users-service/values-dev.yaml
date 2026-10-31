@@ -1,4 +1,19 @@
 replicaCount: 1
-# Perfil prod también en Kubernetes dev: PostgreSQL externo con schema preparado.
-database:
-  existingSecret: wa-users-db-dev
+
+image:
+  tag: "dev"
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+spring:
+  profiles:
+    active: prod
+
+ingress:
+  enabled: false

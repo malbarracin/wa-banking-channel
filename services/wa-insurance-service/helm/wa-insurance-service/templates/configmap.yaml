@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "wa-insurance-service.fullname" . }}-config
+  labels:
+    {{- include "wa-insurance-service.labels" . | nindent 4 }}
+data:
+  DB_URL: {{ .Values.env.DB_URL | quote }}
+  CREDENTIALS_SERVICE_BASE_URL: {{ .Values.env.CREDENTIALS_SERVICE_BASE_URL | quote }}

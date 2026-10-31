@@ -1,0 +1,40 @@
+meta {
+  name: Emitir nueva credencial
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/v1/credenciales/emitir
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{h3ServiceToken}}
+}
+
+body:json {
+  {
+    "numeroWhatsapp": "{{numeroWhatsapp}}",
+    "documentoTipo": "{{docTipo}}",
+    "documentoNumero": "{{docNumber}}",
+    "vinculoActivo": true,
+    "identidadVerificada": true
+  }
+}
+
+assert {
+  res.status: eq 201
+  res.body.credencial: isString
+}
+
+script:post-response {
+  bru.setVar("jwt", res.body.credencial);
+  bru.setVar("fechaExpiracion", res.body.fechaExpiracion);
+}
+
+docs {
+  Solo H3 (Bearer h3ServiceToken). Deja una credencial ACTIVA nueva para probar la revocación masiva.
+}

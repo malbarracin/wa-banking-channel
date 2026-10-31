@@ -12,7 +12,7 @@
 - Estados admitidos: `queued`, `sent`, `delivered`, `read`, `failed`. Otros → **400** sin publicar.
 - `ErrorCode` opcional. No se publican textos de error, teléfonos ni el formulario original.
 - `correlationId` HTTP debe ser UUID; si falta/se genera, se propaga a evento/headers Kafka/MDC. Si es inválido como UUID → **400**.
-- Cuerpo > **16 KiB** → **413**. Límite global **120 callbacks/minuto** por instancia → **429**.
+- Cuerpo > **16 KiB** → **413**. Límite global **120 callbacks/minuto** por instancia → **429**. Ambos los impone `WebhookInputFilter` antes de que Spring MVC lea el cuerpo (con longitud desconocida lee como máximo 16385 bytes); el controller repite el chequeo como segunda barrera. Ver [INPUT-LIMITS.md](INPUT-LIMITS.md).
 
 ## Publicación
 - Publica `MessageStatus` en `wa.message.status.v1` validado contra el schema compartido.

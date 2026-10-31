@@ -36,7 +36,7 @@ flowchart LR
 | `dedup` | `DedupeService`: `INSERT ... ON CONFLICT DO NOTHING` por `messageId` global |
 | `conversation` | `ConversationService`: carga/crea `conversation_state`, actualiza estado con versión optimista |
 | `saga` | `SagaOrchestrator`, `SagaTimeoutScheduler`, compensaciones y ejecuciones por paso |
-| `agent` | `H9TurnClient` y DTOs del turno (contrato provisional, ver [H9.md](H9.md)) |
+| `agent` | `H9TurnClient` y DTOs del turno (contrato v1, ver [H9.md](H9.md)) |
 | `outbox` | `OutboundEventPublisher` (TX obligatoria) y `OutboxDispatcher` (despacho serial) |
 | `messaging.config` | Reintentos inbound, `SafeDeadLetterRecoverer` y productor idempotente |
 
@@ -111,7 +111,7 @@ nunca valores reales en el repo.
 | `POSTGRES_DB` | `wa_orchestrator` (solo compose) |
 | `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092`; en compose `kafka:29092` |
 | `KAFKA_SECURITY_PROTOCOL` | `PLAINTEXT` solo local |
-| `H9_BASE_URL` | `http://localhost:8099`; HTTPS fuera de local |
+| `H9_BASE_URL` | `http://localhost:8099` (provisional; `project.yaml` fija H9 en 8103, alinear por entorno); HTTPS fuera de local |
 | `H9_SERVICE_TOKEN` | Vacío; sin token se rechaza la llamada antes de enviar |
 | `H9_CONNECT_TIMEOUT_MS` | `1000` |
 | `H9_TIMEOUT_MS` | `5000` por intento completo |
@@ -147,8 +147,8 @@ Configuración de webhook, URL pública, firma y túnel: [TWILIO-CONFIG.md](../.
 `X-Idempotency-Key=messageId`. Request: identificadores, `customerAddress`, `body` y
 `context` (contexto técnico + historial). Respuesta 200: los tres identificadores,
 `reply.body`, `escalate`, `toolsUsed`; se rechaza una respuesta vacía, incompleta o de otro turno.
-El contrato compartido `shared/contracts/wa-conversation-agent/turn.md` sigue pendiente de
-publicación por H9; la definición provisional está en [H9.md](H9.md).
+El contrato compartido v1 es [shared/contracts/wa-conversation-agent/turn.md](../../shared/contracts/wa-conversation-agent/turn.md);
+la definición local y las contingencias del cliente están en [H9.md](H9.md).
 
 ### Integración con Kafka
 
@@ -222,7 +222,7 @@ El verificador descubre este POM en `platform/*/pom.xml` y ejecuta el wrapper co
 | [Catálogo y sobre de eventos](../../shared/contracts/events/README.md) | `MessageReceived` (consume), `MessageReadyToSend` (produce), `DeadLetter` (produce), `MessageStatus` (consumidor pendiente) |
 | [Topics](../../shared/contracts/events/topics.md) | Particiones, retención, claves y headers |
 | [Handoff H0.2](../../shared/contracts/wa-channel-orchestrator/handoff.md) | Variables, contratos, operación y límites |
-| `shared/contracts/wa-conversation-agent/turn.md` | Pendiente de publicación por H9; ver [H9.md](H9.md) |
+| [Contrato de turno H9](../../shared/contracts/wa-conversation-agent/turn.md) | v1 publicado por H9; cliente y contingencias en [H9.md](H9.md) |
 | [ADR-006](../../docs/adr/ADR-006-orquestador-dedicado-ciclo-vida-canal.md), [ADR-007](../../docs/adr/ADR-007-estado-conversacion-saga-persistente.md), [ADR-008](../../docs/adr/ADR-008-limite-orquestacion-vs-conversacion-h9.md) | Decisiones de diseño |
 
 ## Guías de operación
@@ -231,7 +231,7 @@ El verificador descubre este POM en `platform/*/pom.xml` y ejecuta el wrapper co
 |---|---|
 | Consumo, deduplicación y orden | [INBOUND.md](INBOUND.md) |
 | Secuencias y contingencias | [FLUJOS.md](FLUJOS.md) |
-| Cliente y definición provisional de turno H9 | [H9.md](H9.md) |
+| Cliente y contingencias del turno H9 | [H9.md](H9.md) |
 | Pausa, timeout y compensación | [SAGAS.md](SAGAS.md) |
 | Publicación transaccional y despacho serial | [OUTBOUND.md](OUTBOUND.md) |
 | Diagnóstico y reproceso | [DLQ.md](DLQ.md) |

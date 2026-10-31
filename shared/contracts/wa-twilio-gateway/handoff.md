@@ -51,7 +51,10 @@ Inbound valida `MessageSid` como `SM` + 32 dígitos hexadecimales, direcciones
 `whatsapp:+E164` y texto de 1 a 4096 caracteres. No admite mensajes exclusivamente
 multimedia. Inbound limita el formulario completo a 16384 bytes y aplica una
 ventana de un minuto con 120 solicitudes por IP remota, antes de validar firma
-o publicar. No confía en `X-Forwarded-For`; detrás de un proxy comparte su cupo.
+o publicar. `WebhookInputFilter` impone esos límites antes de que Spring MVC lea
+o bufferice el cuerpo (con longitud desconocida lee como máximo 16385 bytes); el
+controller los repite como segunda barrera. No confía en `X-Forwarded-For`; detrás
+de un proxy comparte su cupo.
 La tabla admite hasta 10000 IP por ventana; nuevas IP reciben 429 al llenarse.
 Los contadores son locales a cada instancia. Configurar también límites de
 transporte en el borde para acotar la lectura HTTP y coordinar cuotas entre réplicas.

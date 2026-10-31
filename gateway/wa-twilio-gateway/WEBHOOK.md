@@ -25,7 +25,7 @@
 - Para múltiples réplicas reemplazar por store compartido.
 
 ## Límites y observabilidad
-- El controller inbound rechaza formularios mayores de 16384 bytes con 413 y aplica 120 solicitudes por IP remota por ventana de un minuto e instancia con 429, antes de validar firma o publicar. Incluye solicitudes con firma inválida y no toma la IP de `X-Forwarded-For`. La tabla está acotada a 10000 IP por ventana; nuevas IP reciben 429 si se alcanza la capacidad. Detrás de un proxy el cupo corresponde a su IP. Configurar además límites de transporte en el borde para acotar la lectura HTTP y coordinar cuotas entre réplicas.
+- `WebhookInputFilter` aplica los límites antes de que Spring MVC convierta el cuerpo a `byte[]`: `Content-Length` mayor de 16384 → **413** sin abrir el stream; longitud desconocida o declarada menor que la real → lee como máximo **16385** bytes y responde **413** si los supera. El cupo de **120** solicitudes por IP remota por ventana de un minuto e instancia (**429**) se evalúa antes de leer el cuerpo. Incluye solicitudes con firma inválida y no toma la IP de `X-Forwarded-For`. La tabla está acotada a **10000** IP por ventana; nuevas IP reciben **429** si se alcanza la capacidad. El controller conserva ambos chequeos como segunda barrera. Detrás de un proxy el cupo corresponde a su IP; configurar además límites de transporte en el borde para acotar la lectura HTTP y coordinar cuotas entre réplicas. Ver [INPUT-LIMITS.md](INPUT-LIMITS.md).
 - Trazabilidad con `correlationId` (ver [OBSERVABILITY.md](OBSERVABILITY.md)).
 
 ## Verificación

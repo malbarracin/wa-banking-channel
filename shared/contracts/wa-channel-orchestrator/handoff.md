@@ -32,8 +32,8 @@ Conversación/outbox limitan identificadores a 128 caracteres; inbound acepta ha
 
 ## H9 y límites actuales
 
-`shared/contracts/wa-conversation-agent/turn.md` sigue pendiente. La definición provisional implementada
-está en [H9.md](../../../platform/wa-channel-orchestrator/H9.md): POST /api/v1/agent/turn,
+El contrato compartido v1 es [turn.md](../wa-conversation-agent/turn.md) (lo publica H9). La
+definición local implementada está en [H9.md](../../../platform/wa-channel-orchestrator/H9.md): POST /api/v1/agent/turn,
 Bearer de servicio y X-Correlation-Id/X-Conversation-Id/X-Message-Id/X-Idempotency-Key=messageId.
 Request: identificadores, customerAddress, body, context (technicalContext/history).
 Respuesta 200: identificadores, reply.body, escalate, toolsUsed; se verifica correspondencia del turno.
@@ -59,7 +59,7 @@ no se carga automáticamente. Fuente: application.yml y application-local.yml.
 | SPRING_DATASOURCE_USERNAME / SPRING_DATASOURCE_PASSWORD | Obligatorios, sin default |
 | KAFKA_BOOTSTRAP_SERVERS | localhost:9092 |
 | KAFKA_SECURITY_PROTOCOL | PLAINTEXT solo local |
-| H9_BASE_URL | http://localhost:8099; HTTPS fuera de local |
+| H9_BASE_URL | http://localhost:8099 (default provisional; `project.yaml` fija H9 en 8103: alinear por entorno, ver turn.md); HTTPS fuera de local |
 | H9_SERVICE_TOKEN | Vacío; sin token se rechaza la llamada antes de enviar |
 | H9_CONNECT_TIMEOUT_MS | 1000 |
 | H9_TIMEOUT_MS | 5000 por intento completo |

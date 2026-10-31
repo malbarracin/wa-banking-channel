@@ -35,8 +35,10 @@ Ver [WEBHOOK.md](WEBHOOK.md) y [STATUS-CALLBACK.md](STATUS-CALLBACK.md).
 ## 3) Firma, validación y respuestas
 | Endpoint | Reglas clave | Respuestas |
 | --- | --- | --- |
-| `POST /webhook/twilio` | `X-Twilio-Signature`, URL pública exacta, parámetros del cuerpo, sin repetidos | 200 (confirmado/duplicado), 400 (inválido), 403 (firma), 503 (fallo/timeout/capacidad), 500 (inesperado) |
+| `POST /webhook/twilio` | `X-Twilio-Signature`, URL pública exacta, parámetros del cuerpo, sin repetidos | 200 (confirmado/duplicado), 400 (inválido), 403 (firma), 413 (>16KiB), 429 (>120/min), 503 (fallo/timeout/capacidad), 500 (inesperado) |
 | `POST /webhooks/twilio/status` | Firma con todos los campos, URL exacta, `MessageSid/MessageStatus/From/To`, estados válidos, `correlationId` UUID si presente | 200, 400, 403, 413 (>16KiB), 429 (>120/min), 503, 500 |
+
+Los límites de tamaño y tasa los aplica `WebhookInputFilter` antes de que Spring MVC lea y bufferice el cuerpo en ambos endpoints; el controller los repite como segunda barrera. Ver [INPUT-LIMITS.md](INPUT-LIMITS.md).
 
 ACK HTTP se espera <500ms confirmando publicación Kafka (medir bajo carga).
 
@@ -114,6 +116,7 @@ Revisar `target/surefire-reports`, `target/site/jacoco/index.html`. Tests embebi
 - [WEBHOOK.md](WEBHOOK.md)
 - [STATUS-CALLBACK.md](STATUS-CALLBACK.md)
 - [NORMALIZATION.md](NORMALIZATION.md)
+- [INPUT-LIMITS.md](INPUT-LIMITS.md)
 - [OUTBOUND.md](OUTBOUND.md)
 - [OBSERVABILITY.md](OBSERVABILITY.md)
 - [shared/contracts/events/README.md](../../shared/contracts/events/README.md)

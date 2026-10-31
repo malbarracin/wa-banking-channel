@@ -175,6 +175,28 @@ async def test_partial_events_and_safe_projection(services):
         assert not (await memory.search_memory(app_name="h9", user_id="u", query="")).memories
 
 
+async def test_filtered_session_append_preserves_history_and_does_not_persist_mutations(services):
+    sessions, _ = services
+    session = await sessions.create_session(app_name="h9", user_id="u", session_id="c")
+    await sessions.append_event(session, event("hola", onboarding_step="inicio"))
+    await sessions.append_event(session, event("necesito ayuda", current_intent="ayuda"))
+    filtered = await sessions.get_session(
+        app_name="h9", user_id="u", session_id="c", config=GetSessionConfig(num_recent_events=1)
+    )
+    assert filtered is not None
+    # Runner's in-process session may contain sensitive tool state or altered events.
+    forbidden = "synthetic-private-tool-result"
+    filtered.state["credencial"] = forbidden
+    filtered.events[0].content.parts[0].text = forbidden
+    await sessions.append_event(filtered, event("continuar", onboarding_step="verificacion"))
+    loaded = await sessions.get_session(app_name="h9", user_id="u", session_id="c")
+    assert loaded is not None
+    assert [entry.content.parts[0].text for entry in loaded.events] == ["hola", "necesito ayuda", "continuar"]
+    assert loaded.state == {"onboarding_step": "verificacion", "current_intent": "ayuda"}
+    raw = await sessions.store.client.get(sessions._key("h9", "u", "c"))
+    assert forbidden.encode() not in raw
+
+
 async def test_factory_and_runner_compatibility(services):
     sessions, memory = services
     runner = Runner(

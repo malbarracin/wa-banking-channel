@@ -342,6 +342,225 @@
         }
       }
     },
+    "/api/v1/credenciales/renovacion/obtener" : {
+      "post" : {
+        "tags" : [ "Credenciales" ],
+        "summary" : "Obtener renovación preparada",
+        "description" : "H3 presenta el JWT vigente y guarda durablemente el reemplazo antes de confirmarlo.",
+        "operationId" : "obtener",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ValidarCredencialRequest"
+              },
+              "examples" : {
+                "Actual" : {
+                  "description" : "Actual",
+                  "value" : {
+                    "credencial" : "JWT_ACTUAL"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "JWT sustituto; Cache-Control: no-store",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EmitirCredencialResponse"
+                },
+                "examples" : {
+                  "Reemplazo" : {
+                    "description" : "Reemplazo",
+                    "value" : {
+                      "credencial" : "JWT_NUEVO",
+                      "fechaExpiracion" : "2026-11-01T12:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400" : {
+            "description" : "VALIDATION_ERROR o BAD_REQUEST",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "ValidationError" : {
+                    "$ref" : "#/components/examples/ValidationError"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Credencial inválida, revocada, expirada o con riesgo",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "Unauthorized" : {
+                    "$ref" : "#/components/examples/Unauthorized"
+                  }
+                }
+              }
+            }
+          },
+          "404" : {
+            "description" : "Todavía no hay renovación preparada",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "NoPreparada" : {
+                    "description" : "NoPreparada",
+                    "value" : {
+                      "code" : "NOT_FOUND",
+                      "message" : "Todavía no hay una renovación preparada",
+                      "details" : [ ],
+                      "timestamp" : "2026-10-26T12:00:00Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto de persistencia",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "Conflict" : {
+                    "$ref" : "#/components/examples/Conflict"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "INTERNAL_ERROR",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "InternalError" : {
+                    "$ref" : "#/components/examples/InternalError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/credenciales/renovacion/confirmar" : {
+      "post" : {
+        "tags" : [ "Credenciales" ],
+        "summary" : "Confirmar recepción durable de renovación",
+        "description" : "H3 presenta el JWT nuevo. Activa el reemplazo y revoca el anterior atómicamente.",
+        "operationId" : "confirmar",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ValidarCredencialRequest"
+              },
+              "examples" : {
+                "Nuevo" : {
+                  "description" : "Nuevo",
+                  "value" : {
+                    "credencial" : "JWT_NUEVO"
+                  }
+                }
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Reemplazo activo, también ante repetición"
+          },
+          "400" : {
+            "description" : "VALIDATION_ERROR o BAD_REQUEST",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "ValidationError" : {
+                    "$ref" : "#/components/examples/ValidationError"
+                  }
+                }
+              }
+            }
+          },
+          "401" : {
+            "description" : "Reemplazo o credencial anterior no autorizados",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "Unauthorized" : {
+                    "$ref" : "#/components/examples/Unauthorized"
+                  }
+                }
+              }
+            }
+          },
+          "409" : {
+            "description" : "Conflicto de persistencia",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "Conflict" : {
+                    "$ref" : "#/components/examples/Conflict"
+                  }
+                }
+              }
+            }
+          },
+          "500" : {
+            "description" : "INTERNAL_ERROR",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "InternalError" : {
+                    "$ref" : "#/components/examples/InternalError"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/credenciales/emitir" : {
       "post" : {
         "tags" : [ "Credenciales" ],
@@ -763,6 +982,23 @@
           }
         }
       },
+      "EmitirCredencialResponse" : {
+        "type" : "object",
+        "description" : "Credencial destinada exclusivamente al canal H3, nunca a mensajes visibles por el cliente final.",
+        "properties" : {
+          "credencial" : {
+            "type" : "string",
+            "description" : "JWT de sesión interno; usar el valor devuelto por emitir, nunca mostrarlo al cliente",
+            "example" : "JWT_DEVUELTO_POR_EMITIR"
+          },
+          "fechaExpiracion" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Vencimiento UTC en formato ISO-8601",
+            "example" : "2026-10-27T12:00:00Z"
+          }
+        }
+      },
       "EmitirCredencialRequest" : {
         "type" : "object",
         "description" : "Confirmación del canal H3; ambos indicadores deben ser verdaderos para autorizar la emisión.",
@@ -800,23 +1036,6 @@
           }
         },
         "required" : [ "documentoNumero", "documentoTipo", "identidadVerificada", "numeroWhatsapp", "vinculoActivo" ]
-      },
-      "EmitirCredencialResponse" : {
-        "type" : "object",
-        "description" : "Credencial destinada exclusivamente al canal H3, nunca a mensajes visibles por el cliente final.",
-        "properties" : {
-          "credencial" : {
-            "type" : "string",
-            "description" : "JWT de sesión interno; usar el valor devuelto por emitir, nunca mostrarlo al cliente",
-            "example" : "JWT_DEVUELTO_POR_EMITIR"
-          },
-          "fechaExpiracion" : {
-            "type" : "string",
-            "format" : "date-time",
-            "description" : "Vencimiento UTC en formato ISO-8601",
-            "example" : "2026-10-27T12:00:00Z"
-          }
-        }
       },
       "EventoCredencialResponse" : {
         "type" : "object",
@@ -891,129 +1110,129 @@
     "examples" : {
       "ValidationError" : {
         "value" : {
+          "message" : "La solicitud tiene datos inválidos",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "code" : "VALIDATION_ERROR",
           "details" : [ {
             "message" : "no debe estar vacío",
             "field" : "documentoTipo"
-          } ],
-          "message" : "La solicitud tiene datos inválidos",
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "VALIDATION_ERROR"
+          } ]
         }
       },
       "ValidationMotivo" : {
         "value" : {
+          "message" : "La solicitud tiene datos inválidos",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "code" : "VALIDATION_ERROR",
           "details" : [ {
             "message" : "no debe ser nulo",
             "field" : "motivo"
-          } ],
-          "message" : "La solicitud tiene datos inválidos",
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "VALIDATION_ERROR"
+          } ]
         }
       },
       "ValidationAlcance" : {
         "value" : {
+          "message" : "La solicitud tiene datos inválidos",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "code" : "VALIDATION_ERROR",
           "details" : [ {
             "message" : "POR_CLIENTE requiere segmento; TODAS no admite segmento",
             "field" : "alcanceValido"
-          } ],
-          "message" : "La solicitud tiene datos inválidos",
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "VALIDATION_ERROR"
+          } ]
         }
       },
       "ValidationNumeroHistorial" : {
         "value" : {
+          "message" : "La solicitud tiene datos inválidos",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "code" : "VALIDATION_ERROR",
           "details" : [ {
             "message" : "debe coincidir con \"\\+[1-9][0-9]{1,14}\"",
             "field" : "consultarHistorial.numero"
-          } ],
-          "message" : "La solicitud tiene datos inválidos",
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "VALIDATION_ERROR"
+          } ]
         }
       },
       "ValidationNumeroRevocacion" : {
         "value" : {
+          "message" : "La solicitud tiene datos inválidos",
+          "timestamp" : "2026-10-26T12:00:00Z",
+          "code" : "VALIDATION_ERROR",
           "details" : [ {
             "message" : "debe coincidir con \"\\+[1-9][0-9]{1,14}\"",
             "field" : "revocar.numero"
-          } ],
-          "message" : "La solicitud tiene datos inválidos",
-          "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "VALIDATION_ERROR"
+          } ]
         }
       },
       "BadRequest" : {
         "value" : {
-          "details" : [ ],
           "message" : "La solicitud no es válida",
           "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "BAD_REQUEST"
+          "code" : "BAD_REQUEST",
+          "details" : [ ]
         }
       },
       "Unauthorized" : {
         "value" : {
-          "details" : [ ],
           "message" : "La credencial no es válida; se requiere verificar la identidad nuevamente",
           "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "UNAUTHORIZED"
+          "code" : "UNAUTHORIZED",
+          "details" : [ ]
         }
       },
       "Forbidden" : {
         "value" : {
-          "details" : [ ],
           "message" : "La emisión requiere identidad verificada, vínculo activo y cliente activo",
           "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "FORBIDDEN"
+          "code" : "FORBIDDEN",
+          "details" : [ ]
         }
       },
       "NotFoundCliente" : {
         "value" : {
-          "details" : [ ],
           "message" : "El cliente no existe",
           "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "NOT_FOUND"
+          "code" : "NOT_FOUND",
+          "details" : [ ]
         }
       },
       "NotFoundCredencial" : {
         "value" : {
-          "details" : [ ],
           "message" : "No existe una credencial activa",
           "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "NOT_FOUND"
+          "code" : "NOT_FOUND",
+          "details" : [ ]
         }
       },
       "NotFoundHistorial" : {
         "value" : {
-          "details" : [ ],
           "message" : "No existe historial de credenciales para el número",
           "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "NOT_FOUND"
+          "code" : "NOT_FOUND",
+          "details" : [ ]
         }
       },
       "Conflict" : {
         "value" : {
-          "details" : [ ],
           "message" : "Conflicto al emitir la credencial",
           "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "CONFLICT"
+          "code" : "CONFLICT",
+          "details" : [ ]
         }
       },
       "ServiceUnavailable" : {
         "value" : {
-          "details" : [ ],
           "message" : "No se pudo validar el cliente",
           "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "SERVICE_UNAVAILABLE"
+          "code" : "SERVICE_UNAVAILABLE",
+          "details" : [ ]
         }
       },
       "InternalError" : {
         "value" : {
-          "details" : [ ],
           "message" : "Error interno",
           "timestamp" : "2026-10-26T12:00:00Z",
-          "code" : "INTERNAL_ERROR"
+          "code" : "INTERNAL_ERROR",
+          "details" : [ ]
         }
       }
     }

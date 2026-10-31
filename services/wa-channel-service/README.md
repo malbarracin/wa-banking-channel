@@ -88,6 +88,11 @@ Detalle de Compose, CI y Helm: [`../../delivery/devops-local.md`](../../delivery
 Si H1 no responde, la verificación y la consulta de perfil fallan con **500** `INTERNAL_ERROR`.
 Si H2 no confirma la revocación, el bloqueo/desvinculación local se mantiene y se audita el rechazo.
 
+El puerto `CredencialesServiceClient` también ofrece `obtenerRenovacion` y `confirmarRenovacion`,
+según el [contrato de entrega H2 → H3](../../shared/contracts/wa-credentials-service/renovacion.md).
+El responsable de la sesión guarda el JWT sustituto antes de confirmarlo; ante timeout conserva
+ambos tokens y reintenta la confirmación. Obtener el reemplazo no revoca el JWT actual.
+
 ## Configuración
 
 | Variable / propiedad | Para qué | Valor por defecto |

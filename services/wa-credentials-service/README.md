@@ -25,10 +25,11 @@ Identidad Maven: `com.bcra:wa-credentials-service` · paquete base `com.bcra.cre
 - **Historial resumido** (`GET /api/v1/credenciales/{numero}/historial`): identidad, estado efectivo de
   la última emisión y eventos, del más reciente al más antiguo. Calcula `EXPIRADA` sin modificar la
   credencial. No devuelve JWT ni `jti`.
-- **Renovación automática** (sin endpoint): job interno que rota credenciales próximas a expirar. Con
+- **Renovación automática**: job interno que prepara una entrega durable para credenciales próximas a expirar. Con
   `riesgo = true` no renueva, audita `RENOVACION` / `RECHAZADO` / `REVERIFICACION_REQUERIDA` y la
-  validación responde **401**. Por decisión de arquitectura el job es solo interno: no entrega el JWT
-  renovado a H3 ni implementa outbox.
+  validación responde **401**. H3 obtiene el JWT nuevo mediante el contrato de entrega en dos fases
+  [`renovacion.md`](../../shared/contracts/wa-credentials-service/renovacion.md). La credencial anterior
+  sigue activa hasta que H3 confirma posesión del reemplazo ya guardado; el vencimiento natural no se extiende.
 - **Auditoría**: `EMISION`, `RENOVACION`, `REVOCACION` y `VALIDACION_FALLIDA`, con resultado `EXITOSO` o
   `RECHAZADO`. Nunca guarda el JWT ni claims no confiables; el motivo libre se reemplaza por un texto
   fijo.

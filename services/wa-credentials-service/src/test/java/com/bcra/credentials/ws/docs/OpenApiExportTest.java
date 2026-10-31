@@ -36,7 +36,7 @@ class OpenApiExportTest {
     private ObjectMapper objectMapper;
 
     @Test
-    @DisplayName("exporta JSON y YAML con los cinco endpoints, ejemplos y errores reales de H2")
+    @DisplayName("exporta JSON y YAML con los siete endpoints, ejemplos y errores reales de H2")
     void exportaContratoCompletoDeCredenciales() throws Exception {
         String json = consultar("/v3/api-docs");
         String yaml = consultar("/v3/api-docs.yaml");
@@ -46,13 +46,15 @@ class OpenApiExportTest {
         assertThat(document.path("info").path("title").asText()).isEqualTo("wa-credentials-service");
         assertThat(document.path("info").path("version").asText()).isEqualTo("0.1.0-SNAPSHOT");
         assertThat(document.path("servers").get(0).path("url").asText()).isEqualTo("http://localhost:8082");
-        assertThat(paths.size()).isEqualTo(5);
+        assertThat(paths.size()).isEqualTo(7);
         Map<String, List<String>> expected = Map.of(
                 "/emitir", List.of("201", "400", "403", "404", "409", "500", "503"),
                 "/validar", List.of("200", "400", "401", "500"),
                 "/{numero}/revocacion", List.of("204", "400", "404", "500"),
                 "/revocacion-masiva", List.of("200", "400", "500"),
-                "/{numero}/historial", List.of("200", "400", "404", "500"));
+                "/{numero}/historial", List.of("200", "400", "404", "500"),
+                "/renovacion/obtener", List.of("200", "400", "401", "404", "409", "500"),
+                "/renovacion/confirmar", List.of("204", "400", "401", "409", "500"));
 
         for (Map.Entry<String, List<String>> entry : expected.entrySet()) {
             String method = entry.getKey().endsWith("historial") ? "get" : "post";

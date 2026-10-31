@@ -6,14 +6,25 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from google.adk.tools.mcp_tool.mcp_session_manager import StreamableHTTPConnectionParams
 from google.adk.tools.tool_context import ToolContext
 from mcp.types import CallToolResult, ListToolsResult, Tool
 
 from wa_conversation_agent.agent import root_agent
 from wa_conversation_agent.config import Settings
-from wa_conversation_agent.mcp_tools import ALLOWED, REVERIFY, before_tool_callback, create_toolset
+from wa_conversation_agent.mcp_tools import ALLOWED, REVERIFY, SENSITIVE, before_tool_callback, create_toolset
 
 CONTRACT = Path(__file__).resolve().parents[3] / "shared/contracts/wa-mcp-layer"
+
+
+def test_mcp_transport_configuration(monkeypatch):
+    monkeypatch.delenv("AGENT_MCP_URL", raising=False)
+    default = create_toolset(Settings())
+    assert isinstance(default._connection_params, StreamableHTTPConnectionParams)
+    assert default._connection_params.url == "http://localhost:8101/mcp"
+    monkeypatch.setenv("AGENT_MCP_URL", "http://127.0.0.1:18101/mcp")
+    configured = create_toolset(Settings())
+    assert configured._connection_params.url == "http://127.0.0.1:18101/mcp"
 
 
 @pytest.fixture
@@ -83,14 +94,20 @@ async def test_catalog_filter(local_mcp_stub):
     [
         {"credencial": None},
         {"credencial": ""},
+        {"credencial": "   "},
+        {"credencial": 123},
         {"credencial_valida": False},
         {"vinculo_activo": False},
         {"credencial_valida": "true"},
+        {"vinculo_activo": "true"},
+        {"credencial_valida": None},
+        {"vinculo_activo": None},
     ],
 )
-async def test_identity_blocks_without_transport(local_mcp_stub, invalid):
+@pytest.mark.parametrize("tool_name", sorted(SENSITIVE))
+async def test_identity_blocks_without_transport(local_mcp_stub, invalid, tool_name):
     owner, session = local_mcp_stub
-    tool = next(t for t in await owner.get_tools() if t.name == "cuentas_consultar_saldo_v1")
+    tool = next(t for t in await owner.get_tools() if t.name == tool_name)
     args = {"parametros": {}, "contexto": {"credencial": "model-forgery"}}
     ctx = context(**invalid)
     assert before_tool_callback(tool, args, ctx) == REVERIFY

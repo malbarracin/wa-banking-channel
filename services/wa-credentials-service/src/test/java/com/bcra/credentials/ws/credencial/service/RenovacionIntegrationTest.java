@@ -25,6 +25,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import com.bcra.credentials.ws.credencial.client.UsersServiceClient;
@@ -359,6 +360,31 @@ class RenovacionIntegrationTest {
     }
 
     @Test
+    @DisplayName("La expiración de la anterior antes del acuse impide activar el reemplazo entregado")
+    void expiracionAnteriorImpideConfirmacion() throws Exception {
+        CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
+        String token = firmar(anterior);
+        service.renovarProximasAExpirar();
+        String nuevo = service.obtener(token).credencial();
+        ReflectionTestUtils.setField(anterior, "fechaExpiracion", Instant.now().minusSeconds(60));
+        repository.saveAndFlush(anterior);
+
+        mockMvc.perform(post("/api/v1/credenciales/renovacion/confirmar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json.writeValueAsString(Map.of("credencial", nuevo))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+
+        assertThat(repository.count()).isEqualTo(1);
+        assertThat(entregas.count()).isEqualTo(1);
+        assertThat(auditRepository.findAll()).noneSatisfy(evento ->
+                assertThat(evento.getResultado()).isEqualTo(AuditResultado.EXITOSO));
+        assertThatThrownBy(() -> validacionService.validar(nuevo)).isInstanceOf(UnauthorizedException.class);
+    }
+
+    @Test
     @DisplayName("Una falla de firma durante la entrega conserva la anterior y los metadatos para reintentar")
     void fallaDeEntregaNoRevoca() {
         CredencialSesion anterior = guardar(600, CredencialEstado.ACTIVA, false);
@@ -393,16 +419,22 @@ class RenovacionIntegrationTest {
         for (String accion : new String[] {"obtener", "confirmar"}) {
             mockMvc.perform(post("/api/v1/credenciales/renovacion/" + accion)
                             .contentType(MediaType.APPLICATION_JSON).content("{}"))
-                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                    .andExpect(jsonPath("$.details").isArray());
             mockMvc.perform(post("/api/v1/credenciales/renovacion/" + accion)
                             .contentType(MediaType.APPLICATION_JSON).content("{\"credencial\":\"falso\"}"))
-                    .andExpect(status().isUnauthorized());
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                    .andExpect(jsonPath("$.details").isArray());
         }
         String token = firmar(guardar(600, CredencialEstado.ACTIVA, false));
         mockMvc.perform(post("/api/v1/credenciales/renovacion/obtener")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json.writeValueAsString(Map.of("credencial", token))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.details").isArray());
         assertThat(validacionService.validar(token).vigente()).isTrue();
     }
 

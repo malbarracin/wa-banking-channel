@@ -17,5 +17,5 @@
 | Aceptación de términos sin duplicados / unicidad | canal-whatsapp | PR #3 hilo PRRT_kwDOVOsBA86wX1eL |
 | No confiar en header cliente | canal-whatsapp | PR #3 hilo PRRT_kwDOVOsBA86wX1eC |
 | Renovación entrega token sustituto sin invalidar prematuramente | acceso-sesion | PR #4 hilo PRRT_kwDOVOsBA86wcpmQ |
-| Autenticación/autorización servicio-a-servicio y por actor | acceso-sesion | PR #4 hilos PRRT_kwDOVOsBA86wcpmX, PRRT_kwDOVOsBA86wcpmd |
+| Runtime local Compose (E2E) — docker-compose raíz y scripts | local-devops | Roadmap Notion paso 13 (wa-local-devops) |
 | Validación body /validar con @Valid | acceso-sesion | PR #4 hilo PRRT_kwDOVOsBA86wcpmg |

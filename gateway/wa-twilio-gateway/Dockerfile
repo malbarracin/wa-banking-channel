@@ -16,8 +16,9 @@ RUN ./mvnw -B -q package -DskipTests && \
 
 FROM eclipse-temurin:21-jre-alpine
 RUN addgroup -S app && adduser -S app -G app
-USER app
 WORKDIR /app
+RUN mkdir -p /app/data && chown -R app:app /app/data
+USER app
 
 COPY --from=builder /workspace/gateway/wa-twilio-gateway/dependencies/ ./
 COPY --from=builder /workspace/gateway/wa-twilio-gateway/spring-boot-loader/ ./

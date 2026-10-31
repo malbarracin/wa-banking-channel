@@ -1,3 +1,2 @@
-@echo off
-REM Parar stack E2E
+# Parar stack E2E
 docker compose down

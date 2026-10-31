@@ -1,0 +1,20 @@
+wa-conversation-agent-1  | /app/.venv/lib/python3.12/site-packages/google/adk/features/_feature_decorator.py:72: UserWarning: [EXPERIMENTAL] feature FeatureName.PLUGGABLE_AUTH is enabled.
+wa-conversation-agent-1  |   check_feature_enabled()
+wa-conversation-agent-1  | Traceback (most recent call last):
+wa-conversation-agent-1  |   File "<frozen runpy>", line 198, in _run_module_as_main
+wa-conversation-agent-1  |   File "<frozen runpy>", line 88, in _run_code
+wa-conversation-agent-1  |   File "/app/src/wa_conversation_agent/server.py", line 92, in <module>
+wa-conversation-agent-1  |     app = create_app()
+wa-conversation-agent-1  |           ^^^^^^^^^^^^
+wa-conversation-agent-1  |   File "/app/src/wa_conversation_agent/server.py", line 30, in create_app
+wa-conversation-agent-1  |     turn_processor = processor if processor is not None else TurnProcessor.from_settings(config)
+wa-conversation-agent-1  |                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+wa-conversation-agent-1  |   File "/app/src/wa_conversation_agent/turn.py", line 229, in from_settings
+wa-conversation-agent-1  |     redis_sessions, redis_memory = create_memory_services(settings)
+wa-conversation-agent-1  |                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+wa-conversation-agent-1  |   File "/app/src/wa_conversation_agent/memory.py", line 207, in create_memory_services
+wa-conversation-agent-1  |     store = RedisStore(client, settings.memory_key_secret.get_secret_value())
+wa-conversation-agent-1  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+wa-conversation-agent-1  |   File "/app/src/wa_conversation_agent/memory.py", line 68, in __init__
+wa-conversation-agent-1  |     raise ValueError("Configurar AGENT_MEMORY_KEY_SECRET con al menos 32 caracteres")
+wa-conversation-agent-1  | ValueError: Configurar AGENT_MEMORY_KEY_SECRET con al menos 32 caracteres

@@ -1,9 +1,9 @@
 ---
 title: Runtime local Compose (E2E) — especificación
-status: borrador
+status: aprobada
 source: Roadmap Notion — paso 13 (Runtime local Compose) + docker-compose
   existentes por componente
-updated: 2026-10-31T20:03:50.150Z
+updated: 2026-10-31T20:08:04.670Z
 ---
 
 # Runtime local Compose (E2E) — especificación

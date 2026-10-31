@@ -1,5 +1,7 @@
-"""Frontera HTTP de H9; el Runner se integrará en una tarea posterior."""
+"""Frontera HTTP de H9: contrato de turno con Runner e idempotencia."""
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from secrets import compare_digest
 from typing import Annotated
 
@@ -10,7 +12,8 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from wa_conversation_agent.config import Settings
-from wa_conversation_agent.models import Reply, Text, TurnRequest, TurnResponse
+from wa_conversation_agent.models import Text, TurnRequest, TurnResponse
+from wa_conversation_agent.turn import ConflictError, TurnProcessor
 
 bearer = HTTPBearer(auto_error=False)
 
@@ -19,20 +22,23 @@ class TurnUnavailable(Exception):
     """El procesador no puede atender el turno temporalmente."""
 
 
-def process_turn(payload: TurnRequest) -> TurnResponse:
-    return TurnResponse(
-        correlationId=payload.correlationId,
-        conversationId=payload.conversationId,
-        messageId=payload.messageId,
-        reply=Reply(body="Recibimos tu mensaje."),
-        escalate=False,
-        toolsUsed=[],
-    )
-
-
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    processor: TurnProcessor | None = None,
+) -> FastAPI:
     config = settings if settings is not None else Settings()
-    app = FastAPI(title="H9 — Agente conversacional")
+    turn_processor = processor if processor is not None else TurnProcessor.from_settings(config)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        try:
+            yield
+        finally:
+            await turn_processor.aclose()
+
+    app = FastAPI(title="H9 — Agente conversacional", lifespan=lifespan)
+    app.state.settings = config
+    app.state.processor = turn_processor
 
     async def authorize(
         credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)],
@@ -54,6 +60,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def unavailable(request: Request, error: TurnUnavailable) -> JSONResponse:
         return JSONResponse(status_code=503, content={"detail": "No podemos atender tu mensaje en este momento."})
 
+    @app.exception_handler(ConflictError)
+    async def conflict(request: Request, error: ConflictError) -> JSONResponse:
+        # H0.2 trata 409 como REJECTED sin reintentar (no es éxito cacheado).
+        return JSONResponse(status_code=409, content={"detail": "El mensaje ya se está procesando."})
+
     @app.post("/api/v1/agent/turn", response_model=TurnResponse, dependencies=[Depends(authorize)])
     async def turn(
         payload: TurnRequest,
@@ -62,7 +73,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         message: Annotated[Text, Header(alias="X-Message-Id")],
         idempotency: Annotated[Text, Header(alias="X-Idempotency-Key")],
     ) -> TurnResponse:
-        return process_turn(payload)
+        try:
+            return await turn_processor.process(payload, idempotency)
+        except ConflictError:
+            raise
+        except TurnUnavailable:
+            raise
+        except Exception as error:
+            raise TurnUnavailable() from error
 
     return app
 

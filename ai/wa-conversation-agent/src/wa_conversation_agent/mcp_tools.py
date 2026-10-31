@@ -1,6 +1,5 @@
 """Capacidades H7 v1; contexto técnico fuera de argumentos y eventos del modelo."""
 
-import asyncio
 import json
 from typing import Any
 
@@ -105,9 +104,8 @@ class SessionTool(BaseTool):
         envelope = tool_context.__dict__.pop("_h7_envelope")
         try:
             # Evita instrumentación ADK que registra tool_args con el sobre sensible.
-            async with asyncio.timeout(10):
-                session = await self.owner._mcp_session_manager.create_session()
-                result = await session.call_tool(self.name, arguments=envelope)
+            session = await self.owner._mcp_session_manager.create_session()
+            result = await session.call_tool(self.name, arguments=envelope)
             payload: Any = result.structuredContent
             if payload is None:
                 payload = [json.loads(item.text) for item in result.content if item.type == "text"]

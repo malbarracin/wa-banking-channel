@@ -19,3 +19,7 @@ class Settings(BaseSettings):
     session_ttl_minutes: int = Field(default=30, ge=1, le=1440)
     memory_server_url: SecretStr = Field(default=SecretStr(""), repr=False)
     service_token: SecretStr = Field(default=SecretStr(""), repr=False)
+    max_tool_calls_per_turn: int = Field(default=8, ge=1, le=50)
+    tool_timeout_seconds: float = Field(default=10.0, gt=0, allow_inf_nan=False)
+    turn_timeout_seconds: float = Field(default=45.0, gt=0, allow_inf_nan=False)
+    idempotency_ttl_days: int = Field(default=7, ge=1, le=30)

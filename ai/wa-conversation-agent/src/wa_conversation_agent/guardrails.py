@@ -21,15 +21,19 @@ INJECTION = re.compile(
 TECHNICAL = re.compile(r"traceback|stack\s*trace|exception|https?://localhost|SQLSTATE|api[_ -]?key", re.I)
 # No se intenta clasificar afirmaciones financieras por palabras clave: una
 # paráfrasis puede afirmar un hecho sin mencionar ningún nombre de producto.
+# La confirmación de escalamiento no entra en este set: solo se acepta si
+# `escalar_a_humano` fue efectivamente invocado en el turno (ver after_model_callback).
+ESCALATION_CONFIRMATION = "Para ayudarte mejor, te comunico con una persona de nuestro equipo."
 SAFE_MESSAGES = {
     "Hola, soy el asistente del banco por WhatsApp.",
     "¿En qué te puedo ayudar hoy?",
     "Hola, ¿en qué te puedo ayudar?",
     "¿Podés aclarar tu consulta?",
     "¿Querés que te ayude una persona de nuestro equipo?",
-    "Para ayudarte mejor, te comunico con una persona de nuestro equipo.",
     "Por seguridad, necesitamos verificar tu identidad de nuevo para continuar.",
     "Por seguridad, volvé a verificar tu identidad para continuar",
+    "Esa operación supera el monto permitido para este canal.",
+    "Podés hacerla desde la app o sucursal.",
     UNSUPPORTED,
     UNAVAILABLE,
 }
@@ -85,6 +89,7 @@ def before_model_callback(callback_context: CallbackContext, llm_request: LlmReq
     """Solo evidencia posterior al último mensaje del cliente respalda este turno."""
     evidence: list[str] = []
     unavailable = False
+    escalated = False
     callback_context.state["temp:guardrail"] = {}
     llm_request.contents = [content.model_copy(deep=True) for content in llm_request.contents]
     start = 0
@@ -114,6 +119,10 @@ def before_model_callback(callback_context: CallbackContext, llm_request: LlmReq
                     unavailable |= "no_disponible" in serialized.lower()
                     if part.function_response.name != "escalar_a_humano":
                         evidence.append(serialized)
+                    else:
+                        # No se agrega a `evidence`: escalar_a_humano no aporta datos de
+                        # producto. Solo habilita la confirmación de derivación literal.
+                        escalated = True
     # Solo hashes en el estado temporal de ADK; nunca productos ni credenciales.
     sentences: list[str] = []
 
@@ -133,6 +142,7 @@ def before_model_callback(callback_context: CallbackContext, llm_request: LlmReq
         "turn": callback_context.invocation_id,
         "hashes": [digest(s) for s in sentences],
         "unavailable": unavailable,
+        "escalated": escalated,
     }
     if llm_request.config is None:
         llm_request.config = types.GenerateContentConfig()
@@ -154,12 +164,20 @@ def after_model_callback(callback_context: CallbackContext, llm_response: LlmRes
     if current and guard.get("unavailable"):
         return response(UNAVAILABLE)
     hashes = guard.get("hashes", []) if current else []
+    escalated = current and bool(guard.get("escalated"))
     for part in llm_response.content.parts or [] if llm_response.content else []:
         if part.text:
             credential = callback_context.state.get("credencial")
             if TECHNICAL.search(part.text) or (isinstance(credential, str) and credential and credential in part.text):
                 return response(UNAVAILABLE)
             for sentence in re.split(r"(?<=[.!?])\s+|\n", part.text):
-                if sentence.strip() and sentence.strip() not in SAFE_MESSAGES and digest(sentence) not in hashes:
+                text = sentence.strip()
+                if not text:
+                    continue
+                if text == ESCALATION_CONFIRMATION:
+                    if escalated:
+                        continue
+                    return response(UNSUPPORTED)
+                if text not in SAFE_MESSAGES and digest(sentence) not in hashes:
                     return response(UNSUPPORTED)
     return None

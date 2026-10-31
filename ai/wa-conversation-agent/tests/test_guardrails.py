@@ -118,6 +118,20 @@ def test_escalation_preserves_required_bank_message(context):
     assert cleaned is None or cleaned.content.parts[0].text == message
 
 
+def test_escalation_message_rejected_without_tool_call(context):
+    """La frase de derivación no se puede afirmar si escalar_a_humano no corrió en el turno."""
+    before_model_callback(context, request())
+    message = "Para ayudarte mejor, te comunico con una persona de nuestro equipo."
+    assert after_model_callback(context, response(message)) is not None
+
+
+def test_amount_limit_message_is_safe(context):
+    """El mensaje literal del banco sobre monto permitido no requiere evidencia de herramienta."""
+    before_model_callback(context, request())
+    message = "Esa operación supera el monto permitido para este canal. Podés hacerla desde la app o sucursal."
+    assert after_model_callback(context, response(message)) is None
+
+
 @pytest.mark.parametrize(
     "payload,name",
     [

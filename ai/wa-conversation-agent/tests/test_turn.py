@@ -104,3 +104,44 @@ def test_server_port(monkeypatch: pytest.MonkeyPatch) -> None:
     with patch("wa_conversation_agent.server.uvicorn.run") as run:
         main()
     assert run.call_args.kwargs["port"] == 8103
+
+
+def test_nested_context_and_history(client: TestClient) -> None:
+    payload = {
+        **PAYLOAD,
+        "context": {
+            "technicalContext": {"state": "ACTIVE", "flags": [True, None, 2], "session": {"verified": False}},
+            "history": [{"role": "user", "body": "Consulta sintética", "metadata": {"sequence": 1}}],
+        },
+    }
+    assert TurnRequest.model_validate(payload).model_dump(mode="json") == payload
+    response = client.post("/api/v1/agent/turn", json=payload, headers=HEADERS)
+    assert response.status_code == 200
+    assert response.json()["messageId"] == payload["messageId"]
+
+
+@pytest.mark.parametrize("header", [key for key in HEADERS if key != "Authorization"])
+@pytest.mark.parametrize("value", ["", "   "])
+def test_empty_header(client: TestClient, header: str, value: str) -> None:
+    response = client.post("/api/v1/agent/turn", json=PAYLOAD, headers={**HEADERS, header: value})
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Revisá los datos del mensaje para continuar."}
+
+
+@pytest.mark.parametrize("field", ["technicalContext", "history"])
+def test_missing_context_field(client: TestClient, field: str) -> None:
+    context = {"technicalContext": {}, "history": []}
+    context.pop(field)
+    response = client.post("/api/v1/agent/turn", json={**PAYLOAD, "context": context}, headers=HEADERS)
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Revisá los datos del mensaje para continuar."}
+
+
+def test_malformed_json_is_sanitized(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/agent/turn",
+        content='{"private-data":',
+        headers={**HEADERS, "Content-Type": "application/json"},
+    )
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Revisá los datos del mensaje para continuar."}

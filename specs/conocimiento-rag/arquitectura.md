@@ -99,6 +99,7 @@ Basado en `rag-pgvector` skill. Dimensión = `ia.embedding_dimensions` (por defe
 -- Fuentes aprobadas
 CREATE TABLE kb_source (
   id UUID PRIMARY KEY,
+  source_id UUID NOT NULL,
   title TEXT NOT NULL,
   owner_area TEXT NOT NULL,
   audience TEXT NOT NULL CHECK (audience IN ('public','internal')),
@@ -110,8 +111,11 @@ CREATE TABLE kb_source (
   metadata JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE (title, version)
+  UNIQUE (source_id, version)
 );
+
+-- Índice parcial de revisión vigente por identidad lógica de fuente
+CREATE UNIQUE INDEX kb_source_current ON kb_source(source_id) WHERE status = 'approved';
 
 -- Fragmentos con embeddings y búsqueda textual
 CREATE TABLE kb_chunk (
@@ -136,8 +140,10 @@ CREATE TABLE kb_chunk (
 - `CREATE INDEX idx_kb_source_audience_status ON kb_source (audience, status);`
 
 **Notas:**
-- Solo se consultan `kb_source.status='approved'` y chunks de la versión vigente por fuente.
-- Al reindexar, se crea nueva versión y se marca anterior como `retired` en transacción atómica (no mezclar versiones).
+- `source_id` es la identidad lógica de la fuente (agrupación de versiones). `id` es la clave física de la fila.
+- Solo se consultan `kb_source.status='approved'` y chunks de la versión vigente por `source_id` (índice parcial `kb_source_current`).
+- Al reindexar, se crea nueva versión con el mismo `source_id` y se marca la anterior como `retired` en transacción atómica (no mezclar versiones).
+- La migración de esquema existente agrega `source_id`, reconstruye la identidad lógica por título y reemplaza `UNIQUE (title, version)` por `UNIQUE (source_id, version)`.
 - Trigger/función para mantener `tsv` actualizado con configuración `spanish`.
 
 ## Ingesta (flujo)

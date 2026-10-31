@@ -143,7 +143,7 @@ nombres y valores de ejemplo. Los secretos nunca se registran ni se incluyen en 
 | `AGENT_SERVICE_TOKEN` | Token Bearer que debe enviar H0.2 (secreto) | *(vacío)* |
 | `AGENT_MAX_TOOL_CALLS_PER_TURN` | Tope de llamadas a herramientas por turno (1–50) | `8` |
 | `AGENT_TOOL_TIMEOUT_SECONDS` | Timeout de cada herramienta, incluidas las remotas | `10` |
-| `AGENT_TURN_TIMEOUT_SECONDS` | Timeout total del turno | `45` |
+| `AGENT_TURN_TIMEOUT_SECONDS` | Timeout total del turno | `4` |
 | `AGENT_IDEMPOTENCY_TTL_DAYS` | TTL de la reserva por `messageId` (1–30) | `7` |
 
 Variables que usa **solo** el compose (están en `ai/.env.example`): `AGENT_HOST_PORT` (mapeo del

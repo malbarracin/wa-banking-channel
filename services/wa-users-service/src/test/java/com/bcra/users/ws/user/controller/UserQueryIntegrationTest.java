@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -46,7 +47,9 @@ class UserQueryIntegrationTest {
         guardarUsuario("OTRO", "12345678", UserStatus.ACTIVE);
         guardarUsuario("TIPO_ABIERTO", "87654321", UserStatus.ACTIVE);
 
-        mockMvc.perform(get("/api/v1/users/{tipo}/{numero}", "TIPO_ABIERTO", "12345678"))
+        mockMvc.perform(get("/api/v1/users/{tipo}/{numero}", "TIPO_ABIERTO", "12345678")
+                        .principal(() -> "servicio-autorizado")
+                        .with(request -> { request.addUserRole("USERS_FULL_READ"); return request; }))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", aMapWithSize(10)))
                 .andExpect(jsonPath("$.id").value(usuario.getId().toString()))
@@ -94,8 +97,63 @@ class UserQueryIntegrationTest {
         verificarNoEncontrado("/api/v1/users/DNI/87654321/status");
     }
 
+    @Test
+    @DisplayName("La consulta completa deniega anónimos y perfiles sin permiso sin exponer PII")
+    void deniegaConsultaCompletaSinAutorizacion() throws Exception {
+        guardarUsuario("DNI", "12345678", UserStatus.ACTIVE);
+        for (String numero : new String[] {"12345678", "87654321"}) {
+            mockMvc.perform(get("/api/v1/users/DNI/{numero}", numero)
+                            .header("X-Profile", "USERS_FULL_READ"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                    .andExpect(jsonPath("$", aMapWithSize(4)))
+                    .andExpect(jsonPath("$.details").isEmpty());
+            mockMvc.perform(get("/api/v1/users/DNI/{numero}", numero)
+                            .principal(() -> "soporte")
+                            .with(request -> { request.addUserRole("SUPPORT"); return request; }))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.documento").doesNotExist());
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "12345678, true, false",
+        "87654321, true, false",
+        "12345678, false, true",
+        "87654321, false, true"
+    })
+    @DisplayName("Exige principal y rol conjuntamente aunque los headers declaren autorización")
+    void deniegaCuandoFaltaPrincipalORol(String numero, boolean tienePrincipal, boolean tieneRol) throws Exception {
+        guardarUsuario("DNI", "12345678", UserStatus.ACTIVE);
+
+        mockMvc.perform(get("/api/v1/users/DNI/{numero}", numero)
+                        .header("X-Profile", "USERS_FULL_READ")
+                        .header("X-Role", "USERS_FULL_READ")
+                        .with(request -> {
+                            if (tienePrincipal) {
+                                request.setUserPrincipal(() -> "consultante");
+                            }
+                            if (tieneRol) {
+                                request.addUserRole("USERS_FULL_READ");
+                            }
+                            return request;
+                        }))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$", aMapWithSize(4)))
+                .andExpect(jsonPath("$.code").value("FORBIDDEN"))
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.details").isEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty())
+                .andExpect(jsonPath("$.documento").doesNotExist())
+                .andExpect(jsonPath("$.fechaNacimiento").doesNotExist())
+                .andExpect(jsonPath("$.email").doesNotExist())
+                .andExpect(jsonPath("$.telefono").doesNotExist());
+    }
+
     private void verificarNoEncontrado(String ruta) throws Exception {
-        mockMvc.perform(get(ruta))
+        mockMvc.perform(get(ruta).principal(() -> "servicio-autorizado")
+                        .with(request -> { request.addUserRole("USERS_FULL_READ"); return request; }))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$", aMapWithSize(4)))
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"))

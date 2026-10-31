@@ -65,6 +65,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.CONFLICT, ErrorCode.CONFLICT, exception.getMessage(), List.of());
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException exception) {
+        return build(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, exception.getMessage(), List.of());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception exception) {
         log.error("Error inesperado de tipo {}", exception.getClass().getName());

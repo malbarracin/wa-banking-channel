@@ -46,3 +46,31 @@ La limitación del entorno afecta la verificación; no se declara un arranque sa
 
 No se ejecutó el smoke E2E: corresponde a una tarea posterior y requiere el
 stack disponible.
+
+## Verificación del tester (2026-11-01)
+
+Se repitieron las comprobaciones desde esta copia de trabajo:
+
+| Comprobación | Resultado |
+| --- | --- |
+| `./scripts/start.ps1` | Salida 1: acceso denegado a Docker Engine al consultar `redis:8.4`. |
+| `docker compose config --quiet` | Salida 0. |
+| `docker compose ps --all --format json` | Salida 1: acceso denegado al pipe de Docker. |
+| `docker compose logs --no-color --tail 15 kafka-init` | Salida 1: mismo acceso denegado. |
+| `python -m unittest discover -s scripts -p test_verify_integracion.py` | Salida 0, tres pruebas correctas. |
+| `./mvnw.cmd -q -B clean verify` en gateway | Salida 0; 108 pruebas declaradas, 3 omitidas, sin fallos ni errores. |
+| `./mvnw.cmd -q -B clean verify` en orquestador | Salida 0; 101 pruebas declaradas, 28 omitidas, sin fallos ni errores. |
+| `./mvnw.cmd -q -B clean verify` en plataforma de eventos | Salida 0; 32 pruebas declaradas, ninguna omitida, sin fallos ni errores. |
+
+Los tres builds completos aprobaron el gate JaCoCo configurado. Las pruebas
+omitidas no acreditan integración con Kafka/PostgreSQL en Docker. Se conserva
+el criterio #4; #1–#3 siguen sin evidencia de ejecución satisfactoria.
+No se cambiaron código de producto, tests ni umbrales.
+
+Un primer intento del verificador del equipo se solapó por error con los builds
+`clean verify` y falló con clases ausentes en gateway/orquestador. Se descarta
+como evidencia de defecto del producto y se repite sin builds concurrentes.
+
+La repetición secuencial de `python scripts/verify_integracion.py` terminó con
+salida 0: `Verificación correcta: 3 componente(s).` No se reprodujeron los
+errores de la ejecución solapada.

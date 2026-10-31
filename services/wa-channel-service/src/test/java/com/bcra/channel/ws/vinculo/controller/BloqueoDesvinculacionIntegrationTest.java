@@ -85,11 +85,36 @@ class BloqueoDesvinculacionIntegrationTest {
         this.auditLogRepository = auditLogRepository;
     }
 
+    private void stubValidacion() {
+        H2.stubFor(WireMock.post(WireMock.urlEqualTo("/api/v1/credenciales/validar"))
+                .withRequestBody(WireMock.equalToJson("{\"credencial\":\"sesion-h2\"}"))
+                .willReturn(aResponse().withHeader("Content-Type", "application/json")
+                        .withBody("{\"vigente\":true,\"numeroWhatsapp\":\"" + NUMERO
+                                + "\",\"fechaExpiracion\":\"" + Instant.now().plusSeconds(300) + "\"}")));
+    }
+
+    @Test
+    @DisplayName("El marcador booleano anterior no autoriza bloqueo ni desvinculación")
+    void rechazaHeaderControladoPorCliente() throws Exception {
+        mockMvc.perform(patch(RUTA_BLOQUEO, NUMERO)
+                        .header("X-Canal-Credencial-Valida", "true")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"motivo\":\"SOLICITUD_CLIENTE\",\"confirmacion\":true}"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(patch(RUTA_DESVINCULACION, NUMERO)
+                        .header("X-Canal-Credencial-Valida", "true")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"confirmacion\":true}"))
+                .andExpect(status().isUnauthorized());
+        H2.verify(0, postRequestedFor(urlMatching("/api/v1/credenciales/.*")));
+    }
+
     @BeforeEach
     void preparar() {
         auditLogRepository.deleteAll();
         vinculoRepository.deleteAll();
         H2.resetAll();
+        stubValidacion();
         stubRevocacionExitosa();
     }
 
@@ -105,7 +130,7 @@ class BloqueoDesvinculacionIntegrationTest {
 
         mockMvc.perform(patch(RUTA_BLOQUEO, NUMERO)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true")
+                        .header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, "sesion-h2")
                         .content("""
                                 {"motivo":"SOLICITUD_CLIENTE","confirmacion":true}
                                 """))
@@ -148,7 +173,7 @@ class BloqueoDesvinculacionIntegrationTest {
 
         String respuesta = mockMvc.perform(patch(RUTA_BLOQUEO, NUMERO)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true")
+                        .header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, "sesion-h2")
                         .content("""
                                 {"motivo":"SOLICITUD_CLIENTE","confirmacion":false}
                                 """))
@@ -166,7 +191,7 @@ class BloqueoDesvinculacionIntegrationTest {
 
     @ParameterizedTest
     @NullAndEmptySource
-    @ValueSource(strings = {"false", "1"})
+    @ValueSource(strings = {"true", "false", "1"})
     @DisplayName("PATCH /bloqueo SOLICITUD_CLIENTE sin credencial → 401 UNAUTHORIZED")
     void bloqueoSinCredencial(String header) throws Exception {
         guardarVinculo(VinculoEstado.ACTIVO);
@@ -177,7 +202,7 @@ class BloqueoDesvinculacionIntegrationTest {
                         {"motivo":"SOLICITUD_CLIENTE","confirmacion":true}
                         """);
         if (header != null) {
-            solicitud.header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, header);
+            solicitud.header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, header);
         }
 
         mockMvc.perform(solicitud)
@@ -226,7 +251,7 @@ class BloqueoDesvinculacionIntegrationTest {
 
         mockMvc.perform(patch(RUTA_DESVINCULACION, NUMERO)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true")
+                        .header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, "sesion-h2")
                         .content("""
                                 {"confirmacion":true}
                                 """))
@@ -245,7 +270,7 @@ class BloqueoDesvinculacionIntegrationTest {
 
         mockMvc.perform(patch(RUTA_DESVINCULACION, NUMERO)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true")
+                        .header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, "sesion-h2")
                         .content("""
                                 {"confirmacion":false}
                                 """))
@@ -259,7 +284,7 @@ class BloqueoDesvinculacionIntegrationTest {
 
     @ParameterizedTest
     @NullAndEmptySource
-    @ValueSource(strings = {"false", "1"})
+    @ValueSource(strings = {"true", "false", "1"})
     @DisplayName("PATCH /desvinculacion sin credencial válida → 401 UNAUTHORIZED")
     void desvinculacionSinCredencial(String header) throws Exception {
         guardarVinculo(VinculoEstado.ACTIVO);
@@ -270,7 +295,7 @@ class BloqueoDesvinculacionIntegrationTest {
                         {"confirmacion":true}
                         """);
         if (header != null) {
-            solicitud.header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, header);
+            solicitud.header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, header);
         }
 
         mockMvc.perform(solicitud)
@@ -286,7 +311,7 @@ class BloqueoDesvinculacionIntegrationTest {
     void desvinculacionSinVinculo() throws Exception {
         mockMvc.perform(patch(RUTA_DESVINCULACION, NUMERO)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true")
+                        .header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, "sesion-h2")
                         .content("""
                                 {"confirmacion":true}
                                 """))
@@ -304,7 +329,7 @@ class BloqueoDesvinculacionIntegrationTest {
 
         mockMvc.perform(patch(RUTA_DESVINCULACION, NUMERO)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true")
+                        .header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, "sesion-h2")
                         .content("""
                                 {"confirmacion":true}
                                 """))
@@ -319,6 +344,7 @@ class BloqueoDesvinculacionIntegrationTest {
     void bloqueoConFalloH2() throws Exception {
         guardarVinculo(VinculoEstado.ACTIVO);
         H2.resetAll();
+        stubValidacion();
         H2.stubFor(WireMock.post(urlMatching(PATH_REVOCACION_REGEX))
                 .willReturn(aResponse().withStatus(503).withBody("h2-caido")));
 
@@ -342,12 +368,13 @@ class BloqueoDesvinculacionIntegrationTest {
     void desvinculacionConTimeoutH2() throws Exception {
         guardarVinculo(VinculoEstado.BLOQUEADO);
         H2.resetAll();
+        stubValidacion();
         H2.stubFor(WireMock.post(urlMatching(PATH_REVOCACION_REGEX))
                 .willReturn(aResponse().withFixedDelay(3500).withStatus(200)));
 
         mockMvc.perform(patch(RUTA_DESVINCULACION, NUMERO)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .header(CredencialCanal.HEADER_CREDENCIAL_VALIDA, "true")
+                        .header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, "sesion-h2")
                         .content("""
                                 {"confirmacion":true}
                                 """))

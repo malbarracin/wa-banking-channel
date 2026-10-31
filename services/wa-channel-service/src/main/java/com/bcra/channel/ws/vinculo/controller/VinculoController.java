@@ -272,7 +272,7 @@ public class VinculoController {
     /**
      * Perfil permitido del canal para el titular con credencial válida y vínculo activo.
      * @param numero número de WhatsApp
-     * @param credencialValida header {@link CredencialCanal#HEADER_CREDENCIAL_VALIDA} propagado aguas arriba
+     * @param credencialValida header {@link CredencialCanal#HEADER_CREDENCIAL_TOKEN} propagado aguas arriba
      * @return 200 con datos de H1 + preferencias locales; 401/409 según contrato
      */
     @GetMapping("/{numero}/perfil")
@@ -281,7 +281,7 @@ public class VinculoController {
             description = """
                     Devuelve los datos de contacto de H1 y las preferencias locales del vínculo ACTIVO, \
                     sin datos legales sensibles. Exige el contexto de credencial válida que H2/H0.2 \
-                    propagan tras validar la sesión; H3 no valida el token, solo su presencia. Sin \
+                    propagan; H3 valida vigencia y pertenencia con H2. Sin \
                     credencial responde 401 para derivar a verificación; sin vínculo ACTIVO responde 409.""")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Perfil permitido del canal",
@@ -313,9 +313,9 @@ public class VinculoController {
     public PerfilCanalResponse consultarPerfil(
             @Parameter(description = "Número E.164 del vínculo", example = "+5491112345678")
             @PathVariable String numero,
-            @Parameter(description = "Contexto de credencial validado aguas arriba; debe ser true",
-                    example = "true")
-            @RequestHeader(value = CredencialCanal.HEADER_CREDENCIAL_VALIDA, required = false)
+            @Parameter(description = "Token de sesión validado con H2 para el número solicitado",
+                    example = "token-emitido-por-h2")
+            @RequestHeader(value = CredencialCanal.HEADER_CREDENCIAL_TOKEN, required = false)
             String credencialValida) {
         return vinculoService.consultarPerfil(numero, credencialValida);
     }
@@ -522,9 +522,9 @@ public class VinculoController {
                                                     """)
                             }))
             @Valid @RequestBody BloquearVinculoRequest request,
-            @Parameter(description = "Contexto de credencial validado aguas arriba; obligatorio si el motivo "
-                    + "es SOLICITUD_CLIENTE", example = "true")
-            @RequestHeader(value = CredencialCanal.HEADER_CREDENCIAL_VALIDA, required = false)
+            @Parameter(description = "Token validado con H2; obligatorio si el motivo "
+                    + "es SOLICITUD_CLIENTE", example = "token-emitido-por-h2")
+            @RequestHeader(value = CredencialCanal.HEADER_CREDENCIAL_TOKEN, required = false)
             String credencialValida) {
         return vinculoService.bloquear(numero, request, credencialValida);
     }
@@ -576,9 +576,9 @@ public class VinculoController {
                                     }
                                     """)))
             @Valid @RequestBody DesvincularRequest request,
-            @Parameter(description = "Contexto de credencial validado aguas arriba; debe ser true",
-                    example = "true")
-            @RequestHeader(value = CredencialCanal.HEADER_CREDENCIAL_VALIDA, required = false)
+            @Parameter(description = "Token de sesión validado con H2 para el número solicitado",
+                    example = "token-emitido-por-h2")
+            @RequestHeader(value = CredencialCanal.HEADER_CREDENCIAL_TOKEN, required = false)
             String credencialValida) {
         return vinculoService.desvincular(numero, request, credencialValida);
     }

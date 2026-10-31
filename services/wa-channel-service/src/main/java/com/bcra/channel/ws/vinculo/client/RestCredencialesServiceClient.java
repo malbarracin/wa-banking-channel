@@ -1,17 +1,50 @@
 package com.bcra.channel.ws.vinculo.client;
 
+import java.time.Instant;
+import java.util.Map;
+
+import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-/** Revocación best-effort sin reintentos automáticos ni participación transaccional. */
+/** Valida sesiones con H2 y solicita revocación best-effort sin reintentos automáticos. */
 @RequiredArgsConstructor
 @Slf4j
 public class RestCredencialesServiceClient implements CredencialesServiceClient {
 
     private final RestClient restClient;
+
+    @Override
+    public boolean validar(String credencial, String numeroWhatsapp) {
+        if (credencial == null || credencial.isBlank()) {
+            return false;
+        }
+        try {
+            ValidacionResponse respuesta = restClient.post().uri("/api/v1/credenciales/validar")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("credencial", credencial)).retrieve().body(ValidacionResponse.class);
+            return respuesta != null && respuesta.vigente()
+                    && numeroWhatsapp.equals(respuesta.numeroWhatsapp())
+                    && respuesta.fechaExpiracion() != null
+                    && respuesta.fechaExpiracion().isAfter(Instant.now());
+        } catch (RestClientException exception) {
+            return false;
+        }
+    }
+
+    /** Resultado autoritativo de H2; omite datos sensibles al representarse como texto. */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    private record ValidacionResponse(boolean vigente, String numeroWhatsapp, Instant fechaExpiracion) {
+        @Override
+        public String toString() {
+            return "ValidacionResponse[vigente=" + vigente + "]";
+        }
+    }
 
     @Override
     public boolean solicitarRevocacion(String numeroWhatsapp, String motivo) {

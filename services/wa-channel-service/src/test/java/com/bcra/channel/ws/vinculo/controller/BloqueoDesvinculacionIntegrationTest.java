@@ -109,6 +109,32 @@ class BloqueoDesvinculacionIntegrationTest {
         H2.verify(0, postRequestedFor(urlMatching("/api/v1/credenciales/.*")));
     }
 
+    @ParameterizedTest
+    @ValueSource(ints = {401, 503})
+    @DisplayName("Un token rechazado por H2 no permite cambios aunque se envíe el marcador anterior")
+    void rechazaTokenSinAutorizacionDeH2(int estadoH2) throws Exception {
+        Vinculo vinculo = guardarVinculo(VinculoEstado.ACTIVO);
+        H2.stubFor(WireMock.post(WireMock.urlEqualTo("/api/v1/credenciales/validar"))
+                .withRequestBody(equalToJson("{\"credencial\":\"token-adulterado\"}"))
+                .willReturn(aResponse().withStatus(estadoH2)));
+
+        for (String ruta : List.of(RUTA_BLOQUEO, RUTA_DESVINCULACION)) {
+            mockMvc.perform(patch(ruta, NUMERO)
+                            .header(CredencialCanal.HEADER_CREDENCIAL_TOKEN, "token-adulterado")
+                            .header("X-Canal-Credencial-Valida", "true")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"motivo\":\"SOLICITUD_CLIENTE\",\"confirmacion\":true}"))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("UNAUTHORIZED"))
+                    .andExpect(jsonPath("$.details").isEmpty());
+        }
+
+        assertThat(vinculoRepository.findById(vinculo.getId())).get()
+                .extracting(Vinculo::getEstado).isEqualTo(VinculoEstado.ACTIVO);
+        H2.verify(2, postRequestedFor(WireMock.urlEqualTo("/api/v1/credenciales/validar")));
+        H2.verify(0, postRequestedFor(urlMatching(PATH_REVOCACION_REGEX)));
+    }
+
     @BeforeEach
     void preparar() {
         auditLogRepository.deleteAll();

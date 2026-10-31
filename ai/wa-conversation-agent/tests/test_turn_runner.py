@@ -256,6 +256,7 @@ def test_tool_timeout_escalates_before_turn_timeout() -> None:
         replay = client.post("/api/v1/agent/turn", json=PAYLOAD, headers=HEADERS)
     assert response.status_code == 200
     assert response.json()["escalate"] is True
+    assert response.json()["reply"]["body"] == ESCALATION_CONFIRMATION
     assert response.json()["toolsUsed"] == ["marcar_consulta"]
     assert response.json() == replay.json()
 
@@ -281,6 +282,38 @@ def test_reused_key_with_changed_payload_is_rejected(greeting_client: TestClient
     changed = greeting_client.post("/api/v1/agent/turn", json={**PAYLOAD, "body": "Otro"}, headers=HEADERS)
     assert first.status_code == 200
     assert changed.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_cancelled_turn_does_not_repeat_uncertain_operation() -> None:
+    from wa_conversation_agent.models import TurnRequest
+
+    started = asyncio.Event()
+    invoked: list[str] = []
+
+    async def marcar_consulta() -> dict[str, str]:
+        """Simula una operación aplicada antes de perder la respuesta."""
+        invoked.append("operacion")
+        started.set()
+        await asyncio.Event().wait()
+        return {"status": "ok"}
+
+    processor = build_processor(LoopingToolModel(model="fake"), tools=[marcar_consulta])
+    request = TurnRequest.model_validate(PAYLOAD)
+    task = asyncio.create_task(processor.process(request, request.messageId))
+    try:
+        await asyncio.wait_for(started.wait(), timeout=5)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        with pytest.raises(ConflictError):
+            await processor.process(request, request.messageId)
+        assert invoked == ["operacion"]
+    finally:
+        if not task.done():
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        await processor.aclose()
 
 
 @pytest.mark.asyncio

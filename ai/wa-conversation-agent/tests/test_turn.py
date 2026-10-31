@@ -65,12 +65,30 @@ def test_empty_configured_token() -> None:
 
 
 @pytest.mark.parametrize("field", list(PAYLOAD))
-@pytest.mark.parametrize("value", [None, "", "   "])
+@pytest.mark.parametrize("value", [None])
 def test_invalid_fields(client: TestClient, field: str, value: object) -> None:
     payload = {**PAYLOAD, field: value}
     response = client.post("/api/v1/agent/turn", json=payload, headers=HEADERS)
     assert response.status_code == 400
     assert response.json() == {"detail": "Revisá los datos del mensaje para continuar."}
+
+
+@pytest.mark.parametrize("field", [field for field in PAYLOAD if field != "body"])
+@pytest.mark.parametrize("value", ["", "   "])
+def test_empty_required_fields(client: TestClient, field: str, value: str) -> None:
+    response = client.post("/api/v1/agent/turn", json={**PAYLOAD, field: value}, headers=HEADERS)
+    assert response.status_code == 400
+    assert response.json() == {"detail": "Revisá los datos del mensaje para continuar."}
+
+
+@pytest.mark.parametrize("body", ["", "   "])
+def test_empty_body_matches_java_contract(client: TestClient, body: str) -> None:
+    payload = {**PAYLOAD, "body": body}
+    assert TurnRequest.model_validate(payload).body == body
+    response = client.post("/api/v1/agent/turn", json=payload, headers=HEADERS)
+    assert response.status_code == 200
+    for key in ("correlationId", "conversationId", "messageId"):
+        assert response.json()[key] == payload[key]
 
 
 @pytest.mark.parametrize("field", list(PAYLOAD))

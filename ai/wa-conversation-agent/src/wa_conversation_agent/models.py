@@ -22,7 +22,7 @@ class TurnRequest(ContractModel):
     conversationId: Text
     messageId: Text
     customerAddress: Text
-    body: Text
+    body: str
     context: TurnContext
 
 

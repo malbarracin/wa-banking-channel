@@ -1,0 +1,8 @@
+# Override exclusivo para el simulador en el host; no usar en despliegues.
+services:
+  wa-twilio-gateway:
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      GATEWAY_TWILIO_LOCAL_ENDPOINT: http://host.docker.internal:8099
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

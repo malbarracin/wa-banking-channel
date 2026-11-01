@@ -39,8 +39,14 @@ public class OutboundConfiguration {
     @Bean
     TwilioSender twilioSender(@Value("${TWILIO_ACCOUNT_SID}") String account,
             @Value("${TWILIO_AUTH_TOKEN}") String token, @Value("${TWILIO_WHATSAPP_FROM}") String from,
-            @Value("${TWILIO_STATUS_CALLBACK_PUBLIC_URL}") URI callback) {
-        var client = new TwilioRestClient.Builder(account, token).httpClient(new SingleAttemptHttpClient()).build();
+            @Value("${TWILIO_STATUS_CALLBACK_PUBLIC_URL}") URI callback,
+            @Value("${gateway.twilio-local-endpoint:}") String localEndpoint,
+            org.springframework.core.env.Environment environment) {
+        if (!localEndpoint.isEmpty() && !environment.matchesProfiles("local")) {
+            throw new IllegalArgumentException("Twilio simulator requires local profile");
+        }
+        var client = new TwilioRestClient.Builder(account, token)
+                .httpClient(new SingleAttemptHttpClient(localEndpoint)).build();
         return new TwilioSender(client, from, callback);
     }
 

@@ -15,8 +15,8 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ./scripts/start.ps1
 ```
 
-Bash: `test -f .env || cp .env.example .env` y `./scripts/start.sh`. Los scripts inician pero no
-esperan salud; para esperar todos los servicios y habilitar el simulador de Twilio:
+Bash: `test -f .env || cp .env.example .env` y `./scripts/start.sh`. Los scripts requieren Python 3,
+esperan hasta 600 s por salud y exigen `kafka-init` terminado con código 0. Para habilitar el simulador de Twilio:
 
 ```text
 docker compose -f docker-compose.yml -f scripts/compose.smoke.yml up -d --build --wait --wait-timeout 600

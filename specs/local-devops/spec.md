@@ -95,7 +95,7 @@ El entorno DEBE propagar `correlationId` y exponer endpoints de salud/mÃ©trica
 - [x] No hay secretos reales en el repo; solo .env.example.
 - [x] Healthchecks y depends_on ordenan el arranque.
 - [x] docker compose config valida sin errores (con .env basado en .env.example).
-- [x] Smoke E2E del flujo completo es posible (webhook simulado -> respuesta). Documentado en docs/local-devops.md.
+- [ ] Smoke E2E del flujo completo es posible (webhook simulado -> respuesta). Documentado en docs/local-devops.md. Pendiente: integrar outbound H0.2 y transporte /mcp H7, y demostrar el recorrido con evidencia runtime; la entrega E2E permanece abierta.
 
 ## Requisitos no funcionales
 

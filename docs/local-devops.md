@@ -18,8 +18,13 @@ if (-not (Test-Path .env)) { Copy-Item .env.example .env }
 ./scripts/start.ps1
 ```
 
-Los scripts inician pero no esperan salud. Habilitar el transporte al simulador
-y esperar como máximo 600 s por salud, además del tiempo de build:
+Los scripts esperan como máximo 600 s por todos los servicios permanentes
+running/healthy y exigen que `kafka-init` termine con código 0. Devuelven error
+si falla el build/arranque, una consulta de Docker o la espera. Requieren Python 3
+(comando `python3` en Bash y `python` en PowerShell); el plazo empieza después
+del build e incluye el arranque. Redis y el servidor de memoria solo publican en 127.0.0.1.
+Para habilitar el transporte al simulador, usar el override y comprobar también
+la salida de `kafka-init`:
 
 ```text
 docker compose config --quiet
@@ -27,6 +32,7 @@ docker compose -f docker-compose.yml -f scripts/compose.smoke.yml config --quiet
 docker compose -f docker-compose.yml -f scripts/compose.smoke.yml up -d --build --wait --wait-timeout 600
 docker compose ps --all
 docker compose ps --all --format json
+docker compose wait kafka-init
 ```
 
 No continuar ante código distinto de cero o servicios permanentes sin estado
@@ -87,6 +93,12 @@ Resultado observado en run `20261031-f8ae`: Docker inaccesible por acceso
 denegado al pipe `dockerDesktopLinuxEngine`; no hay salud ni E2E acreditados.
 `GOOGLE_API_KEY` estaba ausente. El intento del tester salió con código 1 por
 falta de `TWILIO_AUTH_TOKEN`, antes de enviar el webhook.
+
+La entrega E2E permanece abierta y su criterio de aceptación está sin cumplir.
+Además de los prerrequisitos del entorno, faltan outbound en H0.2 y transporte
+`/mcp` en H7 según la revisión del PR #18. Las correcciones de arranque y puertos
+no acreditan el recorrido completo; debe implementarse y medirse antes del cierre.
+Ver [correcciones y evidencia del PR #18](evidence/pr18-correcciones.md).
 
 | Medición | Resultado observado | Condición al repetir |
 | --- | --- | --- |

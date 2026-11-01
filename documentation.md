@@ -100,7 +100,7 @@ Python 3 para los scripts. Puertos libres: 8080–8086, 8090–8092, 8101–8103
 ```powershell
 # Desde la raíz. Crear .env solo si falta y completar los secretos locales.
 if (-not (Test-Path .env)) { Copy-Item .env.example .env }
-./scripts/start.ps1          # up -d --build (no espera salud)
+./scripts/start.ps1          # build, arranque y espera de salud (hasta 600 s)
 ```
 
 Bash: `test -f .env || cp .env.example .env` y `./scripts/start.sh`.

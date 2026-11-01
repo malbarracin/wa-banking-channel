@@ -527,7 +527,7 @@ services:
     networks:
       - wa-channel
     ports:
-      - "${AGENT_REDIS_HOST_PORT:-6379}:6379"
+      - "127.0.0.1:${AGENT_REDIS_HOST_PORT:-6379}:6379"
     volumes:
       - agent-redis-data:/data
     healthcheck:
@@ -541,7 +541,7 @@ services:
     networks:
       - wa-channel
     ports:
-      - "${AGENT_MEMORY_HOST_PORT:-8000}:8000"
+      - "127.0.0.1:${AGENT_MEMORY_HOST_PORT:-8000}:8000"
     environment:
       REDIS_URL: redis://agent-redis:6379
       DISABLE_AUTH: "true"

@@ -56,3 +56,36 @@ certifica su salud; comprobarla con plazo finito de 600 segundos.
 Los logs pueden incluir datos sensibles: revisar y redactar antes de compartir.
 La comprobación de salud en ejecución queda sin acreditar por la limitación del
 entorno; no es un bloqueo de implementación según las instrucciones del paso.
+
+## Revisión del tester — 2026-11-01
+
+Se contrastó esta evidencia con la especificación y arquitectura local-devops.
+No se requieren tests nuevos para el cambio documental recibido ni cambios de
+producto. Se repitieron estas comprobaciones:
+
+- `docker compose config --quiet`: código 0, capturado directamente desde Python.
+- `python -m unittest discover -s scripts -p test_verify_integracion.py`:
+  código 0, tres pruebas correctas.
+- `docker info --format '{{.ServerVersion}}'`, `docker compose ps --all --format json`
+  y `docker compose logs --no-color --tail 20`: persiste el acceso denegado al
+  pipe `dockerDesktopLinuxEngine`. No hay evidencia de fallo de un servicio.
+
+Los criterios #2 y #4 están comprobados. Los criterios #1 y #3 requieren repetir
+las consultas y el arranque con Docker Engine accesible; la entrega del tester
+no certifica salud del stack. Se conserva esta limitación según el prompt del paso.
+
+Verificación final del tester:
+
+- `mvnw.cmd -q -B clean verify` desde cada uno de
+  `gateway/wa-twilio-gateway`, `platform/wa-channel-orchestrator` y
+  `platform/wa-event-platform`: los tres devolvieron código 0, con los gates de
+  JaCoCo configurados en 0.80 sin modificaciones.
+- `python scripts/verify_integracion.py`: código 0 capturado directamente con
+  `subprocess.run`, con `Verificación correcta: 3 componente(s).`. Este resultado
+  corresponde a la nueva ejecución del tester; no cambia el registro anterior.
+- Los informes Surefire del gateway registran 108 pruebas, 3 omitidas; los del
+  orquestador, 101 pruebas, 28 omitidas. Sin fallos ni errores. Las omisiones no
+  acreditan las pruebas de integración que requieren Docker.
+
+Resultado del paso: ok con limitación de verificación del runtime. Sin cambios
+de producto, contratos, tests ni umbrales.

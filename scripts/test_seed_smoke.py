@@ -44,6 +44,38 @@ class SeedSmokeTest(unittest.TestCase):
                 seed.check({'phone': '+15555550100'})
             self.assertEqual(api.call_count, 1)
 
+    def test_check_rejects_invalid_or_wrong_number_credential_before_profile(self):
+        data = {'phone': '+15555550100', 'document': 'QA-test'}
+        for validation in ({'vigente': False, 'numeroWhatsapp': data['phone']},
+                           {'vigente': True, 'numeroWhatsapp': '+15555550101'}):
+            with self.subTest(validation=validation), \
+                    patch.object(seed, 'issue', return_value='private-jwt'), \
+                    patch.object(seed, 'api', side_effect=[{'estado': 'ACTIVO'}, validation]) as api:
+                with self.assertRaises(RuntimeError):
+                    seed.check(data)
+                self.assertEqual(api.call_count, 2)
+
+    def test_sql_failure_preserves_identifiers_and_does_not_issue_credential(self):
+        with patch.object(seed, 'STATE') as state, \
+                patch.object(seed, 'api', side_effect=[{}, {'id': 'synthetic-link'}]), \
+                patch.object(seed.subprocess, 'run') as docker, \
+                patch.object(seed, 'check') as check:
+            state.exists.return_value = False
+            docker.return_value.returncode = 1
+            with self.assertRaises(RuntimeError):
+                seed.seed()
+            state.write_text.assert_called_once()
+            state.unlink.assert_not_called()
+            check.assert_not_called()
+
+    def test_existing_seed_does_not_create_more_data(self):
+        with patch.object(seed, 'STATE') as state, patch.object(seed, 'api') as api:
+            state.exists.return_value = True
+            with self.assertRaises(RuntimeError):
+                seed.seed()
+            api.assert_not_called()
+            state.write_text.assert_not_called()
+
     def test_cleanup_confirms_revocation_before_deleting_user(self):
         with patch.object(seed, 'STATE') as state, \
                 patch.object(seed, 'issue', return_value='private-jwt'), \

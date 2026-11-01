@@ -1,4 +1,4 @@
-Ôªø# Origen de los requisitos
+# Origen de los requisitos
 
 | Campo | Valor |
 |-------|-------|
@@ -7,15 +7,15 @@
 | Link | https://github.com/malbarracin/wa-banking-channel/pulls (PR #2, #3, #4) |
 | Actualizado | 2026-10-31 |
 
-## Requisito ‚Üí fuente
+## Requisito ? fuente
 
-| Requisito | √Årea | Id en la fuente |
+| Requisito | ¡rea | Id en la fuente |
 |-----------|------|-----------------|
-| Alta de usuario bancario (auditor√≠a de rechazos, Location header) | usuarios | PR #2 hilos PRRT_kwDOVOsBA86wTyNc, PRRT_kwDOVOsBA86wTyNu |
-| Consulta con proyecci√≥n/autorizaci√≥n por perfil | usuarios | PR #2 hilo PRRT_kwDOVOsBA86wTyNp |
+| Alta de usuario bancario (auditorÌa de rechazos, Location header) | usuarios | PR #2 hilos PRRT_kwDOVOsBA86wTyNc, PRRT_kwDOVOsBA86wTyNu |
+| Consulta con proyecciÛn/autorizaciÛn por perfil | usuarios | PR #2 hilo PRRT_kwDOVOsBA86wTyNp |
 | Secret Helm sin valor por defecto | usuarios | PR #2 hilo PRRT_kwDOVOsBA86wTyNl |
-| Aceptaci√≥n de t√©rminos sin duplicados / unicidad | canal-whatsapp | PR #3 hilo PRRT_kwDOVOsBA86wX1eL |
+| AceptaciÛn de tÈrminos sin duplicados / unicidad | canal-whatsapp | PR #3 hilo PRRT_kwDOVOsBA86wX1eL |
 | No confiar en header cliente | canal-whatsapp | PR #3 hilo PRRT_kwDOVOsBA86wX1eC |
-| Renovaci√≥n entrega token sustituto sin invalidar prematuramente | acceso-sesion | PR #4 hilo PRRT_kwDOVOsBA86wcpmQ |
-| Autenticaci√≥n/autorizaci√≥n servicio-a-servicio y por actor | acceso-sesion | PR #4 hilos PRRT_kwDOVOsBA86wcpmX, PRRT_kwDOVOsBA86wcpmd |
-| Validaci√≥n body /validar con @Valid | acceso-sesion | PR #4 hilo PRRT_kwDOVOsBA86wcpmg |
+| RenovaciÛn entrega token sustituto sin invalidar prematuramente | acceso-sesion | PR #4 hilo PRRT_kwDOVOsBA86wcpmQ |
+| Runtime local Compose (E2E) ó docker-compose raÌz y scripts | local-devops | Paso 13 (wa-local-devops) | https://example.com/tu-pagina-de-requisitos | 2026-10-31 |
+| ValidaciÛn body /validar con @Valid | acceso-sesion | PR #4 hilo PRRT_kwDOVOsBA86wcpmg |

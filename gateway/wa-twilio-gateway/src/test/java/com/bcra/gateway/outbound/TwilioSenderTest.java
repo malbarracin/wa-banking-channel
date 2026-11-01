@@ -10,8 +10,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
-import com.twilio.http.Request;
-import com.twilio.http.Response;
 import com.twilio.http.TwilioRestClient;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -34,16 +32,7 @@ class TwilioSenderTest {
         server = new WireMockServer(0);
         server.start();
         // Keep the production SDK and one-attempt HTTP stack; redirect only its host to WireMock.
-        var transport = new SingleAttemptHttpClient() {
-            @Override
-            public Response makeRequest(Request original) {
-                var redirected = new Request(original.getMethod(), server.baseUrl() + PATH);
-                redirected.setAuth(original.getUsername(), original.getPassword());
-                original.getPostParams().forEach((key, values) -> values.forEach(value ->
-                        redirected.addPostParam(key, value)));
-                return super.makeRequest(redirected);
-            }
-        };
+        var transport = new SingleAttemptHttpClient(server.baseUrl());
         client = new TwilioRestClient.Builder("AC00000000000000000000000000000000", "synthetic-token")
                 .httpClient(transport).build();
         sender = new TwilioSender(client, "whatsapp:+15005550006", URI.create("https://bank.example/status"));
@@ -99,6 +88,8 @@ class TwilioSenderTest {
     @Test
     @DisplayName("Rechaza configuración insegura y destinos que no son WhatsApp E164")
     void validatesConfigurationAndDestination() {
+        assertThatThrownBy(() -> new SingleAttemptHttpClient("https://example.com"))
+                .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new TwilioSender(client, "invalid", URI.create("https://bank.example/status")))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new TwilioSender(client, "whatsapp:+15005550006", URI.create("http://bank/status")))

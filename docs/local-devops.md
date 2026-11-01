@@ -52,3 +52,9 @@ docker compose ps
 - Sin secretos reales: usar solo .env.example como referencia
 - Kafka en modo KRaft
 - Healthchecks ordenan el arranque
+# Seed para el smoke E2E
+
+Preparar y verificar los datos con la [guía del seed local](local-smoke-data.md).
+Incluye autenticación H2/H3, excepción SQL local autorizada para activar el vínculo
+y limpieza por API. No requiere datos ni números Twilio reales.
+

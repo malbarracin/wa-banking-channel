@@ -275,6 +275,8 @@ services:
       DB_USERNAME: ${DB_USERNAME}
       DB_PASSWORD: ${DB_PASSWORD}
       CREDENTIAL_JWT_SECRET: ${CREDENTIAL_JWT_SECRET}
+      CREDENTIAL_H3_SERVICE_TOKEN: ${CREDENTIAL_H3_SERVICE_TOKEN:-}
+      CREDENTIAL_BANK_SERVICE_TOKEN: ${CREDENTIAL_BANK_SERVICE_TOKEN:-}
       WA_USERS_SERVICE_BASE_URL: http://wa-users-service:8080
       SPRING_DATASOURCE_URL: jdbc:postgresql://credentials-postgres:5432/${CREDENTIALS_DB_NAME:-wa_credentials}
     depends_on:
@@ -322,6 +324,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       WA_USERS_SERVICE_BASE_URL: http://wa-users-service:8080
       CREDENCIALES_SERVICE_BASE_URL: http://wa-credentials-service:8082
+      CREDENTIAL_H3_SERVICE_TOKEN: ${CREDENTIAL_H3_SERVICE_TOKEN:-}
       SPRING_DATASOURCE_URL: jdbc:postgresql://channel-postgres:5432/${CHANNEL_DB_NAME:-wa_channel}
     depends_on:
       channel-postgres:

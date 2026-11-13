@@ -321,8 +321,8 @@ class UserIntegrationTest {
 
     @Test
     @Order(10)
-    @DisplayName("U4 — Baja lógica y reactivación; historial de auditoría presente")
-    void shouldLogicallyDeleteAndReactivate_withAuditTrail() throws Exception {
+    @DisplayName("U4 — Baja lógica terminal; rechazo auditado y usuario conservado")
+    void shouldRejectReactivation_withAuditTrail() throws Exception {
         mockMvc.perform(patch("/api/v1/users/{id}/status", createdUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -334,6 +334,8 @@ class UserIntegrationTest {
                 .andExpect(jsonPath("$.status").value("LOGICALLY_DELETED"))
                 .andExpect(jsonPath("$.channelLinkEligible").value(false));
 
+        var priorEvents = auditEventRepository.findByUserIdOrderByTimestampDesc(createdUserId);
+        UserEntity beforeReactivation = userRepository.findById(createdUserId).orElseThrow();
         mockMvc.perform(patch("/api/v1/users/{id}/status", createdUserId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -341,18 +343,27 @@ class UserIntegrationTest {
                                   "status": "ACTIVE"
                                 }
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ACTIVE"))
-                .andExpect(jsonPath("$.channelLinkEligible").value(true));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details[0].field").value("status"));
 
         mockMvc.perform(get("/api/v1/users/{id}/audit", createdUserId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
                 .andExpect(jsonPath("$[0].userId").value(createdUserId));
 
-        assertThat(userRepository.findById(createdUserId)).isPresent();
-        assertThat(auditEventRepository.findByUserIdOrderByTimestampDesc(createdUserId).size())
-                .isGreaterThanOrEqualTo(4);
+        UserEntity afterReactivation = userRepository.findById(createdUserId).orElseThrow();
+        assertThat(afterReactivation).usingRecursiveComparison().isEqualTo(beforeReactivation);
+        var events = auditEventRepository.findByUserIdOrderByTimestampDesc(createdUserId);
+        assertThat(events).hasSize(priorEvents.size() + 1);
+        assertThat(events).extracting(UserAuditEventEntity::getId)
+                .containsAll(priorEvents.stream().map(UserAuditEventEntity::getId).toList());
+        assertThat(events).extracting(UserAuditEventEntity::getTimestamp).isSortedAccordingTo(
+                java.util.Comparator.reverseOrder());
+        assertThat(events.get(0).getResult()).isEqualTo(AuditResult.FAILURE);
+        assertThat(events.get(0).getActor()).isEqualTo("SYSTEM");
+        assertThat(events.get(0).getSummary())
+                .containsEntry("from", "LOGICALLY_DELETED").containsEntry("to", "ACTIVE");
     }
 
     private static boolean isMongoReachable() {

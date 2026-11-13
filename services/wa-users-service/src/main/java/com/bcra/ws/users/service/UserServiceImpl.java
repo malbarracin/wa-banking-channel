@@ -47,7 +47,7 @@ public class UserServiceImpl implements UserService {
     private static final Map<UserStatus, Set<UserStatus>> ALLOWED_TRANSITIONS = Map.of(
             UserStatus.ACTIVE, Set.of(UserStatus.SUSPENDED, UserStatus.LOGICALLY_DELETED),
             UserStatus.SUSPENDED, Set.of(UserStatus.ACTIVE, UserStatus.LOGICALLY_DELETED),
-            UserStatus.LOGICALLY_DELETED, Set.of(UserStatus.ACTIVE)
+            UserStatus.LOGICALLY_DELETED, Set.of()
     );
 
     private final UserRepository userRepository;
@@ -187,9 +187,6 @@ public class UserServiceImpl implements UserService {
         UserStatus from = entity.getStatus();
         UserStatus to = request.getStatus();
 
-        if (from == to) {
-            throw new InvalidStatusTransitionException(from, to);
-        }
         if (!isTransitionAllowed(from, to)) {
             userAuditService.record(
                     id,

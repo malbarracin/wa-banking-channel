@@ -13,5 +13,6 @@ public enum UserStatus {
 
     ACTIVE,
     SUSPENDED,
+    /** Baja lógica terminal: no admite transiciones a otro estado. */
     LOGICALLY_DELETED
 }

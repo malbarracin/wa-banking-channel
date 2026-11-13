@@ -282,7 +282,8 @@ class UserServiceImplTest {
                 .isInstanceOf(InvalidStatusTransitionException.class);
 
         verify(userRepository, never()).save(any());
-        verify(userAuditService, never()).record(any(), eq(AuditAction.STATUS_CHANGED), any(), any(), any());
+        verify(userAuditService).record(eq("user-1"), eq(AuditAction.STATUS_CHANGED), eq(AuditResult.FAILURE),
+                eq(Map.of("from", "ACTIVE", "to", "ACTIVE")), isNull());
     }
 
     @Test
@@ -307,26 +308,20 @@ class UserServiceImplTest {
     }
 
     @Test
-    @DisplayName("Should reactivate from LOGICALLY_DELETED to ACTIVE")
-    void shouldReactivate_whenLogicallyDeletedToActive() {
+    @DisplayName("Should reject reactivation from LOGICALLY_DELETED to ACTIVE")
+    void shouldRejectReactivation_whenLogicallyDeletedToActive() {
         UserEntity entity = sampleEntity("user-1", UserStatus.LOGICALLY_DELETED);
-        UserEntity saved = sampleEntity("user-1", UserStatus.ACTIVE);
-        UserResponse expected = UserResponse.builder()
-                .id("user-1")
-                .status(UserStatus.ACTIVE)
-                .channelLinkEligible(true)
-                .build();
         UserStatusChangeRequest request = UserStatusChangeRequest.builder()
                 .status(UserStatus.ACTIVE)
                 .build();
 
         when(userRepository.findById("user-1")).thenReturn(Optional.of(entity));
-        when(userRepository.save(any(UserEntity.class))).thenReturn(saved);
-        when(userMapper.toResponse(saved)).thenReturn(expected);
-
-        UserResponse response = subject.changeStatus("user-1", request, null);
-
-        assertThat(response.isChannelLinkEligible()).isTrue();
+        assertThatThrownBy(() -> subject.changeStatus("user-1", request, null))
+                .isInstanceOf(InvalidStatusTransitionException.class);
+        assertThat(entity.getStatus()).isEqualTo(UserStatus.LOGICALLY_DELETED);
+        verify(userRepository, never()).save(any());
+        verify(userAuditService).record(eq("user-1"), eq(AuditAction.STATUS_CHANGED), eq(AuditResult.FAILURE),
+                eq(Map.of("from", "LOGICALLY_DELETED", "to", "ACTIVE")), isNull());
     }
 
     @Test

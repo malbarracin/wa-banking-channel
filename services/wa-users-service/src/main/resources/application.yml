@@ -53,6 +53,10 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+users:
+  query:
+    full-view-actors: ${USERS_QUERY_FULL_VIEW_ACTORS:BUSINESS_OPERATIONS,SUPPORT}
+
 api:
   versioning:
     enabled: true

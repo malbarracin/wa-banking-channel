@@ -55,7 +55,9 @@ class UserStatusContractTest {
     void configureRealServicesAndMapper() {
         var service = new UserServiceImpl(userRepository, Mappers.getMapper(UserMapper.class),
                 new UserAuditService(auditRepository));
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserController(service))
+        var projection = new com.bcra.ws.users.api.v1.mapper.UserQueryProjection(
+                Mappers.getMapper(UserMapper.class), java.util.Set.of("BUSINESS_OPERATIONS", "SUPPORT"));
+        mockMvc = MockMvcBuilders.standaloneSetup(new UserController(service, projection))
                 .setControllerAdvice(new GlobalExceptionHandler()).build();
     }
 

@@ -52,7 +52,9 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
  */
 @WebMvcTest(controllers = UserController.class,
         properties = "spring.jackson.deserialization.fail-on-unknown-properties=true")
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class,
+        com.bcra.ws.users.api.v1.mapper.UserQueryProjection.class,
+        com.bcra.ws.users.api.v1.mapper.UserMapperImpl.class})
 @ExtendWith(OutputCaptureExtension.class)
 class UserControllerTest {
 

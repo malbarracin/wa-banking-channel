@@ -4,6 +4,23 @@ Servicio de Usuarios (H1) del canal bancario WhatsApp. Stack: Java 21, Spring Bo
 
 ## Requisitos
 
+Las consultas GET por id y por documento seleccionan la vista con `X-Query-Actor`:
+`BUSINESS_OPERATIONS` y `SUPPORT` reciben el dataset completo; `BANK_SERVICE`, un valor
+desconocido o la ausencia del header reciben únicamente `id`, `documentType`,
+`documentNumber`, `status` y `channelLinkEligible`. El último campo es verdadero solo
+en `ACTIVE`; un cliente inexistente devuelve 404 y no habilita un vínculo.
+
+`users.query.full-view-actors` (variable `USERS_QUERY_FULL_VIEW_ACTORS`, lista separada
+por comas) permite restringir qué actores internos reciben la vista completa sin
+cambiar el esquema. Una lista vacía deja todas las consultas en vista básica.
+Agregar actores desconocidos o `BANK_SERVICE` a esa configuración no amplía sus datos.
+La matriz exacta de campos visibles sigue pendiente de definición por el banco.
+
+El origen declarado es una selección de proyección, no una credencial ni un rol
+autenticado. La infraestructura que integre el servicio debe controlar ese origen
+según la política de acceso bancaria. `X-Actor-Id` es exclusivamente una referencia
+de auditoría y no modifica la vista de consulta. No se implementa el vínculo H3.
+
 - Java 21+
 - Docker / Docker Compose (Mongo local y Testcontainers)
 - Maven Wrapper (`./mvnw`) — no requiere Maven global

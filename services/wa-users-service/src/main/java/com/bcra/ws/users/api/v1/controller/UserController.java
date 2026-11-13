@@ -374,7 +374,7 @@ public class UserController {
     }
 
     /**
-     * U4 — Cambio de estado con política de transiciones.
+     * U4 — Cambio de estado con baja lógica terminal y auditoría de éxitos y rechazos.
      *
      * @param id      id interno
      * @param request estado destino
@@ -385,7 +385,7 @@ public class UserController {
     @Operation(
             summary = "Cambiar estado (U4)",
             description = "Transiciones: ACTIVE↔SUSPENDED, baja lógica (LOGICALLY_DELETED), "
-                    + "reactivación desde LOGICALLY_DELETED. Audita siempre. "
+                    + "sin salida desde LOGICALLY_DELETED. Audita éxitos y rechazos, incluido el mismo estado. "
                     + "channelLinkEligible=false si status≠ACTIVE.")
     @ApiResponses({
             @ApiResponse(

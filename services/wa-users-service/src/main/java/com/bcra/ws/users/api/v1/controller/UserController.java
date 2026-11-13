@@ -14,13 +14,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.bcra.ws.users.exception.ErrorResponse;
 import com.bcra.ws.users.api.v1.dto.UserAuditEventResponse;
+import com.bcra.ws.users.api.v1.dto.UserBasicResponse;
 import com.bcra.ws.users.api.v1.dto.UserCreateRequest;
 import com.bcra.ws.users.api.v1.dto.UserResponse;
 import com.bcra.ws.users.api.v1.dto.UserStatusChangeRequest;
 import com.bcra.ws.users.api.v1.dto.UserUpdateRequest;
+import com.bcra.ws.users.api.v1.mapper.UserQueryProjection;
 import com.bcra.ws.users.domain.DocumentType;
+import com.bcra.ws.users.exception.ErrorResponse;
 import com.bcra.ws.users.service.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -169,6 +171,7 @@ public class UserController {
             """;
 
     private final UserService userService;
+    private final UserQueryProjection queryProjection;
 
     /**
      * U1 — Alta de usuario. Estado inicial ACTIVE.
@@ -235,10 +238,10 @@ public class UserController {
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "Usuario encontrado",
+                    description = "Usuario encontrado; vista completa o básica según X-Query-Actor",
                     content = @Content(
                             mediaType = MEDIA_JSON,
-                            schema = @Schema(implementation = UserResponse.class),
+                            schema = @Schema(oneOf = {UserResponse.class, UserBasicResponse.class}),
                             examples = @ExampleObject(name = "found", value = EX_USER_ACTIVE))),
             @ApiResponse(
                     responseCode = "400",
@@ -271,12 +274,19 @@ public class UserController {
                             schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(name = "internal", value = EX_INTERNAL)))
     })
-    public ResponseEntity<UserResponse> findByDocument(
+    public ResponseEntity<?> findByDocument(
             @Parameter(description = "Tipo de documento", example = "DNI")
             @RequestParam DocumentType documentType,
             @Parameter(description = "Número de documento", example = "30111222")
-            @RequestParam String documentNumber) {
-        return ResponseEntity.ok(userService.findByDocument(documentType, documentNumber));
+            @RequestParam String documentNumber,
+            @Parameter(description = "Origen declarado: BUSINESS_OPERATIONS, SUPPORT o BANK_SERVICE; "
+                    + "ausente/desconocido recibe subset básico. No autentica al solicitante.")
+            @RequestHeader(value = "X-Query-Actor", required = false) String queryActor) {
+        if (documentNumber.isBlank()) {
+            throw new IllegalArgumentException("documentNumber is required");
+        }
+        return ResponseEntity.ok(queryProjection.project(
+                userService.findByDocument(documentType, documentNumber), queryActor));
     }
 
     /**
@@ -292,10 +302,10 @@ public class UserController {
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
-                    description = "Usuario encontrado",
+                    description = "Usuario encontrado; vista completa o básica según X-Query-Actor",
                     content = @Content(
                             mediaType = MEDIA_JSON,
-                            schema = @Schema(implementation = UserResponse.class),
+                            schema = @Schema(oneOf = {UserResponse.class, UserBasicResponse.class}),
                             examples = @ExampleObject(name = "found", value = EX_USER_ACTIVE))),
             @ApiResponse(
                     responseCode = "404",
@@ -312,10 +322,16 @@ public class UserController {
                             schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(name = "internal", value = EX_INTERNAL)))
     })
-    public ResponseEntity<UserResponse> findById(
+    public ResponseEntity<?> findById(
             @Parameter(description = "Id interno del usuario", example = "661f0a1b2c3d4e5f67890123")
-            @PathVariable String id) {
-        return ResponseEntity.ok(userService.findById(id));
+            @PathVariable String id,
+            @Parameter(description = "Origen declarado: BUSINESS_OPERATIONS, SUPPORT o BANK_SERVICE; "
+                    + "ausente/desconocido recibe subset básico. No autentica al solicitante.")
+            @RequestHeader(value = "X-Query-Actor", required = false) String queryActor) {
+        if (id.isBlank()) {
+            throw new IllegalArgumentException("id is required");
+        }
+        return ResponseEntity.ok(queryProjection.project(userService.findById(id), queryActor));
     }
 
     /**

@@ -7,6 +7,7 @@ import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
 import com.bcra.ws.users.api.v1.dto.UserAuditEventResponse;
+import com.bcra.ws.users.api.v1.dto.UserBasicResponse;
 import com.bcra.ws.users.api.v1.dto.UserCreateRequest;
 import com.bcra.ws.users.api.v1.dto.UserResponse;
 import com.bcra.ws.users.domain.UserStatus;
@@ -41,6 +42,10 @@ public interface UserMapper {
      */
     @Mapping(target = "channelLinkEligible", source = "status", qualifiedByName = "toChannelLinkEligible")
     UserResponse toResponse(UserEntity entity);
+
+    /** Proyecta exclusivamente los cinco campos básicos y calcula elegibilidad desde el estado. */
+    @Mapping(target = "channelLinkEligible", source = "status", qualifiedByName = "toChannelLinkEligible")
+    UserBasicResponse toBasicResponse(UserResponse response);
 
     /**
      * Mapea evento de auditoría a response.

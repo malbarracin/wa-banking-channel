@@ -88,6 +88,40 @@ class UserIntegrationTest {
     private static boolean cleaned;
 
     @Test
+    @Order(101)
+    @DisplayName("Las consultas Mongo por id y documento conservan las vistas básica y completa")
+    void shouldProjectPersistedUser() throws Exception {
+        UserEntity user = userRepository.findById(createdUserId).orElseThrow();
+        for (boolean byDocument : new boolean[] {false, true}) {
+            for (String actor : new String[] {"BANK_SERVICE", "BUSINESS_OPERATIONS", "SUPPORT"}) {
+                var request = byDocument
+                        ? get("/api/v1/users").param("documentType", user.getDocumentType().name())
+                                .param("documentNumber", user.getDocumentNumber())
+                        : get("/api/v1/users/{id}", user.getId());
+                var result = mockMvc.perform(request.header("X-Query-Actor", actor))
+                        .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(user.getId()))
+                        .andExpect(jsonPath("$.status").value(user.getStatus().name()))
+                        .andExpect(jsonPath("$.channelLinkEligible")
+                                .value(user.getStatus() == com.bcra.ws.users.domain.UserStatus.ACTIVE))
+                        .andReturn();
+                JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
+                if (actor.equals("BANK_SERVICE")) {
+                    assertThat(body.size()).isEqualTo(5);
+                    assertThat(body.has("email")).isFalse();
+                    assertThat(body.has("phone")).isFalse();
+                    assertThat(body.has("address")).isFalse();
+                    assertThat(body.has("birthDate")).isFalse();
+                } else {
+                    assertThat(body.size()).isEqualTo(15);
+                    assertThat(body.get("email").asText()).isEqualTo(user.getEmail());
+                    assertThat(body.get("address").asText()).isEqualTo(user.getAddress());
+                    assertThat(body.get("birthDate").asText()).isEqualTo(user.getBirthDate().toString());
+                }
+            }
+        }
+    }
+
+    @Test
     @Order(100)
     @DisplayName("Mongo mantiene índices independientes y PATCH propio conserva datos y audita")
     void shouldEnforceIndependentIndexesAndSafePatch() throws Exception {
@@ -212,7 +246,7 @@ class UserIntegrationTest {
     @Order(3)
     @DisplayName("U2 — Consulta por id OK")
     void shouldFindById_whenExists() throws Exception {
-        mockMvc.perform(get("/api/v1/users/{id}", createdUserId))
+        mockMvc.perform(get("/api/v1/users/{id}", createdUserId).header("X-Query-Actor", "SUPPORT"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(createdUserId))
                 .andExpect(jsonPath("$.firstName").value("Ana"))

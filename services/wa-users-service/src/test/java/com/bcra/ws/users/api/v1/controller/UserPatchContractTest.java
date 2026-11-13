@@ -24,6 +24,8 @@ import com.bcra.ws.users.service.UserService;
 /** Verifica PATCH con Jackson configurado para ignorar campos desconocidos. */
 @WebMvcTest(controllers = UserController.class,
         properties = "spring.jackson.deserialization.fail-on-unknown-properties=false")
+@org.springframework.context.annotation.Import({com.bcra.ws.users.api.v1.mapper.UserQueryProjection.class,
+        com.bcra.ws.users.api.v1.mapper.UserMapperImpl.class})
 class UserPatchContractTest {
 
     @Autowired

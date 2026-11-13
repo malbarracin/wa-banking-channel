@@ -55,7 +55,9 @@ class UserPatchServiceContractTest {
         var mapper = JsonMapper.builder().findAndAddModules()
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES).build();
         var service = new UserServiceImpl(userRepository, userMapper, userAuditService);
-        mockMvc = MockMvcBuilders.standaloneSetup(new UserController(service))
+        var projection = new com.bcra.ws.users.api.v1.mapper.UserQueryProjection(
+                userMapper, java.util.Set.of("BUSINESS_OPERATIONS", "SUPPORT"));
+        mockMvc = MockMvcBuilders.standaloneSetup(new UserController(service, projection))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(mapper)).build();
     }

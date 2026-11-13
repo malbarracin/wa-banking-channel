@@ -1,221 +1,162 @@
-# wa-users-service
+# wa-users-service — Servicio de Usuarios
 
-Servicio de Usuarios (H1) del canal bancario WhatsApp. Stack: Java 21, Spring Boot 3.3, MongoDB 7, MVC.
+Administra a las personas clientes del banco: alta Compliance, consulta por vistas según actor, actualización de contacto y estado operativo (activo, suspendido, baja lógica). Es la base de identidad para otros servicios del canal. No gestiona WhatsApp, vínculos de teléfono ni credenciales de sesión.
+
+## Funcionalidades
+
+- `POST /api/v1/users` — Alta de cliente (ACTIVE); unicidad de documento y email
+- `GET /api/v1/users/{id}` — Consulta por id (vista completa o básica según `X-Query-Actor`)
+- `GET /api/v1/users?documentType=&documentNumber=` — Consulta por documento
+- `PATCH /api/v1/users/{id}` — Actualización de campos de contacto/tratamiento
+- `PATCH /api/v1/users/{id}/status` — Cambio de estado (baja lógica terminal)
+- `GET /api/v1/users/{id}/audit` — Historial de auditoría
+- `GET /actuator/health` — Salud
+
+### Vistas de consulta (default)
+
+Las consultas GET seleccionan la proyección con `X-Query-Actor`:
+
+| Actor | Respuesta |
+|-------|-----------|
+| `BUSINESS_OPERATIONS`, `SUPPORT` | Dataset completo (`UserResponse`) |
+| `BANK_SERVICE`, ausente o desconocido | Subset básico: `id`, `documentType`, `documentNumber`, `status`, `channelLinkEligible` |
+
+`channelLinkEligible` es `true` solo en `ACTIVE`. `users.query.full-view-actors` (`USERS_QUERY_FULL_VIEW_ACTORS`) solo puede restringir actores internos; no amplía `BANK_SERVICE` ni desconocidos. La matriz exacta de campos visibles por actor sigue pendiente de definición por el banco. `X-Actor-Id` es solo auditoría y no modifica la vista.
+
+## Stack
+
+| | |
+|---|---|
+| Lenguaje | Java 21 |
+| Framework | Spring Boot 3.3.5 |
+| Base de datos | MongoDB 7 (`wa_users` local; H2 no aplica) |
+| Build | Maven Wrapper (`./mvnw` / `mvnw.cmd`) |
+| Documentación API | springdoc-openapi (Swagger UI) |
 
 ## Requisitos
 
-Las consultas GET por id y por documento seleccionan la vista con `X-Query-Actor`:
-`BUSINESS_OPERATIONS` y `SUPPORT` reciben el dataset completo; `BANK_SERVICE`, un valor
-desconocido o la ausencia del header reciben únicamente `id`, `documentType`,
-`documentNumber`, `status` y `channelLinkEligible`. El último campo es verdadero solo
-en `ACTIVE`; un cliente inexistente devuelve 404 y no habilita un vínculo.
+- JDK 21+
+- Docker / Docker Compose (Mongo local e integración)
+- Maven Wrapper incluido (no requiere Maven global)
 
-`users.query.full-view-actors` (variable `USERS_QUERY_FULL_VIEW_ACTORS`, lista separada
-por comas) permite restringir qué actores internos reciben la vista completa sin
-cambiar el esquema. Una lista vacía deja todas las consultas en vista básica.
-Agregar actores desconocidos o `BANK_SERVICE` a esa configuración no amplía sus datos.
-La matriz exacta de campos visibles sigue pendiente de definición por el banco.
+## Cómo correrlo
 
-El origen declarado es una selección de proyección, no una credencial ni un rol
-autenticado. La infraestructura que integre el servicio debe controlar ese origen
-según la política de acceso bancaria. `X-Actor-Id` es exclusivamente una referencia
-de auditoría y no modifica la vista de consulta. No se implementa el vínculo H3.
+### Local
 
-- Java 21+
-- Docker / Docker Compose (Mongo local y Testcontainers)
-- Maven Wrapper (`./mvnw`) — no requiere Maven global
-
-## Arranque rápido
-
-### 1. Base de datos
-
-```bash
-docker compose up -d mongo
+```powershell
+cd services/wa-users-service
+docker compose up -d --wait mongo
+.\mvnw.cmd spring-boot:run
 ```
 
-### 2. Compilar y ejecutar — Plan A (recomendado en Windows / Git Bash)
+En POSIX: `./mvnw spring-boot:run`. Perfil por defecto: `local` → `mongodb://localhost:27017/wa_users`.
 
-```bash
-./mvnw -DskipTests package
+Alternativa Windows (package + jar):
+
+```powershell
+.\mvnw.cmd -DskipTests package
 java -jar target/wa-users-service-0.0.1-SNAPSHOT.jar
 ```
 
-### 3. Alternativa — Plan B (PowerShell recomendado)
+### Con Docker
 
 ```powershell
-./mvnw spring-boot:run
+cd services/wa-users-service
+docker compose up -d --build --wait
+Invoke-RestMethod http://localhost:8080/actuator/health
+docker compose down
 ```
 
-**Advertencia (Windows / Git Bash / MINGW):** preferir **Plan A** (`package` + `java -jar`). No usar `spring-boot:run` como path principal en Git Bash si el usuario o los paths tienen caracteres no ASCII (fallas de classpath).
+Runbook completo (CI, imagen, Helm): [`../../delivery/devops-local.md`](../../delivery/devops-local.md).
 
-## Tests y coverage
+## Configuración
 
-```bash
-# 1) Mongo real para IT (estrategia equivalente a Testcontainers)
-docker compose up -d mongo
+| Variable / propiedad | Para qué | Valor por defecto |
+|---|---|---|
+| `SPRING_DATA_MONGODB_URI` | URI Mongo | `mongodb://localhost:27017/wa_users` (local) |
+| `SERVER_PORT` / `APP_PORT` | Puerto HTTP | `8080` |
+| `SPRING_PROFILES_ACTIVE` | Perfil | `local` |
+| `USERS_QUERY_FULL_VIEW_ACTORS` | Actores internos con vista completa | `BUSINESS_OPERATIONS,SUPPORT` |
+| `springdoc.swagger-ui.enabled` | UI Swagger | `false` en `prod` |
 
-# 2) Verify + JaCoCo
-./mvnw clean verify
-```
+Ver `.env.example` (sin secretos). Mongo local de Compose no tiene autenticación y publica en loopback.
 
-- Suites: unitarios (service/audit), WebMvc (controller), integración U1–U4 contra Mongo 7.
-- Persistencia IT: `docker compose up -d mongo` → `mongodb://localhost:27017/wa_users_it`
-  (equivalente documentado a Testcontainers; el cliente Testcontainers falla con el npipe
-  de Docker Desktop en este entorno Windows).
-- JaCoCo: umbral **LINE ≥ 80%** en fase `verify` (`jacocoArgLine` + surefire; sin `argLine` global).
-- Reporte HTML: `target/site/jacoco/index.html`.
-- Si Mongo no está arriba, la IT se omite (`Assumptions`) y el resto de suites sigue corriendo.
+## API
 
-## Documentación de API
+- Swagger UI: http://localhost:8080/swagger-ui.html (grupo **v1**)
+- OpenAPI: http://localhost:8080/v3/api-docs/v1 · copia estática en `delivery/openapi/openapi.json` y `.yaml`
 
-| Recurso | Path / URL |
-|---------|------------|
-| OpenAPI (fuente) | `docs/openapi.yaml` |
-| OpenAPI (contrato monorepo) | `shared/contracts/wa-users-service/openapi.yaml` |
-| Postman | `docs/postman/wa-users-service.postman_collection.json` |
-| Runtime OpenAPI JSON | `http://localhost:8080/v3/api-docs` |
-| Swagger UI | `http://localhost:8080/swagger-ui.html` |
+| Método | Ruta | Qué hace | Respuestas |
+|---|---|---|---|
+| POST | `/api/v1/users` | Alta Compliance | 201, 400, 409 |
+| GET | `/api/v1/users/{id}` | Consulta por id | 200, 404 |
+| GET | `/api/v1/users?documentType=&documentNumber=` | Consulta por documento | 200, 400, 404 |
+| PATCH | `/api/v1/users/{id}` | Update contacto | 200, 400, 404, 409 |
+| PATCH | `/api/v1/users/{id}/status` | Cambio de estado | 200, 400, 404, 409 |
+| GET | `/api/v1/users/{id}/audit` | Auditoría | 200, 404 |
 
-Variables Postman: `baseUrl`, `userId`, `documentType`, `documentNumber`, `actorId`.
-La request de alta OK guarda `userId` automáticamente si responde 201.
-
-## Endpoints
-
-| Método | Path | Descripción |
-|--------|------|-------------|
-| POST | `/api/v1/users` | Alta (U1) → 201 ACTIVE |
-| GET | `/api/v1/users/{id}` | Consulta por id (U2) |
-| GET | `/api/v1/users?documentType=&documentNumber=` | Consulta por documento (U2) |
-| PATCH | `/api/v1/users/{id}` | Update campos permitidos (U3) |
-| PATCH | `/api/v1/users/{id}/status` | Cambio de estado (U4) |
-| GET | `/api/v1/users/{id}/audit` | Historial de auditoría |
-| GET | `/actuator/health` | Health |
-| GET | `/v3/api-docs` | OpenAPI |
-| GET | `/swagger-ui.html` | Swagger UI |
-
-Header opcional de auditoría: `X-Actor-Id`.
-
-### Curls de ejemplo (U1–U4)
-
-```bash
-# U1 — Alta OK
-curl -s -X POST http://localhost:8080/api/v1/users \
-  -H "Content-Type: application/json" \
-  -H "X-Actor-Id: ops" \
-  -d '{
-    "documentType": "DNI",
-    "documentNumber": "30111222",
-    "firstName": "Maria",
-    "lastName": "Lopez",
-    "email": "maria.lopez@example.com",
-    "phone": "+5491112345678",
-    "preferredName": "Mari",
-    "preferredLanguage": "es"
-  }'
-
-# U2 — Consulta por id
-curl -s http://localhost:8080/api/v1/users/{id}
-
-# U2 — Consulta por documento
-curl -s "http://localhost:8080/api/v1/users?documentType=DNI&documentNumber=30111222"
-
-# U3 — Update campos permitidos
-curl -s -X PATCH http://localhost:8080/api/v1/users/{id} \
-  -H "Content-Type: application/json" \
-  -H "X-Actor-Id: ops" \
-  -d '{"preferredName":"Mari","email":"mari@example.com"}'
-
-# U4 — Suspender
-curl -s -X PATCH http://localhost:8080/api/v1/users/{id}/status \
-  -H "Content-Type: application/json" \
-  -H "X-Actor-Id: ops" \
-  -d '{"status":"SUSPENDED"}'
-
-# Auditoría
-curl -s http://localhost:8080/api/v1/users/{id}/audit
-```
-
-## Error contract
+### Errores
 
 ```json
 {
-  "code": "NOT_FOUND | VALIDATION_ERROR | BAD_REQUEST | INTERNAL_ERROR",
-  "message": "string",
-  "details": [],
-  "timestamp": "ISO-8601"
+  "code": "CONFLICT",
+  "message": "A user with the same document already exists",
+  "details": [
+    { "field": "documentNumber", "message": "Document already registered" }
+  ],
+  "timestamp": "2026-10-19T12:00:00Z"
 }
 ```
 
 | HTTP | code | Caso |
 |------|------|------|
-| 400 | `VALIDATION_ERROR` | Bean Validation (email inválido, campos requeridos) |
-| 400 | `BAD_REQUEST` | Transición de estado inválida / update sin campos |
+| 400 | `VALIDATION_ERROR` | Bean Validation / campo desconocido |
+| 400 | `BAD_REQUEST` | Parámetros inválidos / campo no actualizable |
 | 404 | `NOT_FOUND` | Usuario inexistente |
-| 409 | `BAD_REQUEST` | Documento duplicado (`details[].field=documentNumber`) |
+| 409 | `CONFLICT` | Documento/email duplicado o transición inválida |
 | 500 | `INTERNAL_ERROR` | Error no controlado (sin stacktrace) |
 
-### Ejemplos JSON
+## Probar la API
 
-**400 VALIDATION_ERROR**
+- Postman: importar `delivery/postman/wa-users-service.postman_collection.json` y el entorno `delivery/postman/wa-users-service.postman_environment.json`
+- Bruno: abrir `delivery/bruno/wa-users-service/`
+- Paso a paso: [`delivery/qa-manual.md`](delivery/qa-manual.md)
+- Curl y ejemplos: [`delivery/api.md`](delivery/api.md)
 
-```json
-{
-  "code": "VALIDATION_ERROR",
-  "message": "Request validation failed",
-  "details": [
-    { "field": "email", "message": "email must be valid" }
-  ],
-  "timestamp": "2026-10-19T12:00:00Z"
-}
+## Tests
+
+```powershell
+cd services/wa-users-service
+docker compose up -d --wait mongo
+.\mvnw.cmd clean verify
 ```
 
-**404 NOT_FOUND**
+- Unitarios (service/audit), WebMvc (controller), integración U1–U4 contra Mongo (`wa_users_it`).
+- JaCoCo: umbral **LINE ≥ 80%** en `verify`. Reporte: `target/site/jacoco/index.html`.
+- El verify regenera `delivery/openapi/openapi.json` y `openapi.yaml`.
 
-```json
-{
-  "code": "NOT_FOUND",
-  "message": "User not found: 661f0a1b2c3d4e5f67890123",
-  "details": [],
-  "timestamp": "2026-10-19T12:00:00Z"
-}
+Desde la raíz del repo: `.\mvnw.cmd -q -B verify` (delega al servicio).
+
+## Estructura del proyecto
+
+```
+services/wa-users-service/
+├── src/main/java/com/bcra/ws/users/
+│   ├── api/v1/{controller,dto,mapper}/
+│   ├── service/  repository/  entity/  domain/
+│   ├── exception/  config/
+├── src/main/resources/application*.yml
+├── delivery/          # API, OpenAPI, Postman, Bruno, QA
+├── Dockerfile
+└── docker-compose.yml
 ```
 
-**409 documento duplicado** (`code` = `BAD_REQUEST`)
+## Documentación
 
-```json
-{
-  "code": "BAD_REQUEST",
-  "message": "A user with the same document already exists",
-  "details": [
-    {
-      "field": "documentNumber",
-      "message": "Document already registered: DNI/30111222"
-    }
-  ],
-  "timestamp": "2026-10-19T12:00:00Z"
-}
-```
-
-**500 INTERNAL_ERROR**
-
-```json
-{
-  "code": "INTERNAL_ERROR",
-  "message": "An unexpected error occurred",
-  "details": [],
-  "timestamp": "2026-10-19T12:00:00Z"
-}
-```
-
-## Perfiles
-
-- `local` (default): Mongo en `mongodb://localhost:27017/wa_users`
-- `docker`: URI vía `SPRING_DATA_MONGODB_URI`
-
-## Docker (app + Mongo)
-
-```bash
-docker compose up -d --build
-docker compose logs -f app
-docker compose down
-```
+| Documento | Para qué |
+|---|---|
+| `delivery/api.md` | Uso de la API con ejemplos curl |
+| `delivery/architecture-overview.md` | Capas, decisiones y flujo de una petición |
+| `delivery/qa-manual.md` | Cómo probar con Postman/Bruno |
+| `../../delivery/devops-local.md` | Docker, CI y despliegue |
+| `specs/usuarios/spec.md` | Requisitos de negocio |

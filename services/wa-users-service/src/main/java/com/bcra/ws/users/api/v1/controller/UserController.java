@@ -37,9 +37,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
- * API v1 de usuarios: alta, consulta, actualización y cambio de estado (U1–U4).
- *
- * @since 2026-10-19
+ * API v1 de usuarios: alta, consulta por vistas, actualización parcial y cambio de estado.
+ * La proyección de consulta usa {@code X-Query-Actor}; {@code X-Actor-Id} solo audita.
  */
 @RestController
 @RequestMapping("/api/v1/users")
@@ -48,7 +47,23 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
     private static final String HEADER_ACTOR = "X-Actor-Id";
+    private static final String HEADER_QUERY_ACTOR = "X-Query-Actor";
     private static final String MEDIA_JSON = "application/json";
+
+    private static final String EX_CREATE_BODY = """
+            {
+              "documentType": "DNI",
+              "documentNumber": "30111222",
+              "firstName": "Maria",
+              "lastName": "Lopez",
+              "email": "maria.lopez@example.com",
+              "phone": "+5491112345678",
+              "address": "Av. Corrientes 1234",
+              "birthDate": "1990-05-20",
+              "preferredName": "Mari",
+              "preferredLanguage": "es"
+            }
+            """;
 
     private static final String EX_USER_ACTIVE = """
             {
@@ -59,12 +74,24 @@ public class UserController {
               "lastName": "Lopez",
               "email": "maria.lopez@example.com",
               "phone": "+5491112345678",
+              "address": "Av. Corrientes 1234",
+              "birthDate": "1990-05-20",
               "preferredName": "Mari",
               "preferredLanguage": "es",
               "status": "ACTIVE",
               "channelLinkEligible": true,
               "createdAt": "2026-10-19T12:00:00Z",
               "updatedAt": "2026-10-19T12:00:00Z"
+            }
+            """;
+
+    private static final String EX_USER_BASIC = """
+            {
+              "id": "661f0a1b2c3d4e5f67890123",
+              "documentType": "DNI",
+              "documentNumber": "30111222",
+              "status": "ACTIVE",
+              "channelLinkEligible": true
             }
             """;
 
@@ -77,12 +104,30 @@ public class UserController {
               "lastName": "Lopez",
               "email": "maria.lopez@example.com",
               "phone": "+5491112345678",
+              "address": "Av. Corrientes 1234",
+              "birthDate": "1990-05-20",
               "preferredName": "Mari",
               "preferredLanguage": "es",
               "status": "SUSPENDED",
               "channelLinkEligible": false,
               "createdAt": "2026-10-19T12:00:00Z",
               "updatedAt": "2026-10-19T14:00:00Z"
+            }
+            """;
+
+    private static final String EX_UPDATE_BODY = """
+            {
+              "preferredName": "Mari",
+              "email": "mari@example.com",
+              "phone": "+5491112345678",
+              "preferredLanguage": "es",
+              "address": "Av. Corrientes 1234"
+            }
+            """;
+
+    private static final String EX_STATUS_BODY = """
+            {
+              "status": "SUSPENDED"
             }
             """;
 
@@ -100,8 +145,19 @@ public class UserController {
     private static final String EX_BAD_REQUEST = """
             {
               "code": "BAD_REQUEST",
-              "message": "At least one updatable field is required: preferredName, email, phone, preferredLanguage",
+              "message": "Invalid request parameters",
               "details": [],
+              "timestamp": "2026-10-19T12:00:00Z"
+            }
+            """;
+
+    private static final String EX_NON_UPDATABLE = """
+            {
+              "code": "BAD_REQUEST",
+              "message": "Field is not updatable in this service",
+              "details": [
+                { "field": "documentNumber", "message": "Field is not updatable in this service" }
+              ],
               "timestamp": "2026-10-19T12:00:00Z"
             }
             """;
@@ -115,15 +171,23 @@ public class UserController {
             }
             """;
 
-    private static final String EX_DUPLICATE = """
+    private static final String EX_DUPLICATE_DOCUMENT = """
             {
               "code": "CONFLICT",
               "message": "A user with the same document already exists",
               "details": [
-                {
-                  "field": "documentNumber",
-                  "message": "Document already registered"
-                }
+                { "field": "documentNumber", "message": "Document already registered" }
+              ],
+              "timestamp": "2026-10-19T12:00:00Z"
+            }
+            """;
+
+    private static final String EX_DUPLICATE_EMAIL = """
+            {
+              "code": "CONFLICT",
+              "message": "A user with the same email already exists",
+              "details": [
+                { "field": "email", "message": "Email already registered" }
               ],
               "timestamp": "2026-10-19T12:00:00Z"
             }
@@ -133,7 +197,9 @@ public class UserController {
             {
               "code": "CONFLICT",
               "message": "Invalid status transition from ACTIVE to ACTIVE",
-              "details": [{ "field": "status", "message": "Status transition is not allowed" }],
+              "details": [
+                { "field": "status", "message": "Status transition is not allowed" }
+              ],
               "timestamp": "2026-10-19T12:00:00Z"
             }
             """;
@@ -174,17 +240,42 @@ public class UserController {
     private final UserQueryProjection queryProjection;
 
     /**
-     * U1 — Alta de usuario. Estado inicial ACTIVE.
+     * Alta de usuario con datos Compliance; estado inicial ACTIVE y unicidad de documento y email.
      *
-     * @param request datos mínimos
-     * @param actor   actor opcional
-     * @return 201 con usuario creado
+     * @param request datos mínimos obligatorios
+     * @param actor   referencia opcional de auditoría ({@code X-Actor-Id})
+     * @return 201 con el usuario creado
      */
     @PostMapping
     @Operation(
             summary = "Alta de usuario (U1)",
-            description = "Crea usuario con estado inicial ACTIVE y channelLinkEligible=true. "
-                    + "Unicidad por (documentType, documentNumber). Duplicado → 409.")
+            description = "Crea usuario ACTIVE con channelLinkEligible=true. "
+                    + "Unicidad independiente de (documentType, documentNumber) y de email. "
+                    + "Campos Compliance: documentType, documentNumber, firstName, lastName, email, "
+                    + "phone, address, birthDate.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            mediaType = MEDIA_JSON,
+                            schema = @Schema(implementation = UserCreateRequest.class),
+                            examples = {
+                                    @ExampleObject(name = "DNI", summary = "Alta con DNI", value = EX_CREATE_BODY),
+                                    @ExampleObject(
+                                            name = "Pasaporte",
+                                            summary = "Alta con pasaporte",
+                                            value = """
+                                                    {
+                                                      "documentType": "PASSPORT",
+                                                      "documentNumber": "AAB123456",
+                                                      "firstName": "Maria",
+                                                      "lastName": "Lopez",
+                                                      "email": "maria.passport@example.com",
+                                                      "phone": "+5491112345678",
+                                                      "address": "Av. Corrientes 1234",
+                                                      "birthDate": "1990-05-20"
+                                                    }
+                                                    """)
+                            })))
     @ApiResponses({
             @ApiResponse(
                     responseCode = "201",
@@ -195,18 +286,24 @@ public class UserController {
                             examples = @ExampleObject(name = "created", value = EX_USER_ACTIVE))),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Validación Bean Validation",
+                    description = "Validación Bean Validation o cuerpo inválido",
                     content = @Content(
                             mediaType = MEDIA_JSON,
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(name = "validation", value = EX_VALIDATION_ERROR))),
+                            examples = {
+                                    @ExampleObject(name = "validation", value = EX_VALIDATION_ERROR),
+                                    @ExampleObject(name = "badRequest", value = EX_BAD_REQUEST)
+                            })),
             @ApiResponse(
                     responseCode = "409",
-                    description = "Documento duplicado (code=CONFLICT)",
+                    description = "Documento o email duplicado (code=CONFLICT)",
                     content = @Content(
                             mediaType = MEDIA_JSON,
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(name = "duplicate", value = EX_DUPLICATE))),
+                            examples = {
+                                    @ExampleObject(name = "duplicateDocument", value = EX_DUPLICATE_DOCUMENT),
+                                    @ExampleObject(name = "duplicateEmail", value = EX_DUPLICATE_EMAIL)
+                            })),
             @ApiResponse(
                     responseCode = "500",
                     description = "Error interno",
@@ -223,18 +320,19 @@ public class UserController {
     }
 
     /**
-     * U2 — Consulta por documento (query params). Debe declararse antes que {@code /{id}}
-     * para que Spring distinga por presencia de query; aquí se usa un mapping dedicado
-     * sin path variable conflictivo vía método separado con params requeridos.
+     * Consulta por documento con proyección según {@code X-Query-Actor}.
      *
-     * @param documentType   tipo
-     * @param documentNumber número
-     * @return 200 usuario
+     * @param documentType   tipo de documento
+     * @param documentNumber número de documento
+     * @param queryActor     origen declarado de la consulta (no autentica)
+     * @return 200 con vista completa o básica
      */
     @GetMapping(params = {"documentType", "documentNumber"})
     @Operation(
             summary = "Consulta por documento (U2)",
-            description = "Busca por documentType + documentNumber (clave de unicidad).")
+            description = "Busca por documentType + documentNumber. "
+                    + "Vista completa para BUSINESS_OPERATIONS/SUPPORT (salvo restricción de "
+                    + "users.query.full-view-actors); vista básica para BANK_SERVICE, ausente o desconocido.")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -242,7 +340,10 @@ public class UserController {
                     content = @Content(
                             mediaType = MEDIA_JSON,
                             schema = @Schema(oneOf = {UserResponse.class, UserBasicResponse.class}),
-                            examples = @ExampleObject(name = "found", value = EX_USER_ACTIVE))),
+                            examples = {
+                                    @ExampleObject(name = "fullView", value = EX_USER_ACTIVE),
+                                    @ExampleObject(name = "basicView", value = EX_USER_BASIC)
+                            })),
             @ApiResponse(
                     responseCode = "400",
                     description = "Parámetros faltantes o inválidos",
@@ -256,16 +357,7 @@ public class UserController {
                     content = @Content(
                             mediaType = MEDIA_JSON,
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(
-                                    name = "notFound",
-                                    value = """
-                                            {
-                                              "code": "NOT_FOUND",
-                                              "message": "User not found",
-                                              "details": [],
-                                              "timestamp": "2026-10-19T12:00:00Z"
-                                            }
-                                            """))),
+                            examples = @ExampleObject(name = "notFound", value = EX_NOT_FOUND))),
             @ApiResponse(
                     responseCode = "500",
                     description = "Error interno",
@@ -279,9 +371,11 @@ public class UserController {
             @RequestParam DocumentType documentType,
             @Parameter(description = "Número de documento", example = "30111222")
             @RequestParam String documentNumber,
-            @Parameter(description = "Origen declarado: BUSINESS_OPERATIONS, SUPPORT o BANK_SERVICE; "
-                    + "ausente/desconocido recibe subset básico. No autentica al solicitante.")
-            @RequestHeader(value = "X-Query-Actor", required = false) String queryActor) {
+            @Parameter(
+                    description = "Origen declarado: BUSINESS_OPERATIONS, SUPPORT o BANK_SERVICE; "
+                            + "ausente/desconocido recibe subset básico. No autentica.",
+                    example = "BUSINESS_OPERATIONS")
+            @RequestHeader(value = HEADER_QUERY_ACTOR, required = false) String queryActor) {
         if (documentNumber.isBlank()) {
             throw new IllegalArgumentException("documentNumber is required");
         }
@@ -290,15 +384,17 @@ public class UserController {
     }
 
     /**
-     * U2 — Consulta por id interno.
+     * Consulta por id interno con proyección según {@code X-Query-Actor}.
      *
-     * @param id id interno
-     * @return 200 usuario
+     * @param id         id interno
+     * @param queryActor origen declarado de la consulta (no autentica)
+     * @return 200 con vista completa o básica
      */
     @GetMapping("/{id}")
     @Operation(
             summary = "Consulta por id (U2)",
-            description = "Devuelve datos autorizados + status + channelLinkEligible (true solo si ACTIVE).")
+            description = "Devuelve datos autorizados + status + channelLinkEligible (true solo si ACTIVE). "
+                    + "La proyección depende de X-Query-Actor; X-Actor-Id no afecta la vista.")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -306,7 +402,10 @@ public class UserController {
                     content = @Content(
                             mediaType = MEDIA_JSON,
                             schema = @Schema(oneOf = {UserResponse.class, UserBasicResponse.class}),
-                            examples = @ExampleObject(name = "found", value = EX_USER_ACTIVE))),
+                            examples = {
+                                    @ExampleObject(name = "fullView", value = EX_USER_ACTIVE),
+                                    @ExampleObject(name = "basicView", value = EX_USER_BASIC)
+                            })),
             @ApiResponse(
                     responseCode = "404",
                     description = "Usuario no encontrado",
@@ -325,9 +424,11 @@ public class UserController {
     public ResponseEntity<?> findById(
             @Parameter(description = "Id interno del usuario", example = "661f0a1b2c3d4e5f67890123")
             @PathVariable String id,
-            @Parameter(description = "Origen declarado: BUSINESS_OPERATIONS, SUPPORT o BANK_SERVICE; "
-                    + "ausente/desconocido recibe subset básico. No autentica al solicitante.")
-            @RequestHeader(value = "X-Query-Actor", required = false) String queryActor) {
+            @Parameter(
+                    description = "Origen declarado: BUSINESS_OPERATIONS, SUPPORT o BANK_SERVICE; "
+                            + "ausente/desconocido recibe subset básico. No autentica.",
+                    example = "BANK_SERVICE")
+            @RequestHeader(value = HEADER_QUERY_ACTOR, required = false) String queryActor) {
         if (id.isBlank()) {
             throw new IllegalArgumentException("id is required");
         }
@@ -335,18 +436,25 @@ public class UserController {
     }
 
     /**
-     * U3 — Actualización de campos permitidos.
+     * Actualización parcial de campos de contacto y tratamiento; rechaza campos ajenos al contrato.
      *
      * @param id      id interno
-     * @param request campos
-     * @param actor   actor opcional
-     * @return 200 usuario actualizado
+     * @param request campos permitidos (al menos uno)
+     * @param actor   referencia opcional de auditoría
+     * @return 200 con el usuario actualizado
      */
     @PatchMapping("/{id}")
     @Operation(
             summary = "Actualizar campos permitidos (U3)",
-            description = "Solo preferredName, email, phone, preferredLanguage. "
-                    + "Documento e identidad legal no son actualizables. Audita el cambio.")
+            description = "Solo preferredName, email, phone, preferredLanguage y address. "
+                    + "Documento, nombre/apellido legales, birthDate y status no son actualizables. "
+                    + "Email duplicado → 409 CONFLICT. Audita el cambio.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            mediaType = MEDIA_JSON,
+                            schema = @Schema(implementation = UserUpdateRequest.class),
+                            examples = @ExampleObject(name = "contacto", value = EX_UPDATE_BODY))))
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -357,13 +465,14 @@ public class UserController {
                             examples = @ExampleObject(name = "updated", value = EX_USER_ACTIVE))),
             @ApiResponse(
                     responseCode = "400",
-                    description = "Sin campos / email inválido",
+                    description = "Sin campos, validación o campo no actualizable",
                     content = @Content(
                             mediaType = MEDIA_JSON,
                             schema = @Schema(implementation = ErrorResponse.class),
                             examples = {
                                     @ExampleObject(name = "emptyUpdate", value = EX_BAD_REQUEST),
-                                    @ExampleObject(name = "validation", value = EX_VALIDATION_ERROR)
+                                    @ExampleObject(name = "validation", value = EX_VALIDATION_ERROR),
+                                    @ExampleObject(name = "nonUpdatable", value = EX_NON_UPDATABLE)
                             })),
             @ApiResponse(
                     responseCode = "404",
@@ -372,6 +481,13 @@ public class UserController {
                             mediaType = MEDIA_JSON,
                             schema = @Schema(implementation = ErrorResponse.class),
                             examples = @ExampleObject(name = "notFound", value = EX_NOT_FOUND))),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Email duplicado (code=CONFLICT)",
+                    content = @Content(
+                            mediaType = MEDIA_JSON,
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(name = "duplicateEmail", value = EX_DUPLICATE_EMAIL))),
             @ApiResponse(
                     responseCode = "500",
                     description = "Error interno",
@@ -390,19 +506,37 @@ public class UserController {
     }
 
     /**
-     * U4 — Cambio de estado con baja lógica terminal y auditoría de éxitos y rechazos.
+     * Cambia el estado operativo validando la matriz de transiciones; la baja lógica es terminal.
      *
      * @param id      id interno
      * @param request estado destino
-     * @param actor   actor opcional
-     * @return 200 usuario
+     * @param actor   referencia opcional de auditoría
+     * @return 200 con el usuario en el nuevo estado
      */
     @PatchMapping("/{id}/status")
     @Operation(
             summary = "Cambiar estado (U4)",
-            description = "Transiciones: ACTIVE↔SUSPENDED, baja lógica (LOGICALLY_DELETED), "
-                    + "sin salida desde LOGICALLY_DELETED. Audita éxitos y rechazos, incluido el mismo estado. "
-                    + "channelLinkEligible=false si status≠ACTIVE.")
+            description = "Transiciones: ACTIVE↔SUSPENDED; ACTIVE|SUSPENDED→LOGICALLY_DELETED. "
+                    + "LOGICALLY_DELETED no admite salida. Mismo estado o transición inválida → "
+                    + "auditoría FAILURE + 409 CONFLICT. channelLinkEligible=false si status≠ACTIVE.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            mediaType = MEDIA_JSON,
+                            schema = @Schema(implementation = UserStatusChangeRequest.class),
+                            examples = {
+                                    @ExampleObject(name = "suspender", value = EX_STATUS_BODY),
+                                    @ExampleObject(
+                                            name = "reactivar",
+                                            value = """
+                                                    { "status": "ACTIVE" }
+                                                    """),
+                                    @ExampleObject(
+                                            name = "bajaLogica",
+                                            value = """
+                                                    { "status": "LOGICALLY_DELETED" }
+                                                    """)
+                            })))
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -411,6 +545,13 @@ public class UserController {
                             mediaType = MEDIA_JSON,
                             schema = @Schema(implementation = UserResponse.class),
                             examples = @ExampleObject(name = "suspended", value = EX_USER_SUSPENDED))),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Cuerpo inválido",
+                    content = @Content(
+                            mediaType = MEDIA_JSON,
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(name = "validation", value = EX_VALIDATION_ERROR))),
             @ApiResponse(
                     responseCode = "409",
                     description = "Transición inválida",
@@ -443,15 +584,16 @@ public class UserController {
     }
 
     /**
-     * Historial de auditoría del usuario.
+     * Devuelve el historial append-only de auditoría del usuario, ordenado descendente por timestamp.
      *
      * @param id id interno
-     * @return 200 lista de eventos
+     * @return 200 con la lista de eventos
      */
     @GetMapping("/{id}/audit")
     @Operation(
             summary = "Historial de auditoría",
-            description = "Eventos append-only ordenados desc por timestamp (USER_CREATED, USER_UPDATED, STATUS_CHANGED).")
+            description = "Eventos append-only ordenados desc por timestamp "
+                    + "(USER_CREATED, USER_UPDATED, STATUS_CHANGED; SUCCESS/FAILURE).")
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",

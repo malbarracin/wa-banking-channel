@@ -60,7 +60,7 @@ api:
 logging:
   level:
     root: INFO
-    com.ingenia.wa.users: DEBUG
+    com.bcra.ws.users: DEBUG
 
 ---
 spring:

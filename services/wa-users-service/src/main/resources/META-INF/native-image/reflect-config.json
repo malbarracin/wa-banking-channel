@@ -1,6 +1,6 @@
 [
   {
-    "name": "com.ingenia.wa.users.api.error.ErrorResponse",
+    "name": "com.bcra.ws.users.api.error.ErrorResponse",
     "allDeclaredConstructors": true,
     "allDeclaredMethods": true,
     "allDeclaredFields": true

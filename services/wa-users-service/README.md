@@ -45,7 +45,7 @@ docker compose up -d mongo
 - Persistencia IT: `docker compose up -d mongo` → `mongodb://localhost:27017/wa_users_it`
   (equivalente documentado a Testcontainers; el cliente Testcontainers falla con el npipe
   de Docker Desktop en este entorno Windows).
-- JaCoCo: umbral **LINE ≥ 70%** en fase `verify` (`jacocoArgLine` + surefire; sin `argLine` global).
+- JaCoCo: umbral **LINE ≥ 80%** en fase `verify` (`jacocoArgLine` + surefire; sin `argLine` global).
 - Reporte HTML: `target/site/jacoco/index.html`.
 - Si Mongo no está arriba, la IT se omite (`Assumptions`) y el resto de suites sigue corriendo.
 

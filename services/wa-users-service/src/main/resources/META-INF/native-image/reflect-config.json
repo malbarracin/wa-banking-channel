@@ -1,0 +1,19 @@
+[
+  {
+    "name": "com.bcra.ws.users.exception.FieldError",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.bcra.ws.users.exception.ErrorCode",
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  },
+  {
+    "name": "com.bcra.ws.users.exception.ErrorResponse",
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true,
+    "allDeclaredFields": true
+  }
+]

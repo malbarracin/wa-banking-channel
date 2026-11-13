@@ -1,0 +1,34 @@
+services:
+  app:
+    build: .
+    image: ${APP_IMAGE:-wa-users-service:local}
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATA_MONGODB_URI=${SPRING_DATA_MONGODB_URI:-mongodb://mongo:27017/wa_users}
+      - APP_NAME=${APP_NAME:-wa-users-service}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  mongo:
+    image: mongo:7.0
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.runCommand({ping:1}).ok ? 0 : 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo-data:

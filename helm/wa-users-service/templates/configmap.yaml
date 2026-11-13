@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "users.name" . }}
+  labels:
+    {{- include "users.labels" . | nindent 4 }}
+data:
+  SPRING_PROFILES_ACTIVE: {{ .Values.springProfile | quote }}
+  SERVER_PORT: "8080"

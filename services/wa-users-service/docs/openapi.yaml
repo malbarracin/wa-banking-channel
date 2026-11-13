@@ -1,0 +1,602 @@
+openapi: 3.0.3
+info:
+  title: wa-users-service API
+  description: |
+    H1 — Servicio de Usuarios (WA Banking Channel).
+
+    Flujos U1–U4: alta, consulta (id/documento), actualización parcial y cambio de estado.
+    Unicidad: `(documentType, documentNumber)`.
+    Estados: `ACTIVE`, `SUSPENDED`, `LOGICALLY_DELETED`.
+    `channelLinkEligible=true` solo si `status=ACTIVE`.
+
+    **Fuera de alcance:** JWT/auth, WhatsApp y vínculo de canal (H3+).
+  version: v1
+  contact:
+    name: Ingenia
+    email: marcelo.albarracin@ingenia.la
+
+servers:
+  - url: http://localhost:8080
+    description: Local (Plan A/B)
+
+tags:
+  - name: Users
+    description: Banking users administration (H1) — U1–U4. No JWT. No WhatsApp.
+
+paths:
+  /api/v1/users:
+    post:
+      tags: [Users]
+      operationId: createUser
+      summary: Alta de usuario (U1)
+      description: |
+        Registra un usuario. Estado inicial ACTIVE con channelLinkEligible=true.
+        Unicidad en (documentType, documentNumber). Duplicado → HTTP 409.
+      parameters:
+        - $ref: '#/components/parameters/ActorHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreateRequest'
+            examples:
+              alta:
+                value:
+                  documentType: DNI
+                  documentNumber: "30111222"
+                  firstName: Maria
+                  lastName: Lopez
+                  email: maria.lopez@example.com
+                  phone: "+5491112345678"
+                  preferredName: Mari
+                  preferredLanguage: es
+      responses:
+        '201':
+          description: Usuario creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              examples:
+                created:
+                  value:
+                    id: "661f0a1b2c3d4e5f67890123"
+                    documentType: DNI
+                    documentNumber: "30111222"
+                    firstName: Maria
+                    lastName: Lopez
+                    email: maria.lopez@example.com
+                    phone: "+5491112345678"
+                    preferredName: Mari
+                    preferredLanguage: es
+                    status: ACTIVE
+                    channelLinkEligible: true
+                    createdAt: "2026-10-19T12:00:00Z"
+                    updatedAt: "2026-10-19T12:00:00Z"
+        '400':
+          description: VALIDATION_ERROR (Bean Validation)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation:
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Request validation failed
+                    details:
+                      - field: email
+                        message: email must be valid
+                    timestamp: "2026-10-19T12:00:00Z"
+        '409':
+          description: Documento duplicado (code=BAD_REQUEST)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicate:
+                  value:
+                    code: BAD_REQUEST
+                    message: A user with the same document already exists
+                    details:
+                      - field: documentNumber
+                        message: "Document already registered: DNI/30111222"
+                    timestamp: "2026-10-19T12:00:00Z"
+        '500':
+          description: INTERNAL_ERROR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                internal:
+                  $ref: '#/components/examples/InternalError'
+    get:
+      tags: [Users]
+      operationId: findUserByDocument
+      summary: Consulta por documento (U2)
+      description: Lookup por documentType + documentNumber (clave de unicidad).
+      parameters:
+        - name: documentType
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/DocumentType'
+          example: DNI
+        - name: documentNumber
+          in: query
+          required: true
+          schema:
+            type: string
+          example: "30111222"
+      responses:
+        '200':
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    code: NOT_FOUND
+                    message: "User not found: document=DNI/99999999"
+                    details: []
+                    timestamp: "2026-10-19T12:00:00Z"
+        '500':
+          description: INTERNAL_ERROR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/users/{id}:
+    get:
+      tags: [Users]
+      operationId: findUserById
+      summary: Consulta por id (U2)
+      description: Devuelve datos autorizados, status y channelLinkEligible.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  $ref: '#/components/examples/NotFound'
+        '500':
+          description: INTERNAL_ERROR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags: [Users]
+      operationId: updateUser
+      summary: Actualizar campos permitidos (U3)
+      description: |
+        Solo preferredName, email, phone, preferredLanguage.
+        Identidad documental y legal son inmutables. Audita el cambio.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/ActorHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateRequest'
+            examples:
+              partialUpdate:
+                value:
+                  preferredName: Mari
+                  email: mari@example.com
+      responses:
+        '200':
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: BAD_REQUEST / VALIDATION_ERROR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                emptyUpdate:
+                  value:
+                    code: BAD_REQUEST
+                    message: >-
+                      At least one updatable field is required: preferredName, email, phone,
+                      preferredLanguage
+                    details: []
+                    timestamp: "2026-10-19T12:00:00Z"
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: INTERNAL_ERROR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/users/{id}/status:
+    patch:
+      tags: [Users]
+      operationId: changeUserStatus
+      summary: Cambiar estado (U4)
+      description: |
+        Transiciones permitidas:
+        ACTIVE → SUSPENDED | LOGICALLY_DELETED;
+        SUSPENDED → ACTIVE | LOGICALLY_DELETED;
+        LOGICALLY_DELETED → ACTIVE.
+        channelLinkEligible es true solo cuando status es ACTIVE.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - $ref: '#/components/parameters/ActorHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserStatusChangeRequest'
+            examples:
+              suspend:
+                value:
+                  status: SUSPENDED
+      responses:
+        '200':
+          description: Estado actualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+              examples:
+                suspended:
+                  value:
+                    id: "661f0a1b2c3d4e5f67890123"
+                    documentType: DNI
+                    documentNumber: "30111222"
+                    firstName: Maria
+                    lastName: Lopez
+                    email: maria.lopez@example.com
+                    phone: "+5491112345678"
+                    preferredName: Mari
+                    preferredLanguage: es
+                    status: SUSPENDED
+                    channelLinkEligible: false
+                    createdAt: "2026-10-19T12:00:00Z"
+                    updatedAt: "2026-10-19T14:00:00Z"
+        '400':
+          description: Transición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidTransition:
+                  value:
+                    code: BAD_REQUEST
+                    message: Invalid status transition from ACTIVE to ACTIVE
+                    details: []
+                    timestamp: "2026-10-19T12:00:00Z"
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: INTERNAL_ERROR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/users/{id}/audit:
+    get:
+      tags: [Users]
+      operationId: findUserAuditTrail
+      summary: Historial de auditoría
+      description: Eventos append-only (alta, updates, cambios de estado), newest first.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Lista de eventos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserAuditEventResponse'
+              examples:
+                trail:
+                  value:
+                    - id: "66f0a1b2c3d4e5f678901234"
+                      userId: "661f0a1b2c3d4e5f67890123"
+                      action: STATUS_CHANGED
+                      timestamp: "2026-10-19T14:00:00Z"
+                      result: SUCCESS
+                      summary:
+                        from: ACTIVE
+                        to: SUSPENDED
+                      actor: ops
+                    - id: "66f0a1b2c3d4e5f678901233"
+                      userId: "661f0a1b2c3d4e5f67890123"
+                      action: USER_CREATED
+                      timestamp: "2026-10-19T12:00:00Z"
+                      result: SUCCESS
+                      summary:
+                        documentType: DNI
+                        documentNumber: "30111222"
+                      actor: ops
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: INTERNAL_ERROR
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      description: Id interno del usuario
+      schema:
+        type: string
+      example: "661f0a1b2c3d4e5f67890123"
+    ActorHeader:
+      name: X-Actor-Id
+      in: header
+      required: false
+      description: Actor opcional para auditoría (si no se envía, SYSTEM)
+      schema:
+        type: string
+      example: ops
+
+  examples:
+    NotFound:
+      value:
+        code: NOT_FOUND
+        message: "User not found: 661f0a1b2c3d4e5f67890123"
+        details: []
+        timestamp: "2026-10-19T12:00:00Z"
+    InternalError:
+      value:
+        code: INTERNAL_ERROR
+        message: An unexpected error occurred
+        details: []
+        timestamp: "2026-10-19T12:00:00Z"
+
+  schemas:
+    DocumentType:
+      type: string
+      enum: [DNI, PASSPORT, CUIT]
+      example: DNI
+
+    UserStatus:
+      type: string
+      enum: [ACTIVE, SUSPENDED, LOGICALLY_DELETED]
+      description: Solo ACTIVE implica channelLinkEligible=true
+      example: ACTIVE
+
+    UserCreateRequest:
+      type: object
+      required:
+        - documentType
+        - documentNumber
+        - firstName
+        - lastName
+        - email
+      properties:
+        documentType:
+          $ref: '#/components/schemas/DocumentType'
+        documentNumber:
+          type: string
+          maxLength: 32
+          example: "30111222"
+        firstName:
+          type: string
+          maxLength: 100
+          example: Maria
+        lastName:
+          type: string
+          maxLength: 100
+          example: Lopez
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: maria.lopez@example.com
+        phone:
+          type: string
+          maxLength: 32
+          example: "+5491112345678"
+        preferredName:
+          type: string
+          maxLength: 100
+          example: Mari
+        preferredLanguage:
+          type: string
+          maxLength: 16
+          example: es
+          default: es
+
+    UserUpdateRequest:
+      type: object
+      description: Al menos un campo debe estar presente
+      properties:
+        preferredName:
+          type: string
+          maxLength: 100
+          example: Mari
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: mari@example.com
+        phone:
+          type: string
+          maxLength: 32
+          example: "+5491112345678"
+        preferredLanguage:
+          type: string
+          maxLength: 16
+          example: es
+
+    UserStatusChangeRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/UserStatus'
+
+    UserResponse:
+      type: object
+      required:
+        - id
+        - documentType
+        - documentNumber
+        - firstName
+        - lastName
+        - email
+        - status
+        - channelLinkEligible
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          example: "661f0a1b2c3d4e5f67890123"
+        documentType:
+          $ref: '#/components/schemas/DocumentType'
+        documentNumber:
+          type: string
+          example: "30111222"
+        firstName:
+          type: string
+          example: Maria
+        lastName:
+          type: string
+          example: Lopez
+        email:
+          type: string
+          example: maria.lopez@example.com
+        phone:
+          type: string
+          example: "+5491112345678"
+        preferredName:
+          type: string
+          example: Mari
+        preferredLanguage:
+          type: string
+          example: es
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        channelLinkEligible:
+          type: boolean
+          description: true solo si status=ACTIVE
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          example: "2026-10-19T12:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2026-10-19T12:00:00Z"
+
+    UserAuditEventResponse:
+      type: object
+      required:
+        - id
+        - userId
+        - action
+        - timestamp
+        - result
+      properties:
+        id:
+          type: string
+          example: "66f0a1b2c3d4e5f678901234"
+        userId:
+          type: string
+          example: "661f0a1b2c3d4e5f67890123"
+        action:
+          type: string
+          enum: [USER_CREATED, USER_UPDATED, STATUS_CHANGED]
+          example: STATUS_CHANGED
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-10-19T14:00:00Z"
+        result:
+          type: string
+          enum: [SUCCESS, FAILURE]
+          example: SUCCESS
+        summary:
+          type: object
+          additionalProperties: true
+          example:
+            from: ACTIVE
+            to: SUSPENDED
+        actor:
+          type: string
+          example: ops
+
+    ErrorResponse:
+      type: object
+      required:
+        - code
+        - message
+        - details
+        - timestamp
+      properties:
+        code:
+          type: string
+          enum: [NOT_FOUND, VALIDATION_ERROR, BAD_REQUEST, INTERNAL_ERROR]
+          example: NOT_FOUND
+        message:
+          type: string
+          example: User not found
+        details:
+          type: array
+          items: {}
+          example: []
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-10-19T12:00:00Z"

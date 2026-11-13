@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wa-users-service
+description: Users service with external MongoDB
+type: application
+version: 0.1.0
+appVersion: 0.0.1-SNAPSHOT

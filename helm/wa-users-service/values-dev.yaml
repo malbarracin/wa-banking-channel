@@ -1,0 +1,4 @@
+replicaCount: 1
+springProfile: dev
+mongodb:
+  existingSecret: wa-users-mongodb-dev

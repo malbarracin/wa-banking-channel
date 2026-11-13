@@ -1,0 +1,8 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+
+logging:
+  level:
+    root: WARN
+    com.bcra.ws.users: INFO

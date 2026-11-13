@@ -1,0 +1,19 @@
+replicaCount: 1
+image:
+  repository: wa-users-service
+  tag: local
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+springProfile: prod
+mongodb:
+  existingSecret: wa-users-mongodb
+  uriKey: uri
+service:
+  port: 8080
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: '1'
+    memory: 768Mi

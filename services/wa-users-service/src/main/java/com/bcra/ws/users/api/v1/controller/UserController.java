@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.bcra.ws.users.api.error.ErrorResponse;
+import com.bcra.ws.users.exception.ErrorResponse;
 import com.bcra.ws.users.api.v1.dto.UserAuditEventResponse;
 import com.bcra.ws.users.api.v1.dto.UserCreateRequest;
 import com.bcra.ws.users.api.v1.dto.UserResponse;
@@ -107,7 +107,7 @@ public class UserController {
     private static final String EX_NOT_FOUND = """
             {
               "code": "NOT_FOUND",
-              "message": "User not found: 661f0a1b2c3d4e5f67890123",
+              "message": "User not found",
               "details": [],
               "timestamp": "2026-10-19T12:00:00Z"
             }
@@ -115,12 +115,12 @@ public class UserController {
 
     private static final String EX_DUPLICATE = """
             {
-              "code": "BAD_REQUEST",
+              "code": "CONFLICT",
               "message": "A user with the same document already exists",
               "details": [
                 {
                   "field": "documentNumber",
-                  "message": "Document already registered: DNI/30111222"
+                  "message": "Document already registered"
                 }
               ],
               "timestamp": "2026-10-19T12:00:00Z"
@@ -129,9 +129,9 @@ public class UserController {
 
     private static final String EX_INVALID_TRANSITION = """
             {
-              "code": "BAD_REQUEST",
+              "code": "CONFLICT",
               "message": "Invalid status transition from ACTIVE to ACTIVE",
-              "details": [],
+              "details": [{ "field": "status", "message": "Status transition is not allowed" }],
               "timestamp": "2026-10-19T12:00:00Z"
             }
             """;
@@ -199,7 +199,7 @@ public class UserController {
                             examples = @ExampleObject(name = "validation", value = EX_VALIDATION_ERROR))),
             @ApiResponse(
                     responseCode = "409",
-                    description = "Documento duplicado (code=BAD_REQUEST)",
+                    description = "Documento duplicado (code=CONFLICT)",
                     content = @Content(
                             mediaType = MEDIA_JSON,
                             schema = @Schema(implementation = ErrorResponse.class),
@@ -258,7 +258,7 @@ public class UserController {
                                     value = """
                                             {
                                               "code": "NOT_FOUND",
-                                              "message": "User not found: document=DNI/99999999",
+                                              "message": "User not found",
                                               "details": [],
                                               "timestamp": "2026-10-19T12:00:00Z"
                                             }
@@ -396,7 +396,7 @@ public class UserController {
                             schema = @Schema(implementation = UserResponse.class),
                             examples = @ExampleObject(name = "suspended", value = EX_USER_SUSPENDED))),
             @ApiResponse(
-                    responseCode = "400",
+                    responseCode = "409",
                     description = "Transición inválida",
                     content = @Content(
                             mediaType = MEDIA_JSON,

@@ -147,7 +147,7 @@ class UserIntegrationTest {
 
     @Test
     @Order(2)
-    @DisplayName("U1 — Alta duplicada → 409 BAD_REQUEST")
+    @DisplayName("U1 — Alta duplicada → 409 CONFLICT")
     void shouldRejectDuplicate_whenSameDocument() throws Exception {
         mockMvc.perform(post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -164,7 +164,7 @@ class UserIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
                 .andExpect(jsonPath("$.details[0].field").value("documentNumber"));
     }
 
@@ -266,7 +266,7 @@ class UserIntegrationTest {
 
     @Test
     @Order(9)
-    @DisplayName("U4 — Transición inválida SUSPENDED→SUSPENDED → 400")
+    @DisplayName("U4 — Transición inválida SUSPENDED→SUSPENDED → 409")
     void shouldRejectInvalidTransition_whenSameStatus() throws Exception {
         mockMvc.perform(patch("/api/v1/users/{id}/status", createdUserId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -275,8 +275,8 @@ class UserIntegrationTest {
                                   "status": "SUSPENDED"
                                 }
                                 """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"));
     }
 
     @Test

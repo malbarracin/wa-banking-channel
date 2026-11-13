@@ -23,9 +23,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 
-import com.bcra.ws.users.api.error.DuplicateDocumentException;
-import com.bcra.ws.users.api.error.InvalidStatusTransitionException;
-import com.bcra.ws.users.api.error.UserNotFoundException;
+import com.bcra.ws.users.exception.DuplicateDocumentException;
+import com.bcra.ws.users.exception.InvalidStatusTransitionException;
+import com.bcra.ws.users.exception.UserNotFoundException;
 import com.bcra.ws.users.api.v1.dto.UserAuditEventResponse;
 import com.bcra.ws.users.api.v1.dto.UserCreateRequest;
 import com.bcra.ws.users.api.v1.dto.UserResponse;

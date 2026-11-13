@@ -6,11 +6,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import com.bcra.ws.users.exception.DuplicateDocumentException;
+import com.bcra.ws.users.exception.DuplicateEmailException;
 import com.bcra.ws.users.exception.InvalidStatusTransitionException;
 import com.bcra.ws.users.exception.UserNotFoundException;
 import com.bcra.ws.users.api.v1.dto.UserAuditEventResponse;
@@ -40,6 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 public class UserServiceImpl implements UserService {
 
     private static final String DEFAULT_LANGUAGE = "es";
+    private static final Pattern EMAIL_INDEX = Pattern.compile("\\bindex:\\s*(?:[^\\s]+\\$)?uk_email\\s");
 
     private static final Map<UserStatus, Set<UserStatus>> ALLOWED_TRANSITIONS = Map.of(
             UserStatus.ACTIVE, Set.of(UserStatus.SUSPENDED, UserStatus.LOGICALLY_DELETED),
@@ -67,6 +70,11 @@ public class UserServiceImpl implements UserService {
             throw new DuplicateDocumentException(documentType, documentNumber);
         }
 
+        if (userRepository.existsByEmail(request.getEmail())) {
+            recordDuplicate(null, AuditAction.USER_CREATED, "email", actor);
+            throw new DuplicateEmailException();
+        }
+
         Instant now = Instant.now();
         UserEntity entity = userMapper.toEntity(request);
         entity.setDocumentNumber(documentNumber);
@@ -86,6 +94,10 @@ public class UserServiceImpl implements UserService {
             log.info("User created: id={}", saved.getId());
             return userMapper.toResponse(saved);
         } catch (DuplicateKeyException exception) {
+            if (isEmailCollision(exception)) {
+                recordDuplicate(null, AuditAction.USER_CREATED, "email", actor);
+                throw new DuplicateEmailException();
+            }
             userAuditService.record(
                     null,
                     AuditAction.USER_CREATED,
@@ -118,8 +130,18 @@ public class UserServiceImpl implements UserService {
         Objects.requireNonNull(request, "request must not be null");
         validateAtLeastOneUpdateField(request);
 
-        UserEntity entity = requireUser(id);
+        UserEntity original = requireUser(id);
+        if (request.getEmail() != null && userRepository.existsByEmailAndIdNot(request.getEmail(), original.getId())) {
+            recordDuplicate(id, AuditAction.USER_UPDATED, "email", actor);
+            throw new DuplicateEmailException();
+        }
+        UserEntity entity = original.toBuilder().build();
         Map<String, Object> changed = new HashMap<>();
+
+        if (request.getAddress() != null) {
+            entity.setAddress(request.getAddress());
+            changed.put("address", request.getAddress());
+        }
 
         if (request.getPreferredName() != null) {
             entity.setPreferredName(request.getPreferredName());
@@ -140,7 +162,17 @@ public class UserServiceImpl implements UserService {
         }
 
         entity.setUpdatedAt(Instant.now());
-        UserEntity saved = userRepository.save(entity);
+        UserEntity saved;
+        try {
+            saved = userRepository.save(entity);
+        } catch (DuplicateKeyException exception) {
+            String field = isEmailCollision(exception) ? "email" : "documentNumber";
+            recordDuplicate(id, AuditAction.USER_UPDATED, field, actor);
+            if (isEmailCollision(exception)) {
+                throw new DuplicateEmailException();
+            }
+            throw new DuplicateDocumentException(entity.getDocumentType(), entity.getDocumentNumber());
+        }
         userAuditService.record(saved.getId(), AuditAction.USER_UPDATED, AuditResult.SUCCESS, changed, actor);
         log.info("User updated: id={}, fields={}", id, changed.keySet());
         return userMapper.toResponse(saved);
@@ -204,10 +236,11 @@ public class UserServiceImpl implements UserService {
         boolean anyPresent = request.getPreferredName() != null
                 || request.getEmail() != null
                 || request.getPhone() != null
-                || request.getPreferredLanguage() != null;
+                || request.getPreferredLanguage() != null
+                || request.getAddress() != null;
         if (!anyPresent) {
             throw new IllegalArgumentException(
-                    "At least one updatable field is required: preferredName, email, phone, preferredLanguage");
+                    "At least one updatable field is required: preferredName, email, phone, preferredLanguage, address");
         }
     }
 
@@ -216,6 +249,23 @@ public class UserServiceImpl implements UserService {
             return "";
         }
         return documentNumber.trim();
+    }
+
+    private void recordDuplicate(String id, AuditAction action, String field, String actor) {
+        userAuditService.record(id, action, AuditResult.FAILURE,
+                Map.of("field", field, "reason", "DUPLICATE"), actor);
+    }
+
+    private static boolean isEmailCollision(DuplicateKeyException exception) {
+        Throwable cause = exception;
+        while (cause != null) {
+            String message = cause.getMessage();
+            if (message != null && EMAIL_INDEX.matcher(message + " ").find()) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     private static String resolveLanguage(String preferredLanguage) {

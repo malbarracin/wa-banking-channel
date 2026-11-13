@@ -5,6 +5,7 @@ import java.time.LocalDate;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import com.bcra.ws.users.domain.DocumentType;
@@ -26,7 +27,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "users")
@@ -45,6 +46,7 @@ public class UserEntity {
 
     private String lastName;
 
+    @Indexed(name = "uk_email", unique = true)
     private String email;
 
     private String phone;

@@ -378,6 +378,72 @@ class UserServiceImplTest {
         subject.create(request, null);
     }
 
+    @Test
+    @DisplayName("Email duplicado en alta se rechaza y audita sin guardar")
+    void shouldRejectDuplicateEmailOnCreate() {
+        when(userRepository.existsByEmail("maria.lopez@example.com")).thenReturn(true);
+        assertThatThrownBy(() -> subject.create(baseCreateRequest(), "actor"))
+                .isInstanceOf(com.bcra.ws.users.exception.DuplicateEmailException.class);
+        verify(userRepository, never()).save(any());
+        verify(userAuditService).record(isNull(), eq(AuditAction.USER_CREATED), eq(AuditResult.FAILURE),
+                any(), eq("actor"));
+    }
+
+    @Test
+    @DisplayName("Precheck de email en PATCH evita cualquier cambio parcial")
+    void shouldRejectEmailBeforeChangingOtherFields() {
+        UserEntity original = sampleEntity("user-1", UserStatus.ACTIVE);
+        when(userRepository.findById("user-1")).thenReturn(Optional.of(original));
+        when(userRepository.existsByEmailAndIdNot("taken@example.com", "user-1")).thenReturn(true);
+        assertThatThrownBy(() -> subject.update("user-1", UserUpdateRequest.builder()
+                .email("taken@example.com").preferredName("Changed").build(), "actor"))
+                .isInstanceOf(com.bcra.ws.users.exception.DuplicateEmailException.class);
+        assertThat(original.getPreferredName()).isNull();
+        verify(userRepository, never()).save(any());
+        verify(userAuditService).record(eq("user-1"), eq(AuditAction.USER_UPDATED), eq(AuditResult.FAILURE),
+                any(), eq("actor"));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"uk_email", "uk_document"})
+    @DisplayName("Carreras de alta y PATCH identifican el índice y auditan rechazo")
+    void shouldTranslateRacingIndexes(String index) {
+        UserCreateRequest create = baseCreateRequest();
+        when(userMapper.toEntity(create)).thenReturn(sampleEntity(null, UserStatus.ACTIVE));
+        when(userRepository.save(any())).thenThrow(new DuplicateKeyException("index: " + index));
+        Class<? extends RuntimeException> expected = index.equals("uk_email")
+                ? com.bcra.ws.users.exception.DuplicateEmailException.class : DuplicateDocumentException.class;
+        assertThatThrownBy(() -> subject.create(create, "actor")).isInstanceOf(expected);
+        UserEntity original = sampleEntity("user-1", UserStatus.ACTIVE);
+        when(userRepository.findById("user-1")).thenReturn(Optional.of(original));
+        assertThatThrownBy(() -> subject.update("user-1", UserUpdateRequest.builder()
+                .email("new@example.com").address("Changed").build(), "actor")).isInstanceOf(expected);
+        assertThat(original.getEmail()).isEqualTo("maria.lopez@example.com");
+        assertThat(original.getAddress()).isNull();
+        verify(userAuditService).record(eq("user-1"), eq(AuditAction.USER_UPDATED), eq(AuditResult.FAILURE),
+                any(), eq("actor"));
+    }
+
+    @Test
+    @DisplayName("PATCH admite email propio y dirección conservando los campos omitidos")
+    void shouldKeepOwnEmailAndOmittedFields() {
+        UserEntity original = sampleEntity("user-1", UserStatus.ACTIVE);
+        when(userRepository.findById("user-1")).thenReturn(Optional.of(original));
+        when(userRepository.save(any())).thenAnswer(invocation -> {
+            UserEntity saved = invocation.getArgument(0);
+            assertThat(saved.getFirstName()).isEqualTo(original.getFirstName());
+            assertThat(saved.getCreatedAt()).isEqualTo(original.getCreatedAt());
+            assertThat(saved.getDocumentNumber()).isEqualTo(original.getDocumentNumber());
+            assertThat(saved.getAddress()).isEqualTo("New address");
+            return saved;
+        });
+        subject.update("user-1", UserUpdateRequest.builder()
+                .email(original.getEmail()).address("New address").build(), "actor");
+        verify(userRepository).existsByEmailAndIdNot(original.getEmail(), "user-1");
+        verify(userAuditService).record(eq("user-1"), eq(AuditAction.USER_UPDATED), eq(AuditResult.SUCCESS),
+                any(), eq("actor"));
+    }
+
     private static UserCreateRequest baseCreateRequest() {
         return UserCreateRequest.builder()
                 .documentType(DocumentType.DNI)

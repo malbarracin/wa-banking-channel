@@ -87,11 +87,51 @@ class UserIntegrationTest {
 
     private static boolean cleaned;
 
+    @Test
+    @Order(100)
+    @DisplayName("Mongo mantiene índices independientes y PATCH propio conserva datos y audita")
+    void shouldEnforceIndependentIndexesAndSafePatch() throws Exception {
+        UserEntity first = userRepository.findById(createdUserId).orElseThrow();
+        UserEntity other = first.toBuilder().id(null).documentNumber("99887766")
+                .email("independent@example.com").build();
+        other = userRepository.save(other);
+        final UserEntity second = other;
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> userRepository.save(first.toBuilder()
+                .id(null).documentNumber("88776655").build()))
+                .isInstanceOf(org.springframework.dao.DuplicateKeyException.class)
+                .hasMessageContaining("uk_email");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> userRepository.save(first.toBuilder()
+                .id(null).email("different@example.com").build()))
+                .isInstanceOf(org.springframework.dao.DuplicateKeyException.class)
+                .hasMessageContaining("uk_document");
+        mockMvc.perform(patch("/api/v1/users/{id}", second.getId()).contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Actor-Id", "editor")
+                        .content("{\"email\":\"" + first.getEmail() + "\",\"address\":\"Rejected\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.details[0].field").value("email"));
+        assertThat(userRepository.findById(second.getId()).orElseThrow().getAddress())
+                .isEqualTo(second.getAddress());
+        mockMvc.perform(patch("/api/v1/users/{id}", second.getId()).contentType(MediaType.APPLICATION_JSON)
+                        .header("X-Actor-Id", "editor")
+                        .content("{\"email\":\"independent@example.com\",\"address\":\"New address\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.address").value("New address"))
+                .andExpect(jsonPath("$.firstName").value(second.getFirstName()));
+        assertThat(auditEventRepository.findByUserIdOrderByTimestampDesc(second.getId()))
+                .anySatisfy(event -> {
+                    assertThat(event.getAction()).isEqualTo(AuditAction.USER_UPDATED);
+                    assertThat(event.getResult()).isEqualTo(AuditResult.FAILURE);
+                    assertThat(event.getActor()).isEqualTo("editor");
+                    assertThat(event.getTimestamp()).isNotNull();
+                });
+    }
+
     @BeforeEach
     void cleanOnce() {
         if (!cleaned) {
             mongoTemplate.dropCollection(UserEntity.class);
             mongoTemplate.dropCollection(UserAuditEventEntity.class);
+            new com.bcra.ws.users.repository.UserIndexInitializer(mongoTemplate).run(null);
             cleaned = true;
         }
     }

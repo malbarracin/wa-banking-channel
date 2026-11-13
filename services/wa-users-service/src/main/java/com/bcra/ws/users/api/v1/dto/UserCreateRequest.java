@@ -1,11 +1,14 @@
 package com.bcra.ws.users.api.v1.dto;
 
+import java.time.LocalDate;
+
 import com.bcra.ws.users.domain.DocumentType;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Past;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -64,12 +67,24 @@ public class UserCreateRequest {
             requiredMode = Schema.RequiredMode.REQUIRED)
     private String email;
 
+    @NotBlank(message = "phone is required")
     @Size(max = 32)
     @Schema(
             description = "Teléfono de contacto genérico (no es vínculo WhatsApp)",
             example = "+5491112345678",
-            requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+            requiredMode = Schema.RequiredMode.REQUIRED)
     private String phone;
+
+    @NotBlank(message = "address is required")
+    @Schema(description = "Dirección de residencia", example = "Av. Corrientes 1234",
+            requiredMode = Schema.RequiredMode.REQUIRED)
+    private String address;
+
+    @NotNull(message = "birthDate is required")
+    @Past(message = "birthDate must be in the past")
+    @Schema(description = "Fecha de nacimiento", example = "1990-05-20",
+            requiredMode = Schema.RequiredMode.REQUIRED)
+    private LocalDate birthDate;
 
     @Size(max = 100)
     @Schema(

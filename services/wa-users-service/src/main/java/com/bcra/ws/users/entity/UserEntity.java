@@ -1,6 +1,7 @@
 package com.bcra.ws.users.entity;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
@@ -11,8 +12,10 @@ import com.bcra.ws.users.domain.UserStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Documento persistido del usuario bancario en la colección {@code users}.
@@ -20,7 +23,9 @@ import lombok.NoArgsConstructor;
  *
  * @since 2026-10-19
  */
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -29,6 +34,7 @@ import lombok.NoArgsConstructor;
 public class UserEntity {
 
     @Id
+    @EqualsAndHashCode.Include
     private String id;
 
     private DocumentType documentType;
@@ -42,6 +48,10 @@ public class UserEntity {
     private String email;
 
     private String phone;
+
+    private String address;
+
+    private LocalDate birthDate;
 
     private String preferredName;
 

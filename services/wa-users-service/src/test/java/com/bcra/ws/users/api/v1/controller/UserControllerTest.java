@@ -3,6 +3,7 @@ package com.bcra.ws.users.api.v1.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -12,16 +13,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.boot.test.system.CapturedOutput;
-import org.springframework.boot.test.system.OutputCaptureExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -37,6 +44,8 @@ import com.bcra.ws.users.domain.AuditResult;
 import com.bcra.ws.users.domain.DocumentType;
 import com.bcra.ws.users.domain.UserStatus;
 import com.bcra.ws.users.service.UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 /**
  * Web layer tests for {@link UserController} (validation + error mapping).
@@ -201,6 +210,71 @@ class UserControllerTest {
     @MockBean
     private UserService userService;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @ParameterizedTest
+    @ValueSource(strings = {"documentType", "documentNumber", "firstName", "lastName",
+            "email", "phone", "address", "birthDate"})
+    @DisplayName("Should reject registration when any mandatory field is absent")
+    void shouldRejectMissingMandatoryField(String field) throws Exception {
+        ObjectNode body = completeRegistration();
+        body.remove(field);
+        assertInvalidRegistration(body, field);
+    }
+
+    @ParameterizedTest
+    @MethodSource("invalidRegistrationFields")
+    @DisplayName("Should reject null, blank, malformed and non-past registration data")
+    void shouldRejectInvalidMandatoryField(String field, String value) throws Exception {
+        ObjectNode body = completeRegistration();
+        body.put(field, value);
+        assertInvalidRegistration(body, field);
+    }
+
+    private static Stream<Arguments> invalidRegistrationFields() {
+        return Stream.of(
+                Arguments.of("documentType", (String) null),
+                Arguments.of("documentNumber", " "),
+                Arguments.of("firstName", " "),
+                Arguments.of("lastName", " "),
+                Arguments.of("email", "invalid"),
+                Arguments.of("phone", (String) null),
+                Arguments.of("phone", ""),
+                Arguments.of("phone", " "),
+                Arguments.of("address", (String) null),
+                Arguments.of("address", ""),
+                Arguments.of("address", " "),
+                Arguments.of("birthDate", (String) null),
+                Arguments.of("birthDate", LocalDate.now().toString()),
+                Arguments.of("birthDate", LocalDate.now().plusDays(1).toString()));
+    }
+
+    private ObjectNode completeRegistration() throws Exception {
+        return (ObjectNode) objectMapper.readTree("""
+                {
+                  "documentType": "DNI",
+                  "documentNumber": "30111222",
+                  "firstName": "Maria",
+                  "lastName": "Lopez",
+                  "email": "maria.lopez@example.com",
+                  "phone": "+54911111111",
+                  "address": "Av. Corrientes 1234",
+                  "birthDate": "1990-05-20"
+                }
+                """);
+    }
+
+    private void assertInvalidRegistration(ObjectNode body, String field) throws Exception {
+        mockMvc.perform(post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(body)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details[0].field").value(field));
+        verifyNoInteractions(userService);
+    }
+
     @Test
     @DisplayName("Should return 201 when create is valid")
     void shouldReturnCreated_whenCreateValid() throws Exception {
@@ -212,6 +286,9 @@ class UserControllerTest {
                 .firstName("Maria")
                 .lastName("Lopez")
                 .email("maria.lopez@example.com")
+                .phone("+54911111111")
+                .address("Av. Corrientes 1234")
+                .birthDate(LocalDate.of(1990, 5, 20))
                 .status(UserStatus.ACTIVE)
                 .channelLinkEligible(true)
                 .preferredLanguage("es")
@@ -227,11 +304,19 @@ class UserControllerTest {
                                   "documentNumber": "30111222",
                                   "firstName": "Maria",
                                   "lastName": "Lopez",
-                                  "email": "maria.lopez@example.com"
+                                  "email": "maria.lopez@example.com",
+                                  "phone": "+54911111111",
+                                  "address": "Av. Corrientes 1234",
+                                  "birthDate": "1990-05-20"
                                 }
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value("user-1"))
+                .andExpect(jsonPath("$.address").value("Av. Corrientes 1234"))
+                .andExpect(jsonPath("$.birthDate").value("1990-05-20"))
+                .andExpect(jsonPath("$.preferredLanguage").value("es"))
+                .andExpect(jsonPath("$.createdAt").value(now.toString()))
+                .andExpect(jsonPath("$.updatedAt").value(now.toString()))
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
                 .andExpect(jsonPath("$.channelLinkEligible").value(true));
     }
@@ -270,7 +355,10 @@ class UserControllerTest {
                                   "documentNumber": "30111222",
                                   "firstName": "Maria",
                                   "lastName": "Lopez",
-                                  "email": "maria.lopez@example.com"
+                                  "email": "maria.lopez@example.com",
+                                  "phone": "+54911111111",
+                                  "address": "Av. Corrientes 1234",
+                                  "birthDate": "1990-05-20"
                                 }
                                 """))
                 .andExpect(status().isConflict())

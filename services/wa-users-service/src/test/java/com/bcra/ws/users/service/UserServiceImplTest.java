@@ -385,6 +385,9 @@ class UserServiceImplTest {
                 .firstName("Maria")
                 .lastName("Lopez")
                 .email("maria.lopez@example.com")
+                .phone("+54911111111")
+                .address("Av. Corrientes 1234")
+                .birthDate(java.time.LocalDate.of(1990, 5, 20))
                 .build();
     }
 

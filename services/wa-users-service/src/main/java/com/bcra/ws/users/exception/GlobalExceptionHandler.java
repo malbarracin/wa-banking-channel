@@ -44,6 +44,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException exception) {
         Throwable cause = exception;
         while (cause != null) {
+            if (cause instanceof NonUpdatableFieldException invalidField) {
+                return build(HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST,
+                        "Field is not updatable in this service",
+                        List.of(new FieldError(invalidField.getField(), "Field is not updatable in this service")));
+            }
             if (cause instanceof UnrecognizedPropertyException) {
                 return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR,
                         "Request validation failed", List.of(new FieldError("body", "Unknown field")));

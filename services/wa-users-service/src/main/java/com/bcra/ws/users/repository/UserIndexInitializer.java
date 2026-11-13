@@ -36,5 +36,7 @@ public class UserIndexInitializer implements ApplicationRunner {
                 .unique();
         String indexName = mongoTemplate.indexOps(UserEntity.class).ensureIndex(index);
         log.info("Ensured unique user document index: {}", indexName);
+        mongoTemplate.indexOps(UserEntity.class).ensureIndex(
+                new Index().named("uk_email").on("email", Sort.Direction.ASC).unique());
     }
 }

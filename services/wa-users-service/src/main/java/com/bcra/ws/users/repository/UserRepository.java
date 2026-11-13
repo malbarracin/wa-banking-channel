@@ -14,6 +14,12 @@ import com.bcra.ws.users.entity.UserEntity;
  */
 public interface UserRepository extends MongoRepository<UserEntity, String> {
 
+    /** Comprueba unicidad independiente del email. */
+    boolean existsByEmail(String email);
+
+    /** Excluye al propio usuario al comprobar el email. */
+    boolean existsByEmailAndIdNot(String email, String id);
+
     /**
      * Indica si ya existe un usuario con el par documento indicado.
      *

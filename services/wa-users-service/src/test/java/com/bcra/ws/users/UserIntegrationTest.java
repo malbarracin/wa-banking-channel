@@ -112,7 +112,8 @@ class UserIntegrationTest {
                                   "email": "ana.perez@example.com",
                                   "phone": "+54911111111",
                                   "preferredName": "Anita",
-                                  "preferredLanguage": "es"
+                                  "address": "Av. Corrientes 1234",
+                                  "birthDate": "1990-05-20"
                                 }
                                 """))
                 .andExpect(status().isCreated())
@@ -125,6 +126,16 @@ class UserIntegrationTest {
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
         createdUserId = body.get("id").asText();
         assertThat(createdUserId).isNotBlank();
+
+        UserEntity persisted = userRepository.findById(createdUserId).orElseThrow();
+        assertThat(persisted.getAddress()).isEqualTo("Av. Corrientes 1234");
+        assertThat(persisted.getBirthDate()).isEqualTo(java.time.LocalDate.of(1990, 5, 20));
+        assertThat(persisted.getPreferredLanguage()).isEqualTo("es");
+        assertThat(persisted.getCreatedAt()).isNotNull();
+        assertThat(persisted.getUpdatedAt()).isNotNull();
+        assertThat(body.get("address").asText()).isEqualTo(persisted.getAddress());
+        assertThat(body.get("birthDate").asText()).isEqualTo("1990-05-20");
+        assertThat(body.get("preferredLanguage").asText()).isEqualTo("es");
 
         assertThat(auditEventRepository.findByUserIdOrderByTimestampDesc(createdUserId))
                 .anySatisfy(event -> {
@@ -146,7 +157,10 @@ class UserIntegrationTest {
                                   "documentNumber": "40111222",
                                   "firstName": "Ana",
                                   "lastName": "Perez",
-                                  "email": "ana.perez@example.com"
+                                  "email": "ana.perez@example.com",
+                                  "phone": "+54911111111",
+                                  "address": "Av. Corrientes 1234",
+                                  "birthDate": "1990-05-20"
                                 }
                                 """))
                 .andExpect(status().isConflict())
@@ -162,6 +176,8 @@ class UserIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(createdUserId))
                 .andExpect(jsonPath("$.firstName").value("Ana"))
+                .andExpect(jsonPath("$.address").value("Av. Corrientes 1234"))
+                .andExpect(jsonPath("$.birthDate").value("1990-05-20"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
     }
 

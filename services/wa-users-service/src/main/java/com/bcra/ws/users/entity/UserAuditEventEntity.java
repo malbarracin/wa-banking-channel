@@ -12,15 +12,19 @@ import com.bcra.ws.users.domain.AuditResult;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Evento de auditoría append-only en la colección {@code user_audit_events}.
  *
  * @since 2026-10-19
  */
-@Data
+@Getter
+@Setter
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -28,6 +32,7 @@ import lombok.NoArgsConstructor;
 public class UserAuditEventEntity {
 
     @Id
+    @EqualsAndHashCode.Include
     private String id;
 
     @Indexed

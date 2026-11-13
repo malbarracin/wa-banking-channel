@@ -3,6 +3,7 @@ package com.bcra.ws.users.api.v1.mapper;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +37,8 @@ class UserMapperTest {
                 .lastName("Lopez")
                 .email("maria.lopez@example.com")
                 .phone("+5491112345678")
+                .address("Av. Corrientes 1234")
+                .birthDate(LocalDate.of(1990, 5, 20))
                 .preferredName("Mari")
                 .preferredLanguage("es")
                 .build();
@@ -63,6 +66,8 @@ class UserMapperTest {
                 .lastName("Lopez")
                 .email("maria.lopez@example.com")
                 .phone("+5491112345678")
+                .address("Av. Corrientes 1234")
+                .birthDate(LocalDate.of(1990, 5, 20))
                 .preferredName("Mari")
                 .preferredLanguage("es")
                 .createdAt(timestamp)

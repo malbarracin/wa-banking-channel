@@ -1,0 +1,263 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "wa-users-service",
+    "description": "H1 Servicio de Usuarios — flujos U1–U4 + errores típicos.\nVariables: baseUrl, userId, documentNumber, documentType, actorId.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "userId", "value": "661f0a1b2c3d4e5f67890123" },
+    { "key": "documentType", "value": "DNI" },
+    { "key": "documentNumber", "value": "30111222" },
+    { "key": "actorId", "value": "ops" }
+  ],
+  "item": [
+    {
+      "name": "U1 Alta",
+      "item": [
+        {
+          "name": "POST Create user (OK)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.id) { pm.collectionVariables.set('userId', body.id); }",
+                  "  if (body.documentNumber) { pm.collectionVariables.set('documentNumber', body.documentNumber); }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Actor-Id", "value": "{{actorId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"{{documentType}}\",\n  \"documentNumber\": \"{{documentNumber}}\",\n  \"firstName\": \"Maria\",\n  \"lastName\": \"Lopez\",\n  \"email\": \"maria.lopez@example.com\",\n  \"phone\": \"+5491112345678\",\n  \"preferredName\": \"Mari\",\n  \"preferredLanguage\": \"es\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/users",
+            "description": "U1 — Alta válida → 201 ACTIVE"
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create user (409 duplicate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Actor-Id", "value": "{{actorId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"{{documentType}}\",\n  \"documentNumber\": \"{{documentNumber}}\",\n  \"firstName\": \"Maria\",\n  \"lastName\": \"Lopez\",\n  \"email\": \"maria.lopez@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/users",
+            "description": "U1 — Documento duplicado → 409 code=BAD_REQUEST"
+          },
+          "response": []
+        },
+        {
+          "name": "POST Create user (400 validation)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"documentType\": \"DNI\",\n  \"documentNumber\": \"30111222\",\n  \"firstName\": \"Maria\",\n  \"lastName\": \"Lopez\",\n  \"email\": \"not-an-email\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/users",
+            "description": "U1 — Email inválido → 400 VALIDATION_ERROR"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "U2 Consulta",
+      "item": [
+        {
+          "name": "GET By id (OK)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}",
+            "description": "U2 — Consulta por id interno"
+          },
+          "response": []
+        },
+        {
+          "name": "GET By document (OK)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/users?documentType={{documentType}}&documentNumber={{documentNumber}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "users"],
+              "query": [
+                { "key": "documentType", "value": "{{documentType}}" },
+                { "key": "documentNumber", "value": "{{documentNumber}}" }
+              ]
+            },
+            "description": "U2 — Consulta por documento"
+          },
+          "response": []
+        },
+        {
+          "name": "GET By id (404 not found)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/users/000000000000000000000000",
+            "description": "U2 — Id inexistente → 404 NOT_FOUND"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "U3 Update",
+      "item": [
+        {
+          "name": "PATCH Update fields (OK)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Actor-Id", "value": "{{actorId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"preferredName\": \"Mari\",\n  \"email\": \"mari@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}",
+            "description": "U3 — Update campos permitidos"
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Update empty (400)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}",
+            "description": "U3 — Sin campos → 400 BAD_REQUEST"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "U4 Estado",
+      "item": [
+        {
+          "name": "PATCH Suspend (OK)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Actor-Id", "value": "{{actorId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SUSPENDED\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}/status",
+            "description": "U4 — ACTIVE → SUSPENDED (channelLinkEligible=false)"
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Invalid transition (400)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"SUSPENDED\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}/status",
+            "description": "U4 — Misma transición inválida si ya está SUSPENDED → 400"
+          },
+          "response": []
+        },
+        {
+          "name": "PATCH Reactivate (OK)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Actor-Id", "value": "{{actorId}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"ACTIVE\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}/status",
+            "description": "U4 — SUSPENDED → ACTIVE"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auditoría",
+      "item": [
+        {
+          "name": "GET Audit trail (OK)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/users/{{userId}}/audit",
+            "description": "Historial append-only ordenado desc"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Docs / Health",
+      "item": [
+        {
+          "name": "GET OpenAPI /v3/api-docs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/v3/api-docs",
+            "description": "Especificación OpenAPI runtime (springdoc)"
+          },
+          "response": []
+        },
+        {
+          "name": "GET Actuator health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health",
+            "description": "Health check"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

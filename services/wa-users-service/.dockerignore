@@ -1,0 +1,14 @@
+target/
+.git/
+.cursor/
+delivery/
+examples/
+inputs/
+*.md
+.idea/
+.vscode/
+.soma/
+backlog/
+*.log
+.env
+.env.*

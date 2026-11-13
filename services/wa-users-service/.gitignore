@@ -1,25 +1,81 @@
-# >>> opensoma: agentes y configuración de soma (no van al repositorio) >>>
-.opensoma/
-.opencode/
-.claude/agents/
-.claude/skills/
-.claude/settings.local.json
-.cursor/agents/
-.cursor/skills/
-.cursor/rules/team-*.mdc
-.cursor/mcp.json
-.kiro/agents/
-.kiro/skills/
-.codex/agents/
-.agents/skills/
-.mcp.json
-opencode.json
-AGENTS.md
-team.yaml
-project.yaml
-backlog/
-packs/
-# <<< opensoma <<<
+# Soma Orchestrator
+.soma/
+soma.config.yaml
+.sdd/
+sdd.config.yaml
 
-# Build Maven (no versionar)
+# =============================================
+# AGENTE SDD / SOMA (NO VERSIONAR)
+# =============================================
+
+# Carpeta .cursor completa (rules, skills, commands, templates, agents)
+.cursor/
+
+# Carpeta de entregables del pipeline
+delivery/
+
+# Carpeta de ejemplos de input
+examples/
+
+# Archivos de agente por extensión
+*.prompt.md
+*.skill.md
+*.mdc
+*.input.md
+*.template.md
+
+# Inputs generados localmente (opcional)
+inputs/
+
+# =============================================
+# JAVA / SPRING BOOT
+# =============================================
+
+# Build
 target/
+build/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Native build
+target/native-image/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+!.env.example
+
+# =============================================
+# GENERADOS POR EL PIPELINE (NO VERSIONAR)
+# =============================================
+
+# Reportes de coverage
+coverage-report.html
+jacoco.exec
+
+# Archivos temporales de multi-feature
+.multi-feature-temp/
+*.feature-result.json

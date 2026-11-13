@@ -1,6 +1,7 @@
 package com.bcra.ws.users.api.v1.dto;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 import com.bcra.ws.users.domain.DocumentType;
 import com.bcra.ws.users.domain.UserStatus;
@@ -44,6 +45,12 @@ public class UserResponse {
 
     @Schema(description = "Teléfono de contacto", example = "+5491112345678")
     private String phone;
+
+    @Schema(description = "Dirección de residencia", example = "Av. Corrientes 1234")
+    private String address;
+
+    @Schema(description = "Fecha de nacimiento", example = "1990-05-20")
+    private LocalDate birthDate;
 
     @Schema(description = "Nombre preferido para tratamiento", example = "Mari")
     private String preferredName;

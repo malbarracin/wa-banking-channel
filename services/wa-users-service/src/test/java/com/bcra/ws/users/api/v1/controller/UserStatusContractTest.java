@@ -101,6 +101,25 @@ class UserStatusContractTest {
     }
 
     @Test
+    @DisplayName("El cambio de estado de un usuario ausente devuelve 404 sin persistir ni auditar")
+    void shouldRejectStatusChangeForMissingUser() throws Exception {
+        when(userRepository.findById("missing")).thenReturn(Optional.empty());
+
+        mockMvc.perform(patch("/api/v1/users/missing/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Actor-Id", "operator")
+                .content("{\"status\":\"SUSPENDED\"}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.timestamp").isNotEmpty());
+
+        verify(userRepository, never()).save(any());
+        verify(auditRepository, never()).save(any());
+    }
+
+    @Test
     @DisplayName("GET audit mapea eventos en orden descendente sin escribir el historial")
     void shouldMapAuditWithoutWritingHistory() throws Exception {
         when(userRepository.findById("user-1"))

@@ -5,4 +5,4 @@ spring:
 logging:
   level:
     root: WARN
-    com.ingenia.wa.users: INFO
+    com.bcra.ws.users: INFO

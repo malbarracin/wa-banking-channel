@@ -12,3 +12,12 @@ backlog/
 *.log
 .env
 .env.*
+.codex/
+.claude/
+.agents/
+.opensoma/
+.kiro/
+.opencode/
+.mvn/wrapper/maven-wrapper.jar
+**/*.pem
+**/*.key

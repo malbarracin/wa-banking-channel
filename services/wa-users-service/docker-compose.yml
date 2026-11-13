@@ -1,11 +1,12 @@
 services:
   app:
     build: .
+    image: ${APP_IMAGE:-wa-users-service:local}
     ports:
-      - "${APP_PORT:-8080}:8080"
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      - SPRING_DATA_MONGODB_URI=mongodb://mongo:27017/${MONGO_DB:-wa_users}
+      - SPRING_DATA_MONGODB_URI=${SPRING_DATA_MONGODB_URI:-mongodb://mongo:27017/wa_users}
       - APP_NAME=${APP_NAME:-wa-users-service}
     depends_on:
       mongo:
@@ -20,11 +21,11 @@ services:
   mongo:
     image: mongo:7.0
     ports:
-      - "${MONGO_PORT:-27017}:27017"
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"
     volumes:
       - mongo-data:/data/db
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.runCommand({ping:1}).ok ? 0 : 1)"]
       interval: 10s
       timeout: 5s
       retries: 5

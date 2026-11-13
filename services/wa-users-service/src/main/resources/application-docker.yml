@@ -1,0 +1,6 @@
+spring:
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI:mongodb://mongo:27017/wa_users}
+server:
+  port: 8080

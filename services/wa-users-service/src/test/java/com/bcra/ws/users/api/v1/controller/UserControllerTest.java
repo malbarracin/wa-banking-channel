@@ -48,6 +48,38 @@ import com.bcra.ws.users.service.UserService;
 class UserControllerTest {
 
     @Test
+    @DisplayName("Every domain and fallback error exposes exactly the public contract and an ISO timestamp")
+    void shouldExposeOnlyPublicErrorFields() throws Exception {
+        List<RuntimeException> failures = List.of(
+                new UserNotFoundException("missing"),
+                new DuplicateDocumentException(DocumentType.DNI, "12345678"),
+                new com.bcra.ws.users.exception.DuplicateEmailException(),
+                new InvalidStatusTransitionException(UserStatus.ACTIVE, UserStatus.ACTIVE),
+                new IllegalArgumentException("private data"),
+                new RuntimeException("private data"));
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+        for (RuntimeException failure : failures) {
+            org.mockito.Mockito.doThrow(failure).when(userService).findById("contract");
+            String body = mockMvc.perform(get("/api/v1/users/contract"))
+                    .andReturn().getResponse().getContentAsString();
+            var error = mapper.readTree(body);
+            List<String> fields = new java.util.ArrayList<>();
+            error.fieldNames().forEachRemaining(fields::add);
+
+            assertThat(fields).containsExactlyInAnyOrder("code", "message", "details", "timestamp");
+            assertThat(error.get("details").isArray()).isTrue();
+            assertThat(error.get("message").asText()).isNotBlank();
+            assertThat(Instant.parse(error.get("timestamp").asText())).isNotNull();
+            for (var detail : error.get("details")) {
+                assertThat(detail.size()).isEqualTo(2);
+                assertThat(detail.get("field").asText()).isNotBlank();
+                assertThat(detail.get("message").asText()).isNotBlank();
+            }
+        }
+    }
+
+    @Test
     @DisplayName("Sensitive exception messages and documents are absent from error responses and logs")
     void shouldKeepSensitiveValuesOutOfErrorsAndLogs(CapturedOutput output) throws Exception {
         String privateData = "12345678 private@email.com +5491112345678";

@@ -2,7 +2,10 @@ package com.bcra.ws.users.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
@@ -56,5 +59,16 @@ class ErrorResponseTest {
                 List.of(new FieldError("email", "invalid")));
 
         assertThat(response.details()).hasSize(1);
+    }
+    @Test
+    @DisplayName("Error details cannot change after the response is created")
+    void shouldProtectDetailsFromMutation() {
+        FieldError detail = new FieldError("email", "Invalid value");
+        List<FieldError> details = new ArrayList<>(List.of(detail));
+        ErrorResponse response = ErrorResponse.of(ErrorCode.VALIDATION_ERROR, "Invalid request", details);
+        details.clear();
+
+        assertThat(response.details()).containsExactly(detail);
+        assertThatThrownBy(() -> response.details().clear()).isInstanceOf(UnsupportedOperationException.class);
     }
 }

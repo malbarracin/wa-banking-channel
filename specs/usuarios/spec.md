@@ -2,7 +2,7 @@
 title: Usuarios — especificación
 status: borrador
 source: https://app.notion.com/p/H1-Servicio-de-Usuarios-36875bb08ca78197a853e85505bf49a5
-updated: 2026-11-13T20:45:35.298Z
+updated: 2026-11-13T20:51:01.596Z
 ---
 
 # Usuarios — especificación
@@ -205,6 +205,172 @@ El sistema DEBE ser la base de identidad: todo cliente que operará por WhatsApp
 - **CUANDO** el canal (H3) verifica la existencia del cliente en este servicio
 - **ENTONCES** solo se permite continuar si el cliente existe y está en estado que habilita el vínculo
 
+## Arquitectura
+
+### Identidad Java (fuente: `project.yaml`)
+
+- **groupId**: `com.bcra` (de `project.yaml` → `java.group_id`).
+- **Base package**: `com.bcra.ws.users` (de `project.yaml` → `java.base_package`).
+- **Servicio**: carpeta `services/wa-users-service`, artifactId `wa-users-service`, Spring Boot 3.3.x, Java 21.
+- Cita obligatoria en tasks y código: `(from project.yaml java.base_package)`. No inferir desde el nombre del repo ni de la identidad `com.ingenia.wa` del scaffold actual (ver Brechas).
+
+### Stack
+
+- Java 21, Spring Boot 3.3.x, Spring MVC (`spring-boot-starter-web`), Spring Data MongoDB, `spring-boot-starter-validation`, `spring-boot-starter-actuator`, Lombok, MapStruct, springdoc-openapi, JaCoCo.
+- **Persistencia**: MongoDB. Colecciones `users` y `user_audit_events`. Base `wa_users` en perfil `local` (`mongodb://localhost:27017/wa_users`); URI por variable de entorno `SPRING_DATA_MONGODB_URI` en `docker`.
+- **Build**: Maven Wrapper (`./mvnw`). No usar `mvn` global. Cierre con `./mvnw clean verify` (gate de JaCoCo en `verify`).
+- Sin WebFlux, sin Gradle/Kotlin, sin cambio de persistencia (Mongo fijo).
+
+### Estructura de paquetes (MVC por capas + versionado de API)
+
+`api.versioning.enabled: true` en `application.yml` → la capa de API se versiona por paquete; dominio (service/repository/entity/domain) se comparte.
+
+```
+com.bcra.ws.users/
+├── UsersServiceApplication.java
+├── api/v1/
+│   ├── controller/   UserController                (@RequestMapping("/api/v1/users"))
+│   ├── dto/          UserCreateRequest, UserResponse, UserUpdateRequest,
+│   │                 UserStatusChangeRequest, UserAuditEventResponse
+│   └── mapper/       UserMapper (MapStruct, componentModel = "spring")
+├── config/           OpenApiConfig (GroupedOpenApi por versión), NativeHints (solo si native)
+├── exception/        ErrorResponse, FieldError, ErrorCode, GlobalExceptionHandler,
+│                    ConflictException, NotFoundException, DuplicateDocumentException,
+│                    DuplicateEmailException, UserNotFoundException, InvalidStatusTransitionException
+├── domain/          UserStatus, DocumentType, AuditAction, AuditResult
+├── entity/          UserEntity, UserAuditEventEntity (Mongo @Document)
+├── repository/      UserRepository, UserAuditEventRepository, UserIndexInitializer
+└── service/         UserService, UserServiceImpl, UserAuditService
+```
+
+El versionado se expresa en el paquete `api/v1` + `@RequestMapping("/api/v1/...")` + `GroupedOpenApi` por versión. Una futura v2 agregaría `api/v2` con sus propias controller/dto/mapper; service, repository y entity se mantienen compartidos.
+
+### Modelo de persistencia (Mongo)
+
+- **`users`** — `UserEntity` (`@Document(collection = "users")`, `@Id String id`).
+  - Índice único `uk_document` sobre `(documentType, documentNumber)`.
+  - **Índice único `uk_email` sobre `email`** (nuevo).
+  - Campos: `documentType` (enum), `documentNumber`, `firstName`, `lastName`, `email`, `phone`, **`address`** (nuevo), **`birthDate`** (nuevo, `LocalDate`), `preferredName`, `preferredLanguage`, `status` (enum), `createdAt`, `updatedAt`.
+- **`user_audit_events`** — `UserAuditEventEntity` (`@Document(collection = "user_audit_events")`), append-only, índice por `(userId, timestamp desc)`. Campos: `id`, `userId`, `action` (`AuditAction`), `result` (`AuditResult`), `timestamp`, `summary` (`Map<String,Object>`), `actor`.
+- `UserIndexInitializer` (`ApplicationRunner`) asegura los índices únicos `uk_document` y `uk_email` al arranque.
+
+### Lombok en entidades
+
+- Entidades: `@Getter @Setter @Builder @NoArgsConstructor @AllArgsConstructor`. **Evitar `@Data`** en entidades; usar `@EqualsAndHashCode(onlyExplicitlyIncluded = true)` con `@EqualsAndHashCode.Include` solo en `id`.
+- DTOs y records: `@Data`/`@Builder` o `record` según mutabilidad.
+
+### DTOs
+
+- **`UserCreateRequest`** (U1, alta). Requeridos (`@NotNull`/`@NotBlank`): `documentType`, `documentNumber`, `firstName`, `lastName`, `email` (`@Email`), **`phone` (`@NotBlank`)**, **`address` (`@NotBlank`)**, **`birthDate` (`@NotNull`, `@Past`)**. Opcionales: `preferredName`, `preferredLanguage` (default `"es"`).
+- **`UserUpdateRequest`** (U3, PATCH parcial). Campos actualizables (todos opcionales, al menos uno requerido): `preferredName`, `email` (`@Email`), `phone`, `preferredLanguage`, `address` (dato de contacto). **No actualizables** (rechazo si aparecen en el body): `documentType`, `documentNumber`, `firstName`, `lastName`, `birthDate`, `status` y cualquier dato legal sensible.
+- **`UserStatusChangeRequest`** (U4): `status` (`@NotNull`, `UserStatus`).
+- **`UserResponse`** (U2): `id`, `documentType`, `documentNumber`, `firstName`, `lastName`, `email`, `phone`, `address`, `birthDate`, `preferredName`, `preferredLanguage`, `status`, `channelLinkEligible`, `createdAt`, `updatedAt`. La visibilidad por actor se filtra (ver Vistas de consulta).
+- **`UserAuditEventResponse`**: `id`, `userId`, `action`, `timestamp`, `result`, `summary`, `actor`.
+- `@JsonIgnoreProperties(ignoreUnknown = false)` en los DTO de entrada para rechazar campos no esperados (soporta el rechazo de dato sensible en U3).
+
+### Endpoints (API v1)
+
+| Método | Path | Flujo | Éxito | Errores |
+|--------|------|-------|-------|--------|
+| POST | `/api/v1/users` | U1 alta | 201 `UserResponse` (ACTIVE) | 400 `VALIDATION_ERROR`; 409 `CONFLICT` (doc/email duplicado) |
+| GET | `/api/v1/users/{id}` | U2 por id | 200 `UserResponse` | 404 `NOT_FOUND` |
+| GET | `/api/v1/users?documentType=&documentNumber=` | U2 por documento | 200 `UserResponse` | 400 `BAD_REQUEST`; 404 `NOT_FOUND` |
+| PATCH | `/api/v1/users/{id}` | U3 update | 200 `UserResponse` | 400 `VALIDATION_ERROR`/`BAD_REQUEST` (sin campos / campo no actualizable); 404 `NOT_FOUND`; 409 `CONFLICT` (email duplicado) |
+| PATCH | `/api/v1/users/{id}/status` | U4 cambio de estado | 200 `UserResponse` | 404 `NOT_FOUND`; 409 `CONFLICT` (transición inválida) |
+| GET | `/api/v1/users/{id}/audit` | Historial de auditoría | 200 `[UserAuditEventResponse]` | 404 `NOT_FOUND` |
+
+- Header opcional `X-Actor-Id` (auditoría).
+- Actuator: `/actuator/health`, `/actuator/info`. Swagger: `/swagger-ui.html`, `/v3/api-docs`.
+- El canal (H3) verifica existencia y elegibilidad leyendo `status` y `channelLinkEligible` de `GET /api/v1/users/{id}` (o por documento).
+
+### Contrato de errores (skill `error-contract`)
+
+Un único JSON: `{ "code", "message", "details": [{ "field", "message" }], "timestamp" }`.
+
+- `ErrorCode` (enum): `VALIDATION_ERROR`, `BAD_REQUEST`, `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR`.
+- `FieldError` (record): `field`, `message`. `details` nunca `null` (vacío si corresponde).
+- `GlobalExceptionHandler` (`@RestControllerAdvice`) en `exception/`. Sin `try/catch` en controllers; sin stacktrace ni internals en la respuesta.
+- Mapeo:
+
+| HTTP | `code` | Caso |
+|------|-------|------|
+| 400 | `VALIDATION_ERROR` | Bean Validation (`MethodArgumentNotValidException`, campo desconocido en body) |
+| 400 | `BAD_REQUEST` | Argumento ilegal (update sin campos, `documentNumber` vacío, params faltantes) |
+| 404 | `NOT_FOUND` | `UserNotFoundException` |
+| 409 | `CONFLICT` | `DuplicateDocumentException` (`field=documentNumber`), `DuplicateEmailException` (`field=email`), `InvalidStatusTransitionException` (`field=status`) |
+| 500 | `INTERNAL_ERROR` | Fallback (sin stacktrace) |
+
+- Excepciones de dominio extienden `ConflictException` / `NotFoundException` (bases nuevas).
+- Config: `server.error.include-stacktrace: never`.
+
+### Transiciones de estado (U4)
+
+Estados: `ACTIVE`, `SUSPENDED`, `LOGICALLY_DELETED`. Transiciones permitidas (de la especificación):
+
+- `ACTIVE → SUSPENDED`
+- `SUSPENDED → ACTIVE`
+- `ACTIVE → LOGICALLY_DELETED`
+- `SUSPENDED → LOGICALLY_DELETED`
+- `LOGICALLY_DELETED → (ninguna)` — la baja lógica es terminal; la reactivación requiere regularización, fuera de alcance de H1.
+
+Transición no permitida (incluyendo `from == to`) → auditoría `FAILURE` + `409 CONFLICT` (`field=status`, message `Invalid transition FROM→TO`).
+
+### Unicidad (U1 y U3)
+
+- Documento: índice único `uk_document` sobre `(documentType, documentNumber)`.
+- Email: índice único `uk_email` sobre `email`.
+- **U1 (alta)**: pre-verificar con `existsByDocumentTypeAndDocumentNumber` y `existsByEmail` antes de guardar; lanzar `DuplicateDocumentException` o `DuplicateEmailException` con el campo correcto. El índice único es red de seguridad (`DuplicateKeyException`). Auditar `FAILURE` en rechazo.
+- **U3 (update de email)**: verificar `existsByEmailAndIdNot(email, id)` antes de aplicar; si existe en otro cliente → `409 CONFLICT` (`field=email`). Auditar `FAILURE`.
+
+### Auditoría
+
+- `UserAuditService.record(userId, action, result, summary, actor)` → append en `user_audit_events`.
+- Acciones (`AuditAction`): `USER_CREATED`, `USER_UPDATED`, `STATUS_CHANGED`. Resultados (`AuditResult`): `SUCCESS`, `FAILURE`.
+- Se registra en: alta (success / failure por duplicado), update (success / failure por email duplicado), cambio de estado (success / failure por transición inválida).
+- `findAuditTrail(id)` devuelve eventos ordenados desc por `timestamp`.
+
+### Vistas de consulta (U2) y elegibilidad de canal
+
+- `channelLinkEligible = (status == ACTIVE)`. Soporta «Restricción de vínculo de canal según estado» y «Existencia previa del cliente para operar por canal».
+- **Visibilidad por actor**: el banco debe definir el conjunto exacto de campos visibles por actor (pregunta abierta). Mientras no se defina, se aplica este **default ajustable sin romper el contrato**:
+  - Área de negocio/operaciones y Soporte: dataset autorizado completo (`UserResponse`).
+  - Otros servicios del banco: subset básico `{ id, documentType, documentNumber, status, channelLinkEligible }` (sin `email`, `phone`, `address`, `birthDate` ni datos de contacto).
+- Mecanismo: filtrado de la respuesta por actor/origen (vía header `X-Actor-Id`/origen o endpoint dedicado), de modo que la matriz definida por el banco se aplique luego como política sin cambio de esquema.
+
+### Perfiles y configuración (`application.yml`)
+
+- `spring.data.mongodb.uri` (env `SPRING_DATA_MONGODB_URI`), perfiles `local` y `docker`.
+- Actuator: exponer `health`, `info` (mínimo).
+- `server.error.include-stacktrace: never` (nuevo).
+- `springdoc` API docs y swagger-ui.
+- `api.versioning.enabled: true`, `default-version: v1`, `supported-versions: [v1]`.
+- Sin consola de BD embebida (Mongo). `spring.jpa.open-in-view` no aplica.
+
+### Tests y cobertura
+
+- JUnit 5 + Spring Boot Test + AssertJ. WebMvc tests para controller; unitarios para service/audit; integración U1–U4 contra Mongo (local vía `docker compose up -d mongo`; Testcontainers donde el entorno lo permita).
+- **JaCoCo mínimo LINE ≥ 80%** (subir desde el 70% actual del `pom.xml`). Gate en `verify`: `./mvnw clean verify`.
+- Tests por versión de API (v1); al agregar v2, los de v1 pasan sin tocarlos.
+
+### Nativa (opcional)
+
+- Imagen nativa solo si `service.optimization: native` en `project.yaml` (no definido) → nativa desactivada por defecto; el `pom.xml` mantiene el profile `native` opt-in. No requerida para el MVP.
+
+## Brechas y desviaciones de la implementación existente
+
+El scaffold actual en `services/wa-users-service` (Mongo, funcional en U1–U4) usa `com.ingenia.wa.users` y se desalinea con `project.yaml` y la especificación aprobada. Tareas para tech-lead:
+
+1. **Identidad (bloqueante para naming)**: renombrar paquete `com.ingenia.wa.users` → `com.bcra.ws.users` y groupId `com.ingenia.wa` → `com.bcra` en `pom.xml` (fuente: `project.yaml`). Mover `src/main/java` y `src/test/java`. Actualizar `application.yml` (`logging.level`), `Dockerfile` y CI. Quitar marcas `@author Ingenia` / `Contacto: …@ingenia.la` de javadocs (la entrega es del equipo del banco).
+2. **Campos del alta faltantes**: agregar `address` (`@NotBlank`) y `birthDate` (`@NotNull`, `@Past`) a `UserCreateRequest` y `UserEntity`; hacer `phone` `@NotBlank` en el alta (hoy es opcional). `preferredName`/`preferredLanguage` siguen opcionales.
+3. **Unicidad de email no implementada**: agregar índice único `uk_email` en `UserEntity`, `existsByEmail` y `existsByEmailAndIdNot` en `UserRepository`, y las validaciones en `UserServiceImpl` (alta y update de email) con `DuplicateEmailException` → `409 CONFLICT` (`field=email`). Hoy el alta y el update de email no rechazan email duplicado.
+4. **Contrato de errores**: mover `api/error` → `exception/`; agregar `ErrorCode` (enum), `FieldError` (record), bases `ConflictException`/`NotFoundException` y hacer que las excepciones de dominio las extiendan; cambiar `409` duplicado y transición inválida de `code=BAD_REQUEST` a `code=CONFLICT` (y agregar `CONFLICT` a `allowableValues` de `ErrorResponse`); agregar `server.error.include-stacktrace: never`.
+5. **Transición de estado incorrecta**: quitar `LOGICALLY_DELETED → ACTIVE` de `ALLOWED_TRANSITIONS` (contradice la especificación: la baja lógica es terminal) y corregir el javadoc de `UserController`/`UserStatus` que menciona «reactivación desde LOGICALLY_DELETED».
+6. **Dato sensible en U3**: activar rechazo de campos no actualizables en el PATCH (`@JsonIgnoreProperties(ignoreUnknown = false)` + mapeo a `400`) en lugar de ignorarlos silenciosamente; mensaje «field X is not updatable in this service».
+7. **JaCoCo**: subir el mínimo de `0.70` a `0.80` (LINE) en el `pom.xml` y en el README.
+8. **Entidades**: reemplazar `@Data` por `@Getter @Setter` + `@EqualsAndHashCode(onlyExplicitlyIncluded = true)` (solo `id`) en `UserEntity` y `UserAuditEventEntity`.
+9. **Visibilidad por actor**: implementar el mecanismo de filtrado por actor/origen con el default de Vistas de consulta; la matriz exacta queda como pregunta abierta para el banco.
+10. **Auditoría de rechazos**: asegurar que el update rechazado por email duplicado y la transición inválida queden registrados con `result=FAILURE` (parcialmente cubierto hoy).
+
 ## Riesgos y supuestos (de la fuente)
 
 - **Riesgos**: datos inconsistentes con el core legacy; duplicados no detectados; baja de usuario con vínculos activos en canal.
@@ -212,4 +378,4 @@ El sistema DEBE ser la base de identidad: todo cliente que operará por WhatsApp
 
 ## Preguntas abiertas
 
-- **Datos visibles por actor en la consulta**: la fuente indica que la consulta devuelve "solo datos autorizados" por política de privacidad, pero no enumera qué campos ve cada actor (área de negocio/operaciones, soporte del banco, otros servicios). El banco debe definir el conjunto de campos autorizados por actor antes del modelado del contrato de consulta.
+- **Datos visibles por actor en la consulta**: la fuente indica que la consulta devuelve "solo datos autorizados" por política de privacidad, pero no enumera qué campos ve cada actor (área de negocio/operaciones, soporte, otros servicios). No bloquea el comportamiento ni la arquitectura: se implementa un mecanismo de filtrado por actor con un default ajustable (dataset completo para actores internos; subset básico para otros servicios) y la matriz exacta la define el banco antes del modelado final del contrato de consulta.

@@ -1,8 +1,8 @@
 ---
 title: Origen de los requisitos
-status: borrador
+status: aprobada
 source: https://app.notion.com/p/H1-Servicio-de-Usuarios-36875bb08ca78197a853e85505bf49a5
-updated: 2026-11-13T20:45:35.346Z
+updated: 2026-11-13T20:46:26.217Z
 ---
 
 # Origen de los requisitos

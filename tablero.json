@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "seq": 1,
+  "tasks": [
+    {
+      "id": "P-1",
+      "title": "Canal WhatsApp Banco",
+      "description": "El programa se desarrolla **de punta a punta con todos los componentes**: plataforma asíncrona, los 6 servicios de dominio, MCP, **RAG** y agente conversacional.\n\n### Objetivo\n\nCanal WhatsApp bancario completo: Twilio → Gateway → Kafka → Orquestador → agente (MCP + RAG) → usuarios/canal/sesión/productos → respuesta por Twilio.",
+      "status": "todo",
+      "createdAt": "2026-11-14T14:43:10.735Z",
+      "createdBy": {
+        "account": null,
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "updatedAt": "2026-11-14T14:43:10.736Z"
+    }
+  ]
+}

@@ -1,6 +1,96 @@
 {
  "items": [
   {
+   "id": "f0x5bcrh",
+   "texto": "publish_version siempre abre audit.trace_operation; si el llamador también envuelve con trace_operation(\"ingestion\"), los eventos started/completed se duplican con el mismo correlationId. Preferir pasar correlation_id= o heredar sin envolver dos veces.",
+   "tipo": "trampa",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-21T04:41:32.169Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "togu8okd",
+   "texto": "La fábrica api.create_app(search, allows_internal=...) registra POST /retrieval y mantiene el UUID durante la búsqueda; el arranque del servicio debe inyectar el motor híbrido y una política de identidad confiable para habilitar audiencia interna.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-21T04:38:28.514Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "ez5vkqv2",
+   "texto": "Al construir la aplicación FastAPI del RAG, llamar a wa_knowledge_rag.api.register_error_handlers(app) con debug desactivado para servir los mensajes públicos de error 400, 403 y 500.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-21T04:36:53.275Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "y95y4vkm",
+   "texto": "La API de retrieval debe envolver el trabajo con audit.trace_operation('retrieval', correlation_id) y devolver ese UUID; la ingesta puede usar el mismo contexto para que store.publish_version herede el UUID y lo guarde en kb_publication_audit.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-21T04:35:07.756Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "posxkvbo",
+   "texto": "El flujo de publicación del RAG debe llamar a ingestion.validate_document(title, content) antes de particionar o generar embeddings y aplicar security.redact_log antes del renderer y security.sanitize_attributes antes de exportar atributos de spans.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-21T04:31:16.338Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "38bor9kz",
+   "texto": "Para esperar PostgreSQL pgvector:pg17 en Testcontainers, ExecWaitStrategy con pg_isready -h 127.0.0.1 detecta el servidor TCP definitivo; el mensaje de disponibilidad también aparece durante la inicialización temporal.",
+   "tipo": "trampa",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-21T04:28:11.153Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "8cvmct2x",
+   "texto": "La máquina ya tiene uv 0.13.9 y `python` (enlace a /usr/bin/python3, 3.14) en ~/.local/bin, instalados con permiso de la persona: `python scripts/verify_ia.py` corre con el PATH normal y uv resuelve Python 3.12 para cada componente; ya no hace falta el uv temporal en /tmp.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-21T04:23:56.016Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "ovqhhl5o",
+   "texto": "La verificación de IA se invoca como python scripts/verify_ia.py; si el entorno solo tiene python3 en PATH, falla antes del script. Documentar python3 en el README del componente y asegurar que el entorno de integración exponga python o use python3.",
+   "tipo": "trampa",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-21T04:17:40.366Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "wrt7nibs",
+   "texto": "Si uv o Python 3.12 faltan en el entorno restringido, uv puede instalarse con UV_UNMANAGED_INSTALL en /tmp y usar UV_PYTHON_INSTALL_DIR en /tmp junto con UV_PYTHON=3.12 para que el verificador encuentre el intérprete.",
+   "tipo": "trampa",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-21T04:12:28.533Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
    "id": "8ul3lb57",
    "texto": "Los datos técnicos del programa (carpeta y nombre de cada componente, grupo Maven com.bcra y paquete base por componente, puertos 8090/8091/8101/8102/8103, prefijo de topics wa. y rutas de contratos en shared/contracts/) están en la sección «Convenciones técnicas del programa» del roadmap de Notion y resumidos en specs/programa/programa.md: no hace falta volver a buscarlos.",
    "tipo": "dato",

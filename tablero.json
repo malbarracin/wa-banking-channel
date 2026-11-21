@@ -478,23 +478,19 @@
         }
       },
       "stalled": null,
-      "waiting": {
-        "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
-        "text": "espera una respuesta",
-        "at": "2026-11-21T04:20:56.963Z"
-      },
+      "waiting": null,
       "times": {
         "startedAt": "2026-11-21T03:57:10.936Z",
         "releasedAt": null,
         "workedMs": 0,
         "stalledMs": 0,
-        "waitingMs": 139953,
+        "waitingMs": 234462,
         "stalls": 0,
         "reopened": 0
       },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T04:20:56.963Z"
+      "updatedAt": "2026-11-21T04:22:31.472Z"
     },
     {
       "id": "P-12",
@@ -828,6 +824,14 @@
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
       "account": "opensoma.app@gmail.com",
       "text": "espera una respuesta"
+    },
+    {
+      "at": "2026-11-21T04:22:31.472Z",
+      "kind": "answered",
+      "id": "P-11",
+      "title": "H8 — Base de conocimiento RAG",
+      "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com"
     }
   ],
   "deadline": null,

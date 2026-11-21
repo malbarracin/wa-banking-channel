@@ -1,6 +1,186 @@
 {
  "items": [
   {
+   "id": "hlrc0hn0",
+   "texto": "Los checks de GitHub pueden fallar sin ejecutar ningún paso por bloqueo de facturación; consultar las anotaciones del check cuando el job no tiene runner ni logs.",
+   "tipo": "trampa",
+   "rol": "dev-integracion",
+   "run": null,
+   "at": "2026-11-21T09:04:34.945Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "w5foeytv",
+   "texto": "application.yml de wa-event-platform tiene 4 documentos de perfil (local, dev, test, docker); TopicsConfigTest debe esperar hasSize(4) e incluir docker — el perfil docker apunta bootstrap a kafka:19092 y no declara NewTopic (los crea kafka-init).",
+   "tipo": "trampa",
+   "rol": "dev-integracion",
+   "run": null,
+   "at": "2026-11-21T08:35:14.064Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "4b9j9whx",
+   "texto": "Imagen y stack local de wa-event-platform: docker build -f platform/wa-event-platform/Dockerfile -t wa-event-platform:local . (contexto = raíz); desde platform/wa-event-platform: docker compose --profile app up -d --wait.",
+   "tipo": "comando",
+   "rol": "devops",
+   "run": null,
+   "at": "2026-11-21T08:12:23.583Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "9lnoel26",
+   "texto": "El .dockerignore de la raíz no puede usar el patrón \".*\": excluye platform/.../.mvn y rompe el Dockerfile (COPY del wrapper). Excluir en su lugar .git, .github, .opensoma, .cursor, etc.",
+   "tipo": "trampa",
+   "rol": "devops",
+   "run": null,
+   "at": "2026-11-21T08:12:23.264Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "a2c2haej",
+   "texto": "El contrato operativo de la plataforma de eventos para gateway y orquestador está en shared/contracts/wa-event-platform/handoff.md; los esquemas y topics solo en shared/contracts/events/.",
+   "tipo": "dato",
+   "rol": "dev-integracion",
+   "run": null,
+   "at": "2026-11-21T07:30:58.735Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "qd01u2qh",
+   "texto": "En wa-event-platform, tras resolver conflictos de integración DLQ+observabilidad, se conservan: DeadLetterConfig (bean kafkaErrorHandler + EventMetrics), KafkaConsumerConfig (observation-enabled), DlqConfig como fachada de tests, y DlqReprocessor collect→EnvelopeReader.validate→send.",
+   "tipo": "dato",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-21T07:24:47.741Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "5ryzs1ya",
+   "texto": "En wa-event-platform, tras resolver conflictos DLQ+EnvelopeReader: verify OK con JaCoCo instrucciones ~87% y líneas ~91%; TopicsIntegrationTest y DlqIntegrationTest con Docker 1/1 y 5/5; rejectsInvalidPayloadWithoutPublishing sigue verde.",
+   "tipo": "dato",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-21T07:23:10.688Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "ukxf5oup",
+   "texto": "En wa-event-platform, tras integrar DLQ+observabilidad: el bean kafkaErrorHandler vive en DeadLetterConfig (con EventMetrics); DlqConfig es fachada de tests sin @Configuration; KafkaConsumerConfig aporta el factory con observation-enabled y deliveryAttemptHeader.",
+   "tipo": "dato",
+   "rol": "dev-integracion",
+   "run": null,
+   "at": "2026-11-21T07:14:42.294Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "luhyv5k2",
+   "texto": "En wa-event-platform, re-revisión de observabilidad: DlqReprocessor valida con EnvelopeReader todo el rango antes de republicar; payload inválido no publica (test rejectsInvalidPayloadWithoutPublishing).",
+   "tipo": "dato",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-21T07:02:36.917Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "pry68szi",
+   "texto": "En wa-event-platform, tras validar EnvelopeReader en DlqReprocessor, DlqReprocessorTest.rejectsInvalidPayloadWithoutPublishing confirma SchemaValidationException y never kafka.send; verify OK con TopicsIntegrationTest Docker 1/1.",
+   "tipo": "dato",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-21T07:00:49.468Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "43klso5v",
+   "texto": "En wa-event-platform, DlqReprocessor hace dos pasadas: collect del rango → EnvelopeReader.read de todos → recién entonces kafka.send; al publicar solo headers de contrato + x-dlq-reprocessed-from.",
+   "tipo": "dato",
+   "rol": "dev-integracion",
+   "run": null,
+   "at": "2026-11-21T06:54:03.439Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "i3b4rsz0",
+   "texto": "En wa-event-platform, DlqReprocessor debe validar cada registro (p. ej. con EnvelopeReader) antes de republicar al topic original; si el payload es inválido por esquema/headers, no publicar (arquitectura §10).",
+   "tipo": "dato",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-21T06:44:32.044Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "wlih2dxj",
+   "texto": "En platform/wa-event-platform, no redirigir mvnw clean verify a target/verify.log en Windows: clean no puede borrar el log abierto; usar una ruta fuera de target (p. ej. verify-wa-event-platform.log en la raíz del worktree).",
+   "tipo": "trampa",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-21T06:41:06.106Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "g14m350s",
+   "texto": "En wa-event-platform la DLQ usa DefaultErrorHandler bloqueante (sin topics de retry) y DeadLetterPublishingRecoverer hacia wa.message.dlq.v1; ExceptionHeadersCreator propio + excludeHeader evitan kafka_dlt-exception-stacktrace; DlqReprocessor valida el rango completo con EnvelopeReader antes de cualquier publish.",
+   "tipo": "dato",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-21T06:37:21.506Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "yifnpn0k",
+   "texto": "En DlqIntegrationTest, no reutilizar el mismo valor de payload (p. ej. {not-json) entre casos: el awaitDlq puede tomar un fixture de otro test sin headers kafka_dlt-original-*; usar un sufijo UUID/correlation por caso.",
+   "tipo": "trampa",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-21T06:33:24.145Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "rutcysa6",
+   "texto": "En wa-event-platform, ExponentialBackOffWithMaxRetries vive en org.springframework.kafka.support (no en listener). ExceptionHeadersCreator.create(Headers, Exception, boolean, HeaderNames) ya no recibe ConsumerRecord. PhoneMasker usa length-5 para coincidir con el ejemplo +549*********55 de la arquitectura.",
+   "tipo": "dato",
+   "rol": "dev-integracion",
+   "run": null,
+   "at": "2026-11-21T05:57:43.936Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "4e3cj40t",
+   "texto": "En platform/wa-event-platform, ./mvnw -q -B clean verify valida retry/DLQ unitario (DlqConfigTest, DlqExceptionHeadersCreatorTest, DlqReprocessorTest); las IT con Testcontainers (DlqIntegrationTest) se omiten si el daemon Docker no responde (npipe 400) — hay que re-verificar con Docker arriba.",
+   "tipo": "trampa",
+   "rol": "dev-integracion",
+   "run": null,
+   "at": "2026-11-21T05:42:50.888Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "pcc2lbh6",
+   "texto": "Tras TASK-4 el README de platform/wa-event-platform aún dice que el consumidor de referencia «requiere validación de contratos e idempotencia», pero ya están implementadas; conviene alinear ese párrafo con la sección de idempotencia.",
+   "tipo": "dato",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-21T05:22:04.077Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "6g051vpr",
    "texto": "wa-users-service autentica con JWT del gateway (Authorization Bearer); claims sub/role; config app.gateway.jwt.jwk-set-uri e issuer vía SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_*; contrato en shared/contracts/wa-users-service/gateway-trust.md. verify: python scripts/verify_ia.py",
    "tipo": "decision",
@@ -11,6 +191,16 @@
    "de": "Marcelo"
   },
   {
+   "id": "pk5m22we",
+   "texto": "La verificación de la plataforma pasa sin Docker, pero Testcontainers omite la integración Kafka cuando el daemon no está disponible; verificarla de nuevo con Docker operativo.",
+   "tipo": "trampa",
+   "rol": "dev-integracion",
+   "run": null,
+   "at": "2026-11-21T05:12:47.266Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "etwvylc9",
    "texto": "El remoto origin solo tiene la rama main (no existe develop): los pull requests se abren contra main, que es la rama de partida de las corridas.",
    "tipo": "dato",
@@ -19,6 +209,16 @@
    "at": "2026-11-21T04:54:53.972Z",
    "veces": 1,
    "de": "Marcelo"
+  },
+  {
+   "id": "ttvf3kxi",
+   "texto": "En platform/wa-event-platform, mvnw.cmd puede fallar con ClassNotFoundException: MavenWrapperMain si .mvn/wrapper/maven-wrapper.jar está incompleto (~27 KB); hace falta un jar válido del wrapper antes de confiar en verify/JaCoCo.",
+   "tipo": "trampa",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-21T04:54:38.011Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
   },
   {
    "id": "ugssgaxu",
@@ -59,6 +259,16 @@
    "at": "2026-11-21T04:38:26.816Z",
    "veces": 1,
    "de": "Marcelo"
+  },
+  {
+   "id": "7gtcj453",
+   "texto": "El catálogo v1 en shared/contracts/events/ (envelope + 3 eventos + topics.md + README) pasó revisión de integración sin hallazgos CRITICAL/HIGH; coincide con la arquitectura. La ejecución de EventContractsTest/NetworkNT sigue pendiente de acceso a Maven Central.",
+   "tipo": "dato",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-21T04:36:53.781Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
   },
   {
    "id": "ez5vkqv2",
@@ -111,6 +321,16 @@
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
   },
   {
+   "id": "jbp09tq1",
+   "texto": "En Windows, una ruta entre comillas terminada en barra invertida puede alterar el cierre de comillas al pasar argumentos a Java; mvnw.cmd añade un punto final al directorio para evitarlo.",
+   "tipo": "trampa",
+   "rol": "dev-integracion",
+   "run": null,
+   "at": "2026-11-21T04:23:15.241Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "kx6k79xs",
    "texto": "En Windows, PYTHONIOENCODING=utf-8 evita que scripts/verify_ia.py falle al imprimir errores que contienen caracteres fuera de cp1252.",
    "tipo": "trampa",
@@ -131,6 +351,16 @@
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
   },
   {
+   "id": "hwu9r9a8",
+   "texto": "En este entorno la descarga desde Maven Central falló y Spring Boot 3.5.7 no está en la caché local; la verificación Maven requiere acceso al repositorio.",
+   "tipo": "trampa",
+   "rol": "dev-integracion",
+   "run": null,
+   "at": "2026-11-21T04:16:27.576Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "wrt7nibs",
    "texto": "Si uv o Python 3.12 faltan en el entorno restringido, uv puede instalarse con UV_UNMANAGED_INSTALL en /tmp y usar UV_PYTHON_INSTALL_DIR en /tmp junto con UV_PYTHON=3.12 para que el verificador encuentre el intérprete.",
    "tipo": "trampa",
@@ -139,6 +369,56 @@
    "at": "2026-11-21T04:12:28.533Z",
    "veces": 1,
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "z5r4szwr",
+   "texto": "Pedido R-2 a marcelo-a-abarracin-ThinkPad-L15-Gen-2: «Como estas, necesitas ayuda?» → Todo bien por acá, por ahora no necesitamos ayuda. Esta oficina tiene un solo frente, P-11 (H8 — Base de conocimiento RAG), que está en curso: ya pasaron el analista y el arquitecto, y falta la implementación. La entrega",
+   "tipo": "dato",
+   "rol": null,
+   "run": null,
+   "at": "2026-11-21T04:10:16.184Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "4aa1ajbj",
+   "texto": "Los componentes no comparten código Java: los esquemas de shared/contracts/events/ se copian al classpath en el build con maven-resources-plugin desde ../../shared/contracts/events y se validan en los dos lados; el puerto HTTP de wa-event-platform es 8092 (las convenciones del programa no le asignaban ninguno) y el componente no tiene base de datos.",
+   "tipo": "dato",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-21T04:06:32.333Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "yqo66o33",
+   "texto": "Reintentos bloqueantes (4 intentos, 500 ms a 8 s) y una sola DLQ wa.message.dlq.v1: no se crean topics de retry porque reordenarían los mensajes de una conversación, y los errores de esquema o de parseo van derecho a DLQ sin reintentar.",
+   "tipo": "decision",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-21T04:06:30.283Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "73tzwjmj",
+   "texto": "conversationId = \"conv-\" + UUIDv5(semilla de entorno, \"whatsapp:\"+teléfono en E.164), lo genera el gateway H0 y es opaco (va sin enmascarar en logs); messageId es el MessageSid de Twilio en MessageReceived y es la clave de deduplicación que todo consumidor debe registrar en la misma transacción que el efecto.",
+   "tipo": "decision",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-21T04:06:26.993Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "xq4vwa40",
+   "texto": "El contrato de eventos del canal está fijado en specs/plataforma-eventos/arquitectura.md y docs/adr/0001-0006: sobre único (eventId, eventType, eventVersion, occurredAt, correlationId, conversationId, messageId, payload) con additionalProperties false, clave de partición conversationId, headers correlationId/eventType/eventVersion, y los cuatro topics del piloto (wa.message.received.v1, wa.message.ready-to-send.v1, wa.message.status.v1, wa.message.dlq.v1).",
+   "tipo": "decision",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-21T04:06:24.782Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
   },
   {
    "id": "51p7zty1",

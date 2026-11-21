@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +40,18 @@ class OpenApiContractTest {
         assertThat(published.path("openapi").asText()).startsWith("3.");
         assertThat(operations(published.path("paths"))).isEqualTo(operations(mapper.readTree(json).path("paths")));
         assertThat(operations(published.path("paths")).values().stream().mapToInt(Set::size).sum()).isEqualTo(6);
+    }
+
+    @Test
+    void updatePatternsAcceptNonBlankValuesAndRejectWhitespace() throws Exception {
+        JsonNode properties = new ObjectMapper(new YAMLFactory()).readTree(
+                Path.of("../../shared/contracts/wa-users-service/openapi.yaml").toFile())
+                .path("components").path("schemas").path("UpdateUserRequest").path("properties");
+        for (String field : Set.of("nombreTratamiento", "email", "telefono")) {
+            Pattern pattern = Pattern.compile(properties.path(field).path("pattern").asText());
+            assertThat(pattern.matcher("ejemplo").find()).as(field + " accepts nonblank values").isTrue();
+            assertThat(pattern.matcher("   ").find()).as(field + " rejects whitespace").isFalse();
+        }
     }
 
     private Map<String, Set<String>> operations(JsonNode paths) {

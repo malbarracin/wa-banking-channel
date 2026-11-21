@@ -94,13 +94,18 @@
       "dependsOn": [],
       "assignedTo": null,
       "deliverables": "Servicio corriendo en services/wa-users-service con sus endpoints de alta, consulta, actualización y estados, y su contrato publicado en shared/contracts/wa-users-service/openapi.yaml más su shared/contracts/wa-users-service/handoff.md.",
-      "status": "todo",
+      "status": "doing",
       "createdAt": "2026-11-21T03:43:49.017Z",
       "createdBy": {
         "account": "opensoma.app@gmail.com",
         "floor": "DESKTOP-JVEJTUF"
       },
-      "claim": null,
+      "claim": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "Marcelo",
+        "run": "20261121-e564",
+        "at": "2026-11-21T03:45:29.741Z"
+      },
       "doneAt": null,
       "doneBy": null,
       "note": null,
@@ -109,10 +114,18 @@
       "spent": null,
       "stalled": null,
       "waiting": null,
-      "times": null,
+      "times": {
+        "startedAt": "2026-11-21T03:45:29.742Z",
+        "releasedAt": null,
+        "workedMs": 0,
+        "stalledMs": 0,
+        "waitingMs": 0,
+        "stalls": 0,
+        "reopened": 0
+      },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T03:43:49.017Z"
+      "updatedAt": "2026-11-21T03:45:29.742Z"
     },
     {
       "id": "P-5",
@@ -512,6 +525,14 @@
       "floor": "DESKTOP-JVEJTUF",
       "account": "opensoma.app@gmail.com",
       "text": "17"
+    },
+    {
+      "at": "2026-11-21T03:45:29.742Z",
+      "kind": "claimed",
+      "id": "P-4",
+      "title": "H1 — Servicio de Usuarios",
+      "floor": "Marcelo",
+      "account": "opensoma.app@gmail.com"
     }
   ],
   "deadline": null,

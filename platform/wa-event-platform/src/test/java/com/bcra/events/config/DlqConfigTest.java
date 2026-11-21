@@ -87,9 +87,74 @@ class DlqConfigTest {
         assertThat(header(headers, "correlationId")).isEqualTo("3b0f8e14-7c2a-4d55-9e01-11b22c33d44e");
         assertThat(header(headers, "eventType")).isEqualTo("MessageReceived");
         assertThat(header(headers, "eventVersion")).isEqualTo("1");
+
+        // Origin coordinates of the failed record, needed to reprocess the range later on.
+        assertThat(intHeader(headers, DlqHeaders.ORIGINAL_PARTITION)).isEqualTo(1);
+        assertThat(longHeader(headers, DlqHeaders.ORIGINAL_OFFSET)).isEqualTo(42L);
+        assertThat(headers.lastHeader(DlqHeaders.ORIGINAL_TIMESTAMP)).isNotNull();
+
+        // Nothing resembling a stack trace may travel in the DLQ, under any header name.
+        assertThat(headers).allSatisfy(header ->
+            assertThat(header.key().toLowerCase(java.util.Locale.ROOT)).doesNotContain("stacktrace"));
+        assertThat(headers).allSatisfy(header -> assertThat(new String(header.value(), StandardCharsets.UTF_8))
+            .doesNotContain("\tat ").doesNotContain(".java:"));
+    }
+
+    @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void attemptsHeaderReportsTheNumberOfDeliveries() {
+        KafkaTemplate<String, String> kafka = mock(KafkaTemplate.class);
+        when(kafka.send(any(ProducerRecord.class))).thenReturn(CompletableFuture.completedFuture(null));
+        TopicsProperties topics = new TopicsProperties("wa.message.received.v1", "wa.message.ready-to-send.v1",
+            "wa.message.status.v1", "wa.message.dlq.v1", null);
+        DeadLetterPublishingRecoverer recoverer =
+            DlqConfig.deadLetterRecoverer(kafka, topics, new DlqExceptionHeadersCreator());
+        ConsumerRecord<String, String> record = new ConsumerRecord<>(topics.received(), 0, 1L, "conv-1", "{}");
+        record.headers().add(org.springframework.kafka.support.KafkaHeaders.DELIVERY_ATTEMPT,
+            java.nio.ByteBuffer.allocate(Integer.BYTES).putInt(5).array());
+        recoverer.accept(record, new IllegalStateException("database unavailable"));
+
+        ArgumentCaptor<ProducerRecord> captor = ArgumentCaptor.forClass(ProducerRecord.class);
+        org.mockito.Mockito.verify(kafka).send(captor.capture());
+        assertThat(header(captor.getValue().headers(), DlqHeaders.ATTEMPTS)).isEqualTo("5");
+    }
+
+    @Test
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    void everyContractFailureOfTheReaderIsNotRetryable() throws Exception {
+        KafkaTemplate<String, String> kafka = mock(KafkaTemplate.class);
+        TopicsProperties topics = new TopicsProperties("wa.message.received.v1", "wa.message.ready-to-send.v1",
+            "wa.message.status.v1", "wa.message.dlq.v1", null);
+        DefaultErrorHandler handler = new DlqConfig().kafkaErrorHandler(kafka, topics, new DlqExceptionHeadersCreator());
+        Method classifierMethod = ExceptionClassifier.class.getDeclaredMethod("getClassifier");
+        classifierMethod.setAccessible(true);
+        BinaryExceptionClassifier classifier = (BinaryExceptionClassifier) classifierMethod.invoke(handler);
+
+        // Exactly the failures EnvelopeReaderContractTest produces: all of them reach the DLQ on first delivery.
+        assertThat(classifier.classify(new SchemaValidationException("Invalid event JSON"))).isFalse();
+        assertThat(classifier.classify(new SchemaValidationException("Event does not match its schema"))).isFalse();
+        assertThat(classifier.classify(new SchemaValidationException("Record key or headers do not match envelope")))
+            .isFalse();
+        assertThat(classifier.classify(new SchemaValidationException("Missing event header"))).isFalse();
+        assertThat(classifier.classify(new SchemaValidationException("Unsupported event type or version"))).isFalse();
+
+        // Transient infrastructure failures keep their retries.
+        assertThat(classifier.classify(new java.net.SocketTimeoutException("read timed out"))).isTrue();
+        assertThat(classifier.classify(new org.springframework.dao.TransientDataAccessResourceException("db down")))
+            .isTrue();
+        assertThat(classifier.classify(new org.springframework.web.client.HttpServerErrorException(
+            org.springframework.http.HttpStatus.BAD_GATEWAY))).isTrue();
     }
 
     private static String header(Headers headers, String name) {
         return new String(headers.lastHeader(name).value(), StandardCharsets.UTF_8);
+    }
+
+    private static int intHeader(Headers headers, String name) {
+        return java.nio.ByteBuffer.wrap(headers.lastHeader(name).value()).getInt();
+    }
+
+    private static long longHeader(Headers headers, String name) {
+        return java.nio.ByteBuffer.wrap(headers.lastHeader(name).value()).getLong();
     }
 }

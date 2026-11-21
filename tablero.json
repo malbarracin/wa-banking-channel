@@ -398,9 +398,40 @@
       "note": null,
       "budgetUsd": null,
       "budgetTokens": null,
-      "spent": null,
+      "spent": {
+        "usd": 0,
+        "tokens": 852754,
+        "runs": {
+          "20261121-d525": {
+            "usd": 0,
+            "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+            "tools": {
+              "kilocode": 0
+            },
+            "tokens": 852754,
+            "toolTokens": {
+              "kilocode": 852754
+            },
+            "loops": 0,
+            "redoTokens": 0,
+            "roles": {
+              "analista": {
+                "kilocode": {
+                  "tokens": 852754,
+                  "steps": 1,
+                  "redo": 0
+                }
+              }
+            }
+          }
+        }
+      },
       "stalled": null,
-      "waiting": null,
+      "waiting": {
+        "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+        "text": "espera una aprobación",
+        "at": "2026-11-21T03:59:28.523Z"
+      },
       "times": {
         "startedAt": "2026-11-21T03:57:10.936Z",
         "releasedAt": null,
@@ -412,7 +443,7 @@
       },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T03:57:10.936Z"
+      "updatedAt": "2026-11-21T03:59:28.523Z"
     },
     {
       "id": "P-12",
@@ -663,6 +694,15 @@
       "title": "H8 — Base de conocimiento RAG",
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
       "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-21T03:59:28.523Z",
+      "kind": "waiting",
+      "id": "P-11",
+      "title": "H8 — Base de conocimiento RAG",
+      "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com",
+      "text": "espera una aprobación"
     }
   ],
   "deadline": null,

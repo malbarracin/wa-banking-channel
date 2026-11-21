@@ -1,0 +1,39 @@
+# Contexto de build de las imágenes del canal: es la raíz del repositorio, porque
+# cada componente necesita sus fuentes y los contratos de shared/contracts/.
+# Fuera queda todo lo que no tiene que entrar en una imagen.
+# No se usa el patrón ".*" a secas: excluiría platform/.../.mvn, que el Dockerfile
+# necesita para correr el wrapper.
+
+# Andamiaje y configuración local (incluye .git y los secretos de .env)
+.git
+.gitattributes
+.github
+.opensoma
+.claude
+.codex
+.cursor
+.kiro
+.opencode
+.agents
+.idea
+.vscode
+**/.env
+**/.env.*
+
+# Documentación y material de trabajo
+**/*.md
+docs
+specs
+
+# Resultados de build y de pruebas
+**/target
+**/build
+**/surefire-reports
+**/*.log
+
+# Definición de los propios contenedores
+**/Dockerfile
+**/compose.yaml
+**/compose.yml
+**/docker-compose.yml
+**/docker-compose.yaml

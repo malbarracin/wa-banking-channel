@@ -1,18 +1,80 @@
+# Stack local de la plataforma de eventos.
+#
+#   docker compose up -d                        Kafka KRaft + los topics del piloto (para correr la app con ./mvnw)
+#   docker compose --profile app up -d --build  además, la plataforma dentro de un contenedor
+#   docker compose --profile app down -v        baja todo
+#
+# Escucha solo en 127.0.0.1. Los valores se pueden ajustar con un .env propio
+# (ver .env.example); en el repositorio no hay credenciales.
+
+name: wa-event-platform
+
 services:
   kafka:
     image: apache/kafka:3.9.1
     ports:
-      - "127.0.0.1:9092:9092"
+      # Listener para la PC; entre contenedores se usa kafka:19092.
+      - "127.0.0.1:${KAFKA_HOST_PORT:-9092}:9092"
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:19092,HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:19092,HOST://localhost:${KAFKA_HOST_PORT:-9092}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,HOST:PLAINTEXT
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 15s
+
+  # Crea los cuatro topics del piloto con las particiones y la retención del
+  # catálogo (shared/contracts/events/topics.md) y termina. Es idempotente.
+  kafka-init:
+    image: apache/kafka:3.9.1
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        crear() {
+          /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 \
+            --create --if-not-exists --topic "$$1" --partitions "$$2" --replication-factor 1 \
+            --config cleanup.policy=delete --config retention.ms="$$3"
+        }
+        crear wa.message.received.v1      3 604800000
+        crear wa.message.ready-to-send.v1 3 604800000
+        crear wa.message.status.v1        3 604800000
+        crear wa.message.dlq.v1           1 2592000000
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:19092 --list
+
+  wa-event-platform:
+    profiles: ["app"]
+    image: wa-event-platform:${WA_EVENT_PLATFORM_TAG:-local}
+    build:
+      # La raíz del repositorio: la imagen necesita los contratos de shared/contracts/events.
+      context: ../..
+      dockerfile: platform/wa-event-platform/Dockerfile
+    depends_on:
+      kafka:
+        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-docker}
+      SERVER_PORT: 8092
+      KAFKA_BOOTSTRAP_SERVERS: kafka:19092
+    ports:
+      - "127.0.0.1:${APP_HOST_PORT:-8092}:8092"
+    restart: unless-stopped
+    # El healthcheck (Actuator) viene en la imagen; queda DOWN si falta un topic.

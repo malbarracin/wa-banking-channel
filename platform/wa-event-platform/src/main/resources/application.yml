@@ -73,3 +73,14 @@ spring:
   kafka:
     consumer:
       group-id: wa-event-platform-reference
+---
+# Dentro de un contenedor los topics los provisiona la infraestructura
+# (kafka-init en el compose) y la aplicación solo verifica que existan al arrancar.
+spring:
+  config:
+    activate:
+      on-profile: docker
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka:19092}
+    consumer:
+      group-id: wa-event-platform-reference

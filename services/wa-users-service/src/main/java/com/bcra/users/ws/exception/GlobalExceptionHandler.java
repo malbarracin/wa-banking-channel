@@ -2,6 +2,7 @@ package com.bcra.users.ws.exception;
 
 import java.time.Instant;
 import java.util.List;
+import com.bcra.users.ws.user.dto.UpdateUserRequest.UnknownUpdateFieldException;
 
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
@@ -42,7 +43,18 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, "La solicitud tiene datos inválidos", details);
     }
 
-    @ExceptionHandler({IllegalArgumentException.class, HttpMessageNotReadableException.class,
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleUnreadable(HttpMessageNotReadableException exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof UnknownUpdateFieldException) {
+                return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR,
+                        "La solicitud tiene datos inválidos", List.of());
+            }
+        }
+        return build(HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST, "La solicitud no es válida", List.of());
+    }
+
+    @ExceptionHandler({IllegalArgumentException.class,
             MethodArgumentTypeMismatchException.class, ServletRequestBindingException.class})
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception exception) {
         return build(HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST, "La solicitud no es válida", List.of());

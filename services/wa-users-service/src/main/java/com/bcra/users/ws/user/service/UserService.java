@@ -1,6 +1,8 @@
 package com.bcra.users.ws.user.service;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Objects;
 import java.util.UUID;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -15,6 +17,7 @@ import com.bcra.users.ws.config.CurrentActor;
 import com.bcra.users.ws.exception.DuplicateUserException;
 import com.bcra.users.ws.exception.UserNotFoundException;
 import com.bcra.users.ws.user.dto.CreateUserRequest;
+import com.bcra.users.ws.user.dto.UpdateUserRequest;
 import com.bcra.users.ws.user.dto.UserResponse;
 import com.bcra.users.ws.user.entity.DocumentType;
 import com.bcra.users.ws.user.entity.User;
@@ -22,6 +25,7 @@ import com.bcra.users.ws.user.entity.UserStatus;
 import com.bcra.users.ws.user.mapper.UserMapper;
 import com.bcra.users.ws.user.repository.UserRepository;
 
+/** Casos de uso de administración de usuarios. */
 @Service
 public class UserService {
     private final UserRepository repository;
@@ -71,6 +75,34 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse findById(UUID id) {
         return mapper.toResponse(repository.findById(id).orElseThrow(UserNotFoundException::new));
+    }
+
+    /** Actualiza los campos permitidos y registra los nombres de los cambios en la misma transacción. */
+    @Transactional
+    public UserResponse update(UUID id, UpdateUserRequest request) {
+        User user = repository.findById(id).orElseThrow(UserNotFoundException::new);
+        List<String> changed = new ArrayList<>();
+        if (request.nombreTratamiento() != null && !Objects.equals(request.nombreTratamiento(), user.getNombreTratamiento())) {
+            user.setNombreTratamiento(request.nombreTratamiento());
+            changed.add("nombreTratamiento");
+        }
+        if (request.email() != null && !Objects.equals(request.email(), user.getEmail())) {
+            user.setEmail(request.email());
+            changed.add("email");
+        }
+        if (request.telefono() != null && !Objects.equals(request.telefono(), user.getTelefono())) {
+            user.setTelefono(request.telefono());
+            changed.add("telefono");
+        }
+        if (request.preferencias() != null && !Objects.equals(request.preferencias(), user.getPreferencias())) {
+            user.setPreferencias(request.preferencias());
+            changed.add("preferencias");
+        }
+        repository.flush();
+        CurrentActor.Actor current = actor.get().orElseThrow();
+        audit.record(id, AuditAction.ACTUALIZACION, AuditResult.EXITOSO, changed,
+                MDC.get("correlationId"), current.role() + ":" + current.id());
+        return mapper.toResponse(user);
     }
 
     @Transactional(readOnly = true)

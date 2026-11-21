@@ -26,9 +26,40 @@
       "note": null,
       "budgetUsd": null,
       "budgetTokens": null,
-      "spent": null,
+      "spent": {
+        "usd": 0,
+        "tokens": 736283,
+        "runs": {
+          "20261121-f233": {
+            "usd": 0,
+            "floor": "DESKTOP-JVEJTUF",
+            "tools": {
+              "kilocode": 0
+            },
+            "tokens": 736283,
+            "toolTokens": {
+              "kilocode": 736283
+            },
+            "loops": 0,
+            "redoTokens": 0,
+            "roles": {
+              "analista": {
+                "kilocode": {
+                  "tokens": 736283,
+                  "steps": 1,
+                  "redo": 0
+                }
+              }
+            }
+          }
+        }
+      },
       "stalled": null,
-      "waiting": null,
+      "waiting": {
+        "floor": "DESKTOP-JVEJTUF",
+        "text": "espera una aprobación",
+        "at": "2026-11-21T03:52:33.007Z"
+      },
       "times": {
         "startedAt": "2026-11-21T03:49:02.977Z",
         "releasedAt": null,
@@ -40,7 +71,7 @@
       },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T03:49:02.977Z"
+      "updatedAt": "2026-11-21T03:52:33.007Z"
     },
     {
       "id": "P-2",
@@ -598,6 +629,15 @@
       "title": "H1 — Servicio de Usuarios",
       "floor": "Marcelo",
       "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-21T03:52:33.007Z",
+      "kind": "waiting",
+      "id": "P-1",
+      "title": "H0.1 — Plataforma de Eventos (Kafka)",
+      "floor": "DESKTOP-JVEJTUF",
+      "account": "opensoma.app@gmail.com",
+      "text": "espera una aprobación"
     }
   ],
   "deadline": null,

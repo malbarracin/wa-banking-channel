@@ -1,0 +1,25 @@
+{
+ "items": [
+  {
+   "id": "8ul3lb57",
+   "texto": "Los datos técnicos del programa (carpeta y nombre de cada componente, grupo Maven com.bcra y paquete base por componente, puertos 8090/8091/8101/8102/8103, prefijo de topics wa. y rutas de contratos en shared/contracts/) están en la sección «Convenciones técnicas del programa» del roadmap de Notion y resumidos en specs/programa/programa.md: no hace falta volver a buscarlos.",
+   "tipo": "dato",
+   "rol": "director",
+   "run": null,
+   "at": "2026-11-21T03:42:23.303Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "vl9i62mn",
+   "texto": "El programa se partió en 17 frentes, uno por cada fila del tablero de hitos del roadmap (H0.1, H0, H0.2, H1, H3, H2, H4, H5, H6, H7, H8, H9, E2E, QA, SEC, REV, REL), con las dependencias y los contratos de shared/contracts/ que fija el roadmap; la propuesta está en specs/programa/frentes.json y specs/programa/programa.md.",
+   "tipo": "decision",
+   "rol": "director",
+   "run": null,
+   "at": "2026-11-21T03:42:20.839Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  }
+ ],
+ "forgotten": {}
+}

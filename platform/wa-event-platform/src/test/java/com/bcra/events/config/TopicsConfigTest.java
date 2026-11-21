@@ -45,10 +45,16 @@ class TopicsConfigTest {
         assertThat(config.getProperty("wa.topics.consumer-groups.gateway")).isEqualTo("wa-twilio-gateway");
         assertThat(config.getProperty("wa.topics.consumer-groups.orchestrator")).isEqualTo("wa-channel-orchestrator");
         assertThat(config.getProperty("wa.topics.consumer-groups.reference")).isEqualTo("wa-event-platform-reference");
-        assertThat(documents.subList(1, documents.size())).hasSize(3).allSatisfy(document -> {
-            assertThat(document.getProperty("spring.config.activate.on-profile")).isIn("local", "dev", "test");
+        assertThat(documents.subList(1, documents.size())).hasSize(4).allSatisfy(document -> {
+            assertThat(document.getProperty("spring.config.activate.on-profile")).isIn("local", "dev", "test", "docker");
             assertThat(document.getProperty("spring.kafka.consumer.group-id")).isEqualTo("wa-event-platform-reference");
         });
+        var dockerProfile = documents.subList(1, documents.size()).stream()
+            .filter(document -> "docker".equals(document.getProperty("spring.config.activate.on-profile")))
+            .findFirst()
+            .orElseThrow();
+        assertThat(dockerProfile.getProperty("spring.kafka.bootstrap-servers"))
+            .isEqualTo("${KAFKA_BOOTSTRAP_SERVERS:kafka:19092}");
     }
 
     @Test

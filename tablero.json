@@ -399,27 +399,27 @@
       "budgetUsd": null,
       "budgetTokens": null,
       "spent": {
-        "usd": 1.5082,
-        "tokens": 8152230,
+        "usd": 2.1957,
+        "tokens": 8370780,
         "runs": {
           "20261121-d525": {
-            "usd": 1.5082,
+            "usd": 2.1957,
             "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
             "tools": {
               "kilocode": 0,
-              "claude-code": 1.5082,
+              "claude-code": 2.1956,
               "codex": 0,
               "cursor": 0
             },
-            "tokens": 8152230,
+            "tokens": 8370780,
             "toolTokens": {
               "kilocode": 4196893,
-              "claude-code": 575185,
+              "claude-code": 793735,
               "codex": 2290994,
               "cursor": 1089158
             },
             "loops": 2,
-            "redoTokens": 4513534,
+            "redoTokens": 4732084,
             "roles": {
               "analista": {
                 "kilocode": {
@@ -454,9 +454,9 @@
                   "redo": 2
                 },
                 "claude-code": {
-                  "tokens": 306687,
-                  "steps": 1,
-                  "redo": 1
+                  "tokens": 525237,
+                  "steps": 2,
+                  "redo": 2
                 }
               },
               "tester": {
@@ -478,7 +478,11 @@
         }
       },
       "stalled": null,
-      "waiting": null,
+      "waiting": {
+        "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+        "text": "espera una respuesta",
+        "at": "2026-11-21T04:22:57.951Z"
+      },
       "times": {
         "startedAt": "2026-11-21T03:57:10.936Z",
         "releasedAt": null,
@@ -490,7 +494,7 @@
       },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T04:22:31.472Z"
+      "updatedAt": "2026-11-21T04:22:57.951Z"
     },
     {
       "id": "P-12",
@@ -832,6 +836,15 @@
       "title": "H8 — Base de conocimiento RAG",
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
       "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-21T04:22:57.951Z",
+      "kind": "waiting",
+      "id": "P-11",
+      "title": "H8 — Base de conocimiento RAG",
+      "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com",
+      "text": "espera una respuesta"
     }
   ],
   "deadline": null,

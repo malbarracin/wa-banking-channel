@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.bcra.local/wa/events/message-ready-to-send.v1.schema.json",
+  "allOf": [
+    {"$ref": "envelope.v1.schema.json"},
+    {"properties": {
+      "eventType": {"const": "MessageReadyToSend"},
+      "eventVersion": {"const": 1},
+      "payload": {
+        "type": "object", "additionalProperties": false, "required": ["to", "kind"],
+        "properties": {
+          "to": {"type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$"},
+          "kind": {"enum": ["TEXT", "TEMPLATE"]},
+          "text": {"type": "object", "additionalProperties": false, "required": ["body"], "properties": {"body": {"type": "string", "minLength": 1, "maxLength": 4096}}},
+          "template": {"type": "object", "additionalProperties": false, "required": ["name", "language", "variables"], "properties": {"name": {"type": "string", "minLength": 1}, "language": {"type": "string", "pattern": "^[a-z]{2}(_[A-Z]{2})?$"}, "variables": {"type": "array", "maxItems": 10, "items": {"type": "string"}}}},
+          "replyToMessageId": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$"}
+        },
+        "allOf": [
+          {"if": {"properties": {"kind": {"const": "TEXT"}}, "required": ["kind"]}, "then": {"required": ["text"]}},
+          {"if": {"properties": {"kind": {"const": "TEMPLATE"}}, "required": ["kind"]}, "then": {"required": ["template"]}}
+        ]
+      }
+    }}
+  ]
+}

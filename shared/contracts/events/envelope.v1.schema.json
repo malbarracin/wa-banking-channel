@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.bcra.local/wa/events/envelope.v1.schema.json",
+  "title": "Sobre de evento del canal WhatsApp",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["eventId", "eventType", "eventVersion", "occurredAt", "correlationId", "conversationId", "messageId", "payload"],
+  "properties": {
+    "eventId": {"type": "string", "format": "uuid"},
+    "eventType": {"type": "string", "enum": ["MessageReceived", "MessageReadyToSend", "MessageStatus"]},
+    "eventVersion": {"type": "integer", "minimum": 1},
+    "occurredAt": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "correlationId": {"type": "string", "format": "uuid"},
+    "conversationId": {"type": "string", "pattern": "^conv-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"},
+    "messageId": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._:-]+$"},
+    "payload": {"type": "object"}
+  }
+}

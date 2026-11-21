@@ -1,6 +1,7 @@
 package com.bcra.events.messaging;
 
 import com.bcra.events.domain.EventEnvelope;
+import com.bcra.events.observability.EventMetrics;
 import com.bcra.events.schema.SchemaValidationException;
 import com.bcra.events.schema.SchemaValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -22,13 +23,15 @@ public class EventPublisher {
     private final ObjectMapper mapper;
     private final SchemaValidator validator;
     private final MeterRegistry metrics;
+    private final EventMetrics eventMetrics;
 
     public EventPublisher(KafkaTemplate<String, String> kafka, ObjectMapper mapper,
-                          SchemaValidator validator, MeterRegistry metrics) {
+                          SchemaValidator validator, MeterRegistry metrics, EventMetrics eventMetrics) {
         this.kafka = kafka;
         this.mapper = mapper;
         this.validator = validator;
         this.metrics = metrics;
+        this.eventMetrics = eventMetrics;
     }
 
     public CompletableFuture<SendResult<String, String>> publicar(String topic, EventEnvelope input) {
@@ -48,10 +51,10 @@ public class EventPublisher {
             json = mapper.writeValueAsString(event);
             validator.validate(mapper.readTree(json), event.eventType(), event.eventVersion());
         } catch (JsonProcessingException e) {
-            metrics.counter("wa_events_invalid_total", "stage", "produce").increment();
+            eventMetrics.invalid("produce", "serialization");
             throw new SchemaValidationException("Cannot serialize event", e);
         } catch (SchemaValidationException e) {
-            metrics.counter("wa_events_invalid_total", "stage", "produce").increment();
+            eventMetrics.invalid("produce", "schema");
             throw e;
         }
         ProducerRecord<String, String> record = new ProducerRecord<>(topic, event.conversationId(), json);
@@ -63,6 +66,8 @@ public class EventPublisher {
                 if (error != null) {
                     metrics.counter("wa_events_publish_failed_total").increment();
                     LOG.warn("Event publication failed");
+                } else {
+                    eventMetrics.published(topic, event.eventType().name());
                 }
             });
         } catch (RuntimeException e) {

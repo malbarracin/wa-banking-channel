@@ -14,6 +14,7 @@ import com.bcra.events.messaging.consumer.EnvelopeReader;
 import com.bcra.events.messaging.consumer.InMemoryIdempotencyStore;
 import com.bcra.events.messaging.consumer.IdempotencyGuard;
 import com.bcra.events.messaging.consumer.ReferenceMessageReceivedListener;
+import com.bcra.events.observability.EventMetrics;
 import com.bcra.events.schema.SchemaCatalog;
 import com.bcra.events.schema.SchemaValidationException;
 import com.bcra.events.schema.SchemaValidator;
@@ -37,6 +38,11 @@ class ReferenceMessagingTest {
         .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     private final SchemaValidator validator = new SchemaValidator(new SchemaCatalog());
     private final SimpleMeterRegistry metrics = new SimpleMeterRegistry();
+    private final EventMetrics eventMetrics = new EventMetrics(metrics);
+
+    private EventPublisher publisher(KafkaTemplate<String, String> kafka) {
+        return new EventPublisher(kafka, mapper, validator, metrics, eventMetrics);
+    }
 
     private EventEnvelope event(UUID id, String messageId) throws Exception {
         return new EventEnvelope(id, EventType.MessageReceived, 1, Instant.now(),
@@ -51,7 +57,7 @@ class ReferenceMessagingTest {
         @SuppressWarnings("unchecked")
         KafkaTemplate<String, String> kafka = mock(KafkaTemplate.class);
         when(kafka.send(any(ProducerRecord.class))).thenReturn(CompletableFuture.completedFuture(null));
-        EventPublisher publisher = new EventPublisher(kafka, mapper, validator, metrics);
+        EventPublisher publisher = publisher(kafka);
         EventEnvelope input = event(null, "SM123");
         publisher.publicar("wa.message.received.v1", input);
         @SuppressWarnings("unchecked")
@@ -69,7 +75,7 @@ class ReferenceMessagingTest {
         assertThat(mapper.readTree(record.value()).get("eventId").asText()).isNotBlank();
         assertThatThrownBy(() -> publisher.publicar("wa.message.received.v2", input))
             .isInstanceOf(SchemaValidationException.class);
-        assertThat(metrics.counter("wa_events_invalid_total", "stage", "produce").count()).isEqualTo(1);
+        assertThat(metrics.counter("wa_events_invalid_total", "stage", "produce", "reason", "schema").count()).isEqualTo(1);
     }
 
     @Test
@@ -82,7 +88,7 @@ class ReferenceMessagingTest {
         EventEnvelope original = event(null, "SM123");
         EventEnvelope input = new EventEnvelope(null, original.eventType(), 1, null,
             original.correlationId(), original.conversationId(), original.messageId(), original.payload());
-        EventPublisher publisher = new EventPublisher(kafka, mapper, validator, metrics);
+        EventPublisher publisher = publisher(kafka);
         assertThatThrownBy(() -> publisher.publicar("wa.message.received.v1", input).join())
             .hasCauseInstanceOf(IllegalStateException.class);
         @SuppressWarnings("unchecked")
@@ -98,7 +104,7 @@ class ReferenceMessagingTest {
     void invalidPayloadIsNeverPublished() throws Exception {
         @SuppressWarnings("unchecked")
         KafkaTemplate<String, String> kafka = mock(KafkaTemplate.class);
-        EventPublisher publisher = new EventPublisher(kafka, mapper, validator, metrics);
+        EventPublisher publisher = publisher(kafka);
         EventEnvelope original = event(null, "SM123");
         EventEnvelope invalid = new EventEnvelope(null, original.eventType(), 1, null,
             original.correlationId(), original.conversationId(), original.messageId(), mapper.createObjectNode());

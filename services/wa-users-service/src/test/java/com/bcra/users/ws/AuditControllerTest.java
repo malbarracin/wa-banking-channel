@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
@@ -21,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
+import com.bcra.users.ws.support.GatewayJwtTestConfig;
+import com.bcra.users.ws.support.GatewayJwtTokens;
 import com.bcra.users.ws.audit.entity.AuditAction;
 import com.bcra.users.ws.audit.entity.AuditEvent;
 import com.bcra.users.ws.audit.entity.AuditResult;
@@ -34,6 +37,7 @@ import com.bcra.users.ws.user.repository.UserRepository;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(GatewayJwtTestConfig.class)
 @Transactional
 class AuditControllerTest {
     @Autowired private MockMvc mvc;
@@ -61,8 +65,7 @@ class AuditControllerTest {
         ReflectionTestUtils.setField(recent, "createdAt", Instant.parse("2024-01-02T00:00:00Z"));
         events.save(old);
         events.save(recent);
-        String body = mvc.perform(get("/api/v1/users/{id}/audit", id).header("X-Actor-Id", "actor")
-                .header("X-Actor-Role", "SOPORTE"))
+        String body = mvc.perform(get("/api/v1/users/{id}/audit", id).header("Authorization", GatewayJwtTokens.bearer("actor", "SOPORTE")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$[0].action").value("CAMBIO_ESTADO"))
                 .andExpect(jsonPath("$[0].fecha").value("2024-01-02T00:00:00Z"))
                 .andExpect(jsonPath("$[0].correlationId").value("corr-2"))
@@ -73,20 +76,17 @@ class AuditControllerTest {
         assertThat(mapper.safeFields(List.of("email", "test@example.invalid", "12345678")))
                 .containsExactly("email");
         assertThat(mapper.safeFields(null)).isEmpty();
-        mvc.perform(get("/api/v1/users/{id}/audit", id).header("X-Actor-Id", "actor")
-                .header("X-Actor-Role", "OPERACIONES")).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/users/{id}/audit", id).header("Authorization", GatewayJwtTokens.bearer("actor", "OPERACIONES"))).andExpect(status().isOk());
     }
 
     @Test
     void missingUserReturnsErrorAndInternalServiceIsForbidden() throws Exception {
         UUID id = UUID.randomUUID();
-        mvc.perform(get("/api/v1/users/{id}/audit", id).header("X-Actor-Id", "actor")
-                .header("X-Actor-Role", "SOPORTE")).andExpect(status().isNotFound())
+        mvc.perform(get("/api/v1/users/{id}/audit", id).header("Authorization", GatewayJwtTokens.bearer("actor", "SOPORTE"))).andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"))
                 .andExpect(jsonPath("$.message").isString()).andExpect(jsonPath("$.details").isArray())
                 .andExpect(jsonPath("$.timestamp").isString());
-        mvc.perform(get("/api/v1/users/{id}/audit", id).header("X-Actor-Id", "actor")
-                .header("X-Actor-Role", "SERVICIO_INTERNO")).andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/users/{id}/audit", id).header("Authorization", GatewayJwtTokens.bearer("actor", "SERVICIO_INTERNO"))).andExpect(status().isForbidden());
     }
 
     @Test
@@ -97,11 +97,8 @@ class AuditControllerTest {
                 || entry.getKey().getMethodsCondition().getMethods().stream().anyMatch(method ->
                         method == RequestMethod.PUT || method == RequestMethod.PATCH || method == RequestMethod.DELETE)));
         UUID id = UUID.randomUUID();
-        mvc.perform(put("/api/v1/users/{id}/audit", id).header("X-Actor-Id", "actor")
-                .header("X-Actor-Role", "OPERACIONES")).andExpect(status().isForbidden());
-        mvc.perform(patch("/api/v1/users/{id}/audit", id).header("X-Actor-Id", "actor")
-                .header("X-Actor-Role", "OPERACIONES")).andExpect(status().isForbidden());
-        mvc.perform(delete("/api/v1/users/{id}/audit", id).header("X-Actor-Id", "actor")
-                .header("X-Actor-Role", "OPERACIONES")).andExpect(status().isForbidden());
+        mvc.perform(put("/api/v1/users/{id}/audit", id).header("Authorization", GatewayJwtTokens.bearer("actor", "OPERACIONES"))).andExpect(status().isForbidden());
+        mvc.perform(patch("/api/v1/users/{id}/audit", id).header("Authorization", GatewayJwtTokens.bearer("actor", "OPERACIONES"))).andExpect(status().isForbidden());
+        mvc.perform(delete("/api/v1/users/{id}/audit", id).header("Authorization", GatewayJwtTokens.bearer("actor", "OPERACIONES"))).andExpect(status().isForbidden());
     }
 }

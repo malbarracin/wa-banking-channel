@@ -15,12 +15,15 @@ import com.bcra.users.ws.exception.InvalidStatusTransitionException;
 import com.bcra.users.ws.user.dto.ChangeStatusRequest;
 import com.bcra.users.ws.user.entity.UserStatus;
 import com.bcra.users.ws.user.repository.UserRepository;
+import com.bcra.users.ws.support.GatewayJwtTestConfig;
+import com.bcra.users.ws.support.GatewayJwtTokens;
 import com.bcra.users.ws.user.service.StatusChangedPublisher;
 import com.bcra.users.ws.user.service.UserStatusService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
@@ -30,6 +33,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(GatewayJwtTestConfig.class)
 class UserStatusTest {
     @Autowired MockMvc mvc;
     @Autowired UserRepository users;
@@ -42,7 +46,7 @@ class UserStatusTest {
     void transitionsAuditAuthorizationAndCommit() throws Exception {
         String document = UUID.randomUUID().toString().substring(0, 8);
         var creation = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/users")
-                .header("X-Actor-Id", "actor").header("X-Actor-Role", "OPERACIONES")
+                .header("Authorization", GatewayJwtTokens.bearer("actor", "OPERACIONES"))
                 .contentType(MediaType.APPLICATION_JSON).content("""
                         {"tipoDocumento":"DNI","numeroDocumento":"%s","nombreCompleto":"Ejemplo",
                         "fechaNacimiento":"1990-01-01","email":"test@example.invalid","telefono":"00000000"}
@@ -72,7 +76,7 @@ class UserStatusTest {
     void transactionRollbackDoesNotPublish() throws Exception {
         String document = UUID.randomUUID().toString().substring(0, 8);
         var creation = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/users")
-                .header("X-Actor-Id", "actor").header("X-Actor-Role", "OPERACIONES")
+                .header("Authorization", GatewayJwtTokens.bearer("actor", "OPERACIONES"))
                 .contentType(MediaType.APPLICATION_JSON).content("""
                         {"tipoDocumento":"DNI","numeroDocumento":"%s","nombreCompleto":"Ejemplo",
                         "fechaNacimiento":"1990-01-01","email":"test@example.invalid","telefono":"00000000"}
@@ -95,8 +99,9 @@ class UserStatusTest {
 
     private org.springframework.test.web.servlet.ResultActions change(UUID id, String state, String role)
             throws Exception {
-        return mvc.perform(patch("/api/v1/users/{id}/status", id).header("X-Actor-Id", "actor")
-                .header("X-Actor-Role", role).header("X-Correlation-Id", "corr-test")
+        return mvc.perform(patch("/api/v1/users/{id}/status", id)
+                .header("Authorization", GatewayJwtTokens.bearer("actor", role))
+                .header("X-Correlation-Id", "corr-test")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"nuevoEstado\":\"" + state + "\",\"motivo\":\"prueba\"}"));
     }

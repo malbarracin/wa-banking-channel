@@ -11,6 +11,8 @@ import java.util.UUID;
 
 import com.bcra.users.ws.config.CorrelationIdFilter;
 import com.bcra.users.ws.config.JacksonConfig;
+import com.bcra.users.ws.support.GatewayJwtTestConfig;
+import com.bcra.users.ws.support.GatewayJwtTokens;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
@@ -22,6 +24,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,10 +35,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
+@ActiveProfiles("test")
 @WebMvcTest(controllers = GlobalExceptionHandlerTest.TestController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@TestPropertySource(properties = {
+        "app.gateway.jwt.jwk-set-uri=http://127.0.0.1:9/jwks",
+        "app.gateway.jwt.issuer=https://gateway.test/iam"
+})
 @Import({GlobalExceptionHandlerTest.TestController.class, GlobalExceptionHandler.class,
-        CorrelationIdFilter.class, JacksonConfig.class})
+        CorrelationIdFilter.class, JacksonConfig.class, GatewayJwtTestConfig.class})
 class GlobalExceptionHandlerTest {
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper mapper;

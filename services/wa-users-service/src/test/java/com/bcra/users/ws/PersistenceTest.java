@@ -9,10 +9,13 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.bcra.users.ws.support.GatewayJwtTestConfig;
+import com.bcra.users.ws.support.GatewayJwtTokens;
 import com.bcra.users.ws.audit.entity.AuditAction;
 import com.bcra.users.ws.audit.entity.AuditResult;
 import com.bcra.users.ws.audit.repository.AuditEventRepository;
@@ -24,6 +27,7 @@ import com.bcra.users.ws.user.repository.UserRepository;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(GatewayJwtTestConfig.class)
 @Transactional
 class PersistenceTest {
     @Autowired private UserRepository users;

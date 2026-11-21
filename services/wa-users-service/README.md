@@ -22,7 +22,7 @@ Es un backend HTTP clásico (Java 21 + Spring Boot 3, paquete base `com.bcra.use
 - Consultar u operar productos: cuentas, tarjetas, seguros.
 - Modificar datos legales sensibles (domicilio legal, estado civil, etc.) salvo política expresa del banco.
 - Hacer onboarding comercial de productos.
-- Autenticar al actor: confía en los headers `X-Actor-Id` / `X-Actor-Role` ya autenticados por el gateway de la plataforma.
+- Emitir el JWT del actor: valida el token firmado por el gateway/IAM (`Authorization: Bearer`) según `shared/contracts/wa-users-service/gateway-trust.md`.
 
 ## Stack
 
@@ -31,7 +31,7 @@ Es un backend HTTP clásico (Java 21 + Spring Boot 3, paquete base `com.bcra.use
 | Java 21 + Spring Boot 3.5 | Base del servicio |
 | Spring Web / Bean Validation | API REST y validación de entrada |
 | Spring Data JPA + PostgreSQL + Flyway | Persistencia y migraciones (`db/migration/V1__init.sql`) |
-| Spring Security | Autorización por rol leyendo los headers de identidad |
+| Spring Security + OAuth2 Resource Server | Validación JWT (JWKS) y autorización por rol del claim `role` |
 | springdoc-openapi | Documentación de la API (`/v3/api-docs`, denegada en producción) |
 | Actuator + Micrometer | `health`, `info` y contadores de operaciones |
 | MapStruct / Lombok | Mapeo entidad ↔ DTO y reducción de boilerplate |
@@ -78,7 +78,7 @@ Definir `DB_URL`, `DB_USER` y `DB_PASSWORD` en el entorno y arrancar con el perf
 ### Con Docker Compose (desde la raíz del repositorio)
 
 ```bash
-cp .env.example .env   # completar USERS_DB_NAME, USERS_DB_USER y USERS_DB_PASSWORD
+cp .env.example .env   # completar USERS_DB_*, USERS_GATEWAY_JWK_SET_URI y USERS_GATEWAY_JWT_ISSUER
 docker compose up -d --build --wait
 docker compose down    # bajar el entorno
 ```
@@ -95,18 +95,20 @@ Raíz del repositorio — `.env` para `docker-compose.yml` (copiar `.env.example
 | `USERS_DB_USER` | Usuario de la base | `usuario_ejemplo` |
 | `USERS_DB_PASSWORD` | Contraseña de la base (solo en `.env`, nunca en el repo) | — |
 | `USERS_HTTP_PORT` | Puerto del host donde se publica el servicio; dentro del contenedor es `8080` | `8080` |
+| `USERS_GATEWAY_JWK_SET_URI` | JWKS del gateway/IAM | `https://gateway.ejemplo/jwks` |
+| `USERS_GATEWAY_JWT_ISSUER` | Emisor esperado del JWT | `https://gateway.ejemplo/iam` |
 
-Servicio — `services/wa-users-service/.env.example` (consumido por `application.yml`):
+Servicio — `services/wa-users-service/.env.example` (consumido por `application.yml` / perfil `prod`):
 
 | Variable | Para qué | Ejemplo |
 | --- | --- | --- |
 | `DB_URL` | URL JDBC de PostgreSQL | `jdbc:postgresql://wa-users-postgres:5432/nombre_bd_ejemplo` |
 | `DB_USER` | Usuario de la base | `usuario_ejemplo` |
 | `DB_PASSWORD` | Contraseña de la base | — |
-| `APP_ACTOR_HEADER_ID` | Nombre del header de identidad del actor | `X-Actor-Id` |
-| `APP_ACTOR_HEADER_ROLE` | Nombre del header de rol del actor | `X-Actor-Role` |
+| `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI` | Endpoint JWKS del gateway/IAM | `https://gateway.ejemplo/jwks` |
+| `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI` | Emisor esperado del JWT (`iss`) | `https://gateway.ejemplo/iam` |
 
-Nota: los nombres de los headers están fijos hoy en el código (`X-Actor-Id`, `X-Actor-Role`, `X-Correlation-Id`); `APP_ACTOR_HEADER_ID` y `APP_ACTOR_HEADER_ROLE` figuran en el `.env.example` del componente como placeholders de configuración, pero todavía no son leídos por la aplicación.
+La identidad y el rol salen de los claims verificados del JWT (`sub`, `role`). `X-Correlation-Id` sigue siendo opcional. Ver `shared/contracts/wa-users-service/gateway-trust.md`.
 
 Perfiles: `dev` (H2, sin Flyway), `test` (H2 en modo PostgreSQL, usado por los tests) y `prod` (PostgreSQL, Flyway + `ddl-auto: validate`). Sin perfil, `application.yml` exige `DB_URL`, `DB_USER` y `DB_PASSWORD`.
 
@@ -130,7 +132,7 @@ Los ejemplos usan datos ficticios. Tipos de documento: `DNI`, `PASAPORTE`, `CUIL
 ```bash
 curl -X POST http://localhost:8080/api/v1/users \
   -H 'Content-Type: application/json' \
-  -H 'X-Actor-Id: actor-ejemplo' -H 'X-Actor-Role: OPERACIONES' \
+  -H 'Authorization: Bearer <jwt-del-gateway>' \
   -d '{
     "tipoDocumento": "DNI",
     "numeroDocumento": "00000000",
@@ -161,11 +163,11 @@ Respuesta `201` (el documento se devuelve enmascarado):
 
 ```bash
 curl 'http://localhost:8080/api/v1/users/by-document?tipo=DNI&numero=00000000' \
-  -H 'X-Actor-Id: actor-ejemplo' -H 'X-Actor-Role: SERVICIO_INTERNO'
+  -H 'Authorization: Bearer <jwt-del-gateway>'
 
 curl -X PATCH http://localhost:8080/api/v1/users/00000000-0000-4000-8000-000000000001 \
   -H 'Content-Type: application/json' \
-  -H 'X-Actor-Id: actor-ejemplo' -H 'X-Actor-Role: OPERACIONES' \
+  -H 'Authorization: Bearer <jwt-del-gateway>' \
   -d '{"email": "nuevo@example.invalid", "preferencias": "Sin preferencias"}'
 ```
 
@@ -176,13 +178,13 @@ En la actualización, los campos omitidos o nulos no se modifican y se rechazan 
 ```bash
 curl -X PATCH http://localhost:8080/api/v1/users/00000000-0000-4000-8000-000000000001/status \
   -H 'Content-Type: application/json' \
-  -H 'X-Actor-Id: actor-ejemplo' -H 'X-Actor-Role: OPERACIONES' \
+  -H 'Authorization: Bearer <jwt-del-gateway>' \
   -d '{"nuevoEstado": "SUSPENDIDO", "motivo": "Solicitud de ejemplo"}'
 ```
 
 ### Formato de error
 
-Todos los errores comparten la misma forma. El `code` es `VALIDATION_ERROR`, `BAD_REQUEST`, `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR`, `UNAUTHORIZED` o `FORBIDDEN`; los stack traces no se devuelven al cliente.
+Todos los errores comparten la misma forma. El `code` es `VALIDATION_ERROR`, `BAD_REQUEST`, `NOT_FOUND`, `CONFLICT`, `INTERNAL_ERROR`, `INVALID_TOKEN`, `TOKEN_EXPIRED` o `INSUFFICIENT_CLAIMS`; los stack traces no se devuelven al cliente.
 
 ```json
 {
@@ -197,12 +199,11 @@ Cuando los errores vienen de la validación de campos, `details` contiene entrad
 
 ## Seguridad
 
-La identidad y el rol viajan **solo por headers HTTP**, nunca en el cuerpo ni en un prompt. El gateway/IAM de la plataforma debe autenticar al actor y asegurar estos headers, eliminando los que envíe el cliente; el servicio confía en ellos y los usa para autorizar y auditar.
+El gateway/IAM autentica al actor y emite un JWT. El consumidor envía `Authorization: Bearer <token>`; el servicio valida firma (JWKS), `iss`, `aud=wa-users-service`, `exp`, `iat` y `jti`, y toma `sub`/`role` de los claims. Los headers `X-Actor-Id` / `X-Actor-Role` no tienen autoridad. Detalle en [`gateway-trust.md`](../../shared/contracts/wa-users-service/gateway-trust.md).
 
 | Header | Obligatorio | Descripción |
 | --- | --- | --- |
-| `X-Actor-Id` | Sí | Identificador del actor. Vacío → `401 UNAUTHORIZED`. |
-| `X-Actor-Role` | Sí | `OPERACIONES`, `SOPORTE` o `SERVICIO_INTERNO`. Rol sin permiso → `403 FORBIDDEN`. |
+| `Authorization` | Sí | `Bearer` + JWT del gateway. Ausente/inválido → `401 INVALID_TOKEN`; vencido → `401 TOKEN_EXPIRED`; claims insuficientes → `403 INSUFFICIENT_CLAIMS`. |
 | `X-Correlation-Id` | No | 1–64 caracteres alfanuméricos ASCII, punto, guion o guion bajo. Si falta o es inválido se genera un UUID. Se devuelve en la respuesta. |
 
 | Rol | Permisos |
@@ -261,13 +262,14 @@ La publicación ocurre después del commit (`@TransactionalEventListener`, fase 
 - **Health**: `GET /actuator/health` (lo usa el healthcheck de Docker y de Compose); `GET /actuator/info`. Ambos son públicos.
 - **Logs con `correlationId`**: el filtro `CorrelationIdFilter` lee o genera el identificador, lo devuelve en la cabecera `X-Correlation-Id` y lo pone en el MDC con la clave `correlationId`. Con él se puede seguir una solicitud de punta a punta, incluida su fila de auditoría y el evento de cambio de estado.
 - **Métricas** (Actuator/Micrometer): `http.server.requests` (latencia por endpoint) y los contadores `users.created`, `users.duplicate.rejected` y `users.status.changed`.
-- **Errores frecuentes**: `VALIDATION_ERROR` (datos inválidos o campos desconocidos), `BAD_REQUEST` (JSON o query malformados, tipo de documento inválido), `NOT_FOUND` (usuario inexistente), `CONFLICT` (documento duplicado o transición no permitida), `UNAUTHORIZED`/`FORBIDDEN` (identidad o rol ausente/insuficiente), `INTERNAL_ERROR` (error no esperado; el detalle queda solo en el log).
+- **Errores frecuentes**: `VALIDATION_ERROR` (datos inválidos o campos desconocidos), `BAD_REQUEST` (JSON o query malformados, tipo de documento inválido), `NOT_FOUND` (usuario inexistente), `CONFLICT` (documento duplicado o transición no permitida), `INVALID_TOKEN`/`TOKEN_EXPIRED`/`INSUFFICIENT_CLAIMS` (JWT ausente, inválido, vencido o sin permiso), `INTERNAL_ERROR` (error no esperado; el detalle queda solo en el log).
 
 ## Contrato
 
 El contrato publicado está en [`shared/contracts/wa-users-service/`](../../shared/contracts/wa-users-service/):
 
-- [`openapi.yaml`](../../shared/contracts/wa-users-service/openapi.yaml): especificación OpenAPI 3.0.3 de los seis endpoints, los DTOs, los headers, los errores y sus ejemplos.
-- [`handoff.md`](../../shared/contracts/wa-users-service/handoff.md): guía de consumo (base path, headers, roles, estados, correlación y evento) para quienes integren con el servicio.
+- [`openapi.yaml`](../../shared/contracts/wa-users-service/openapi.yaml): especificación OpenAPI 3.0.3 de los seis endpoints, los DTOs, la seguridad Bearer JWT, los errores y sus ejemplos.
+- [`handoff.md`](../../shared/contracts/wa-users-service/handoff.md): guía de consumo (base path, JWT, roles, estados, correlación y evento) para quienes integren con el servicio.
+- [`gateway-trust.md`](../../shared/contracts/wa-users-service/gateway-trust.md): confianza del gateway/IAM (claims JWT, JWKS e issuer).
 
 Las decisiones de diseño están en `docs/adr/0001` a `0004` (stack, identificador y unicidad, auditoría y evento de cambio de estado).

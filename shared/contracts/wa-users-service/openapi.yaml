@@ -2,7 +2,9 @@ openapi: 3.0.3
 info:
   title: Servicio de usuarios
   version: v1
-  description: Administración de usuarios bancarios. La identidad de los headers debe ser autenticada por el gateway.
+  description: Administración de usuarios bancarios. Ver gateway-trust.md para el JWT del gateway.
+security:
+  - gatewayJwt: []
 servers:
   - url: http://localhost:8080
 paths:
@@ -10,7 +12,7 @@ paths:
     post:
       summary: Crear usuario activo
       description: Rol permitido OPERACIONES. El documento completo es necesario para el alta.
-      parameters: [ { $ref: '#/components/parameters/ActorId' }, { $ref: '#/components/parameters/ActorRole' }, { $ref: '#/components/parameters/CorrelationId' } ]
+      parameters: [ { $ref: '#/components/parameters/CorrelationId' } ]
       requestBody:
         required: true
         content:
@@ -34,7 +36,7 @@ paths:
     get:
       summary: Consultar por ID
       description: Roles permitidos OPERACIONES y SERVICIO_INTERNO.
-      parameters: [ { $ref: '#/components/parameters/ActorId' }, { $ref: '#/components/parameters/ActorRole' }, { $ref: '#/components/parameters/CorrelationId' } ]
+      parameters: [ { $ref: '#/components/parameters/CorrelationId' } ]
       responses:
         '200': { $ref: '#/components/responses/User' }
         '400': { $ref: '#/components/responses/BadRequest' }
@@ -45,7 +47,7 @@ paths:
     patch:
       summary: Actualizar campos permitidos
       description: Rol permitido OPERACIONES. Los campos omitidos o nulos no cambian; se rechazan campos desconocidos.
-      parameters: [ { $ref: '#/components/parameters/ActorId' }, { $ref: '#/components/parameters/ActorRole' }, { $ref: '#/components/parameters/CorrelationId' } ]
+      parameters: [ { $ref: '#/components/parameters/CorrelationId' } ]
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/UpdateUserRequest' } } }
@@ -62,8 +64,6 @@ paths:
       summary: Consultar por documento
       description: Roles permitidos OPERACIONES y SERVICIO_INTERNO. El número completo viaja en la consulta.
       parameters:
-        - { $ref: '#/components/parameters/ActorId' }
-        - { $ref: '#/components/parameters/ActorRole' }
         - { $ref: '#/components/parameters/CorrelationId' }
         - { name: tipo, in: query, required: true, schema: { $ref: '#/components/schemas/DocumentType' } }
         - { name: numero, in: query, required: true, description: Número completo del documento., schema: { type: string, minLength: 1 }, example: '00000000' }
@@ -78,7 +78,7 @@ paths:
     patch:
       summary: Cambiar estado
       description: Rol permitido OPERACIONES. BAJA_LOGICA es terminal; las transiciones al mismo estado se rechazan.
-      parameters: [ { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/ActorId' }, { $ref: '#/components/parameters/ActorRole' }, { $ref: '#/components/parameters/CorrelationId' } ]
+      parameters: [ { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/CorrelationId' } ]
       requestBody:
         required: true
         content: { application/json: { schema: { $ref: '#/components/schemas/ChangeStatusRequest' } } }
@@ -95,7 +95,7 @@ paths:
     get:
       summary: Consultar historial de auditoría
       description: Roles permitidos OPERACIONES y SOPORTE.
-      parameters: [ { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/ActorId' }, { $ref: '#/components/parameters/ActorRole' }, { $ref: '#/components/parameters/CorrelationId' } ]
+      parameters: [ { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/CorrelationId' } ]
       responses:
         '200':
           description: Historial
@@ -107,10 +107,10 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '500': { $ref: '#/components/responses/InternalError' }
 components:
+  securitySchemes:
+    gatewayJwt: { type: http, scheme: bearer, bearerFormat: JWT }
   parameters:
     Id: { name: id, in: path, required: true, schema: { type: string, format: uuid }, example: '00000000-0000-4000-8000-000000000001' }
-    ActorId: { name: X-Actor-Id, in: header, required: true, schema: { type: string, minLength: 1 }, example: actor-ejemplo }
-    ActorRole: { name: X-Actor-Role, in: header, required: true, schema: { type: string, enum: [OPERACIONES, SOPORTE, SERVICIO_INTERNO] }, example: OPERACIONES }
     CorrelationId: { name: X-Correlation-Id, in: header, required: false, description: Si falta o es inválido se genera un UUID., schema: { type: string, pattern: '^[A-Za-z0-9._-]{1,64}$' }, example: ejemplo-1 }
   headers:
     CorrelationId: { description: Identificador de correlación efectivo., schema: { type: string }, example: ejemplo-1 }
@@ -124,13 +124,13 @@ components:
       headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
       content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' }, example: { code: VALIDATION_ERROR, message: La solicitud tiene datos inválidos, details: [], timestamp: '2026-01-01T00:00:00Z' } } }
     Unauthorized:
-      description: UNAUTHORIZED, identidad requerida.
+      description: INVALID_TOKEN, identidad requerida.
       headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
-      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' }, example: { code: UNAUTHORIZED, message: Identidad requerida, details: [], timestamp: '2026-01-01T00:00:00Z' } } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' }, example: { code: INVALID_TOKEN, message: Identidad requerida, details: [], timestamp: '2026-01-01T00:00:00Z' } } }
     Forbidden:
-      description: FORBIDDEN, rol sin permiso.
+      description: INSUFFICIENT_CLAIMS, rol sin permiso.
       headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
-      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' }, example: { code: FORBIDDEN, message: Acceso denegado, details: [], timestamp: '2026-01-01T00:00:00Z' } } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' }, example: { code: INSUFFICIENT_CLAIMS, message: Acceso denegado, details: [], timestamp: '2026-01-01T00:00:00Z' } } }
     NotFound:
       description: NOT_FOUND, usuario inexistente.
       headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
@@ -199,7 +199,7 @@ components:
       type: object
       required: [code, message, details, timestamp]
       properties:
-        code: { type: string, enum: [VALIDATION_ERROR, BAD_REQUEST, NOT_FOUND, CONFLICT, INTERNAL_ERROR, UNAUTHORIZED, FORBIDDEN] }
+        code: { type: string, enum: [VALIDATION_ERROR, BAD_REQUEST, NOT_FOUND, CONFLICT, INTERNAL_ERROR, INVALID_TOKEN, TOKEN_EXPIRED, INSUFFICIENT_CLAIMS] }
         message: { type: string }
         details: { type: array, items: { $ref: '#/components/schemas/FieldError' } }
         timestamp: { type: string, format: date-time }

@@ -399,23 +399,27 @@
       "budgetUsd": null,
       "budgetTokens": null,
       "spent": {
-        "usd": 0.5094,
-        "tokens": 2483444,
+        "usd": 1.5082,
+        "tokens": 8152230,
         "runs": {
           "20261121-d525": {
-            "usd": 0.5094,
+            "usd": 1.5082,
             "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
             "tools": {
               "kilocode": 0,
-              "claude-code": 0.5094
+              "claude-code": 1.5082,
+              "codex": 0,
+              "cursor": 0
             },
-            "tokens": 2483444,
+            "tokens": 8152230,
             "toolTokens": {
-              "kilocode": 2214946,
-              "claude-code": 268498
+              "kilocode": 4196893,
+              "claude-code": 575185,
+              "codex": 2290994,
+              "cursor": 1089158
             },
-            "loops": 0,
-            "redoTokens": 268498,
+            "loops": 2,
+            "redoTokens": 4513534,
             "roles": {
               "analista": {
                 "kilocode": {
@@ -433,14 +437,40 @@
               },
               "tech-lead": {
                 "kilocode": {
-                  "tokens": 872297,
-                  "steps": 1,
-                  "redo": 0
+                  "tokens": 2854244,
+                  "steps": 2,
+                  "redo": 1
                 },
                 "claude-code": {
                   "tokens": 268498,
                   "steps": 1,
                   "redo": 1
+                }
+              },
+              "dev-ia": {
+                "codex": {
+                  "tokens": 1336093,
+                  "steps": 3,
+                  "redo": 2
+                },
+                "claude-code": {
+                  "tokens": 306687,
+                  "steps": 1,
+                  "redo": 1
+                }
+              },
+              "tester": {
+                "codex": {
+                  "tokens": 954901,
+                  "steps": 3,
+                  "redo": 2
+                }
+              },
+              "reviewer": {
+                "cursor": {
+                  "tokens": 1089158,
+                  "steps": 3,
+                  "redo": 2
                 }
               }
             }
@@ -448,7 +478,11 @@
         }
       },
       "stalled": null,
-      "waiting": null,
+      "waiting": {
+        "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+        "text": "espera una respuesta",
+        "at": "2026-11-21T04:20:56.963Z"
+      },
       "times": {
         "startedAt": "2026-11-21T03:57:10.936Z",
         "releasedAt": null,
@@ -460,7 +494,7 @@
       },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T04:06:51.538Z"
+      "updatedAt": "2026-11-21T04:20:56.963Z"
     },
     {
       "id": "P-12",
@@ -784,7 +818,16 @@
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
       "account": "opensoma.app@gmail.com",
       "to": "DESKTOP-JVEJTUF",
-      "text": "Todo bien por acá, por ahora no necesitamos ayuda. Esta oficina tiene un solo frente, P-11 (H8 — Base de conocimiento RAG), que está en curso: ya pasaron el analista y el arquitecto, y falta la implementación. La entrega es la base de conocimiento corriendo en ai/wa-knowledge-rag (puerto 8102), con "
+      "text": "Todo bien por acá, por ahora no necesitamos ayuda. Esta oficina tiene un solo frente, P-11 (H8 — Base de conocimiento RAG), que está en curso: ya pasaron el analista y el arquitecto, y falta la implementación. La entrega es la base de conocimiento corriendo en ai/wa-knowledge-rag (puerto 8102), con"
+    },
+    {
+      "at": "2026-11-21T04:20:56.963Z",
+      "kind": "waiting",
+      "id": "P-11",
+      "title": "H8 — Base de conocimiento RAG",
+      "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com",
+      "text": "espera una respuesta"
     }
   ],
   "deadline": null,

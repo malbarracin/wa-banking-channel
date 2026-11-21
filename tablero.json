@@ -9,13 +9,18 @@
       "dependsOn": [],
       "assignedTo": null,
       "deliverables": "Plataforma de eventos levantable en platform/wa-event-platform (Kafka KRaft local con sus topics creados, productor y consumidor de referencia, retry y DLQ) y el catálogo de eventos versionado publicado en shared/contracts/events/ (un esquema por evento, con su versión).",
-      "status": "todo",
+      "status": "doing",
       "createdAt": "2026-11-21T03:43:49.016Z",
       "createdBy": {
         "account": "opensoma.app@gmail.com",
         "floor": "DESKTOP-JVEJTUF"
       },
-      "claim": null,
+      "claim": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF",
+        "run": "20261121-f233",
+        "at": "2026-11-21T03:49:02.977Z"
+      },
       "doneAt": null,
       "doneBy": null,
       "note": null,
@@ -24,10 +29,18 @@
       "spent": null,
       "stalled": null,
       "waiting": null,
-      "times": null,
+      "times": {
+        "startedAt": "2026-11-21T03:49:02.977Z",
+        "releasedAt": null,
+        "workedMs": 0,
+        "stalledMs": 0,
+        "waitingMs": 0,
+        "stalls": 0,
+        "reopened": 0
+      },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T03:43:49.017Z"
+      "updatedAt": "2026-11-21T03:49:02.977Z"
     },
     {
       "id": "P-2",
@@ -573,6 +586,14 @@
       "floor": "Marcelo",
       "account": "opensoma.app@gmail.com",
       "text": "espera una aprobación"
+    },
+    {
+      "at": "2026-11-21T03:49:02.977Z",
+      "kind": "claimed",
+      "id": "P-1",
+      "title": "H0.1 — Plataforma de Eventos (Kafka)",
+      "floor": "DESKTOP-JVEJTUF",
+      "account": "opensoma.app@gmail.com"
     }
   ],
   "deadline": null,

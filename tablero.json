@@ -111,9 +111,40 @@
       "note": null,
       "budgetUsd": null,
       "budgetTokens": null,
-      "spent": null,
+      "spent": {
+        "usd": 0,
+        "tokens": 1090274,
+        "runs": {
+          "20261121-e564": {
+            "usd": 0,
+            "floor": "Marcelo",
+            "tools": {
+              "kilocode": 0
+            },
+            "tokens": 1090274,
+            "toolTokens": {
+              "kilocode": 1090274
+            },
+            "loops": 0,
+            "redoTokens": 0,
+            "roles": {
+              "analista": {
+                "kilocode": {
+                  "tokens": 1090274,
+                  "steps": 1,
+                  "redo": 0
+                }
+              }
+            }
+          }
+        }
+      },
       "stalled": null,
-      "waiting": null,
+      "waiting": {
+        "floor": "Marcelo",
+        "text": "espera una aprobación",
+        "at": "2026-11-21T03:48:50.535Z"
+      },
       "times": {
         "startedAt": "2026-11-21T03:45:29.742Z",
         "releasedAt": null,
@@ -125,7 +156,7 @@
       },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T03:45:29.742Z"
+      "updatedAt": "2026-11-21T03:48:50.535Z"
     },
     {
       "id": "P-5",
@@ -533,6 +564,15 @@
       "title": "H1 — Servicio de Usuarios",
       "floor": "Marcelo",
       "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-21T03:48:50.535Z",
+      "kind": "waiting",
+      "id": "P-4",
+      "title": "H1 — Servicio de Usuarios",
+      "floor": "Marcelo",
+      "account": "opensoma.app@gmail.com",
+      "text": "espera una aprobación"
     }
   ],
   "deadline": null,

@@ -4,5 +4,6 @@
   <logger name="org.testcontainers" level="WARN"/>
   <logger name="org.apache.kafka" level="WARN"/>
   <logger name="com.bcra.events.config.DlqConfig" level="OFF"/>
+  <logger name="com.bcra.events.messaging.dlq.DeadLetterConfig" level="OFF"/>
   <root level="WARN"><appender-ref ref="CONSOLE"/></root>
 </configuration>

@@ -24,6 +24,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class DlqReprocessor {
     private static final int MAX_RANGE = 1000;
+    private static final Set<String> CONTRACT_HEADERS = Set.of("correlationId", "eventType", "eventVersion");
+
     private final ConsumerFactory<String, String> consumers;
     private final KafkaTemplate<String, String> producer;
     private final EnvelopeReader reader;
@@ -42,7 +44,7 @@ public class DlqReprocessor {
             throw new IllegalArgumentException("Invalid offset range");
         }
         TopicPartition source = new TopicPartition(topics.dlq(), partition);
-        List<ProducerRecord<String, String>> pending = new ArrayList<>();
+        List<ConsumerRecord<String, String>> collected = new ArrayList<>();
         try (Consumer<String, String> consumer = consumers.createConsumer()) {
             consumer.assign(List.of(source));
             long earliest = consumer.beginningOffsets(List.of(source)).get(source);
@@ -58,12 +60,16 @@ public class DlqReprocessor {
                 }
                 for (ConsumerRecord<String, String> record : consumer.poll(Duration.ofMillis(500))) {
                     if (record.offset() < endExclusive) {
-                        pending.add(prepare(record));
+                        collected.add(record);
                     }
                 }
             }
         }
-        // Validate the entire range before sending anything.
+
+        List<ProducerRecord<String, String>> pending = new ArrayList<>(collected.size());
+        for (ConsumerRecord<String, String> record : collected) {
+            pending.add(prepare(record));
+        }
         for (ProducerRecord<String, String> record : pending) {
             producer.send(record).get(30, TimeUnit.SECONDS);
         }
@@ -79,9 +85,10 @@ public class DlqReprocessor {
         if (!Set.of(topics.received(), topics.readyToSend(), topics.status()).contains(topic)) {
             throw new IllegalArgumentException("Original topic is not a business topic");
         }
-        ConsumerRecord<String, String> originalRecord = new ConsumerRecord<>(topic, 0, 0, record.key(), record.value());
+        ConsumerRecord<String, String> originalRecord =
+            new ConsumerRecord<>(topic, 0, 0, record.key(), record.value());
         for (Header header : record.headers()) {
-            if (Set.of("correlationId", "eventType", "eventVersion").contains(header.key())) {
+            if (CONTRACT_HEADERS.contains(header.key())) {
                 originalRecord.headers().add(header);
             }
         }

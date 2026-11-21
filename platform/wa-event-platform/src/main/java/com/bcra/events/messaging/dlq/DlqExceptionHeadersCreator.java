@@ -1,16 +1,21 @@
 package com.bcra.events.messaging.dlq;
 
+import com.bcra.events.observability.PhoneMasker;
 import java.nio.charset.StandardCharsets;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.kafka.common.header.Headers;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer.ExceptionHeadersCreator;
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer.HeaderNames;
 import org.springframework.stereotype.Component;
 
 /**
- * Headers de excepción en DLQ: FQCN y mensaje truncado/saneado; nunca stack trace.
+ * Headers de excepción en DLQ: FQCN y mensaje truncado/saneado (teléfonos enmascarados); nunca stack trace.
  */
 @Component
 public class DlqExceptionHeadersCreator implements ExceptionHeadersCreator {
+    private static final Pattern PHONE = Pattern.compile("\\+[0-9]{6,15}");
+
     @Override
     public void create(Headers headers, Exception exception, boolean isKey, HeaderNames names) {
         Throwable root = rootCause(exception);
@@ -25,6 +30,15 @@ public class DlqExceptionHeadersCreator implements ExceptionHeadersCreator {
         headers.add(message, bytes(sanitize(root.getMessage())));
     }
 
+    static String truncate(String message) {
+        if (message == null) {
+            return "";
+        }
+        return message.length() <= DlqHeaders.EXCEPTION_MESSAGE_MAX
+            ? message
+            : message.substring(0, DlqHeaders.EXCEPTION_MESSAGE_MAX);
+    }
+
     static String sanitize(String raw) {
         if (raw == null || raw.isBlank()) {
             return "Consumer processing failed";
@@ -33,10 +47,13 @@ public class DlqExceptionHeadersCreator implements ExceptionHeadersCreator {
         if (cleaned.isEmpty()) {
             return "Consumer processing failed";
         }
-        if (cleaned.length() > DlqHeaders.EXCEPTION_MESSAGE_MAX) {
-            return cleaned.substring(0, DlqHeaders.EXCEPTION_MESSAGE_MAX);
+        Matcher matcher = PHONE.matcher(cleaned);
+        StringBuilder masked = new StringBuilder();
+        while (matcher.find()) {
+            matcher.appendReplacement(masked, Matcher.quoteReplacement(PhoneMasker.mask(matcher.group())));
         }
-        return cleaned;
+        matcher.appendTail(masked);
+        return truncate(masked.toString());
     }
 
     static Throwable rootCause(Throwable exception) {

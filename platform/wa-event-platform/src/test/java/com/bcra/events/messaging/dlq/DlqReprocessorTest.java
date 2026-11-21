@@ -46,7 +46,8 @@ class DlqReprocessorTest {
         when(consumer.beginningOffsets(any())).thenReturn(Map.of(partition, 0L));
         when(consumer.endOffsets(any())).thenReturn(Map.of(partition, 8L));
         when(consumer.position(partition)).thenReturn(7L, 8L);
-        when(consumer.poll(any(java.time.Duration.class))).thenReturn(new ConsumerRecords<>(Map.of(partition, List.of(record))));
+        when(consumer.poll(any(java.time.Duration.class)))
+            .thenReturn(new ConsumerRecords<>(Map.of(partition, List.of(record))));
         when(producer.send(any(ProducerRecord.class))).thenReturn(CompletableFuture.completedFuture(null));
         DlqReprocessor reprocessor = new DlqReprocessor(factory, producer, reader, topics);
 
@@ -58,13 +59,11 @@ class DlqReprocessorTest {
         assertThat(capture.getValue().value()).isEqualTo("value");
         assertThat(new String(capture.getValue().headers().lastHeader(DlqHeaders.REPROCESSED_FROM).value(),
             StandardCharsets.UTF_8)).isEqualTo("wa.message.dlq.v1:0:7");
-        // The contract headers travel with the event; the DLQ bookkeeping headers do not.
         assertThat(header(capture.getValue(), "correlationId")).isEqualTo("correlation");
         assertThat(header(capture.getValue(), "eventType")).isEqualTo("MessageReceived");
         assertThat(header(capture.getValue(), "eventVersion")).isEqualTo("1");
         assertThat(capture.getValue().headers().lastHeader(DlqHeaders.ORIGINAL_TOPIC)).isNull();
         assertThat(capture.getValue().headers().lastHeader(DlqHeaders.EXCEPTION_FQCN)).isNull();
-        // Reading the range must not move the DLQ consumer group nor remove anything from the topic.
         verify(consumer, never()).commitSync();
         verify(consumer, never()).commitAsync();
         verify(consumer).close();
@@ -171,10 +170,35 @@ class DlqReprocessorTest {
         when(consumer.beginningOffsets(any())).thenReturn(Map.of(partition, 0L));
         when(consumer.endOffsets(any())).thenReturn(Map.of(partition, 1L));
         when(consumer.position(partition)).thenReturn(0L, 1L);
-        when(consumer.poll(any(java.time.Duration.class))).thenReturn(new ConsumerRecords<>(Map.of(partition, List.of(record))));
+        when(consumer.poll(any(java.time.Duration.class)))
+            .thenReturn(new ConsumerRecords<>(Map.of(partition, List.of(record))));
         doThrow(new SchemaValidationException("invalid")).when(reader).read(any(), any());
         DlqReprocessor reprocessor = new DlqReprocessor(factory, producer, reader, topics);
         assertThatThrownBy(() -> reprocessor.reprocess(0, 0, 1)).isInstanceOf(SchemaValidationException.class);
+        verify(producer, never()).send(any(ProducerRecord.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void rejectsInvalidPayloadWithoutPublishing() throws Exception {
+        ConsumerFactory<String, String> factory = mock(ConsumerFactory.class);
+        Consumer<String, String> consumer = mock(Consumer.class);
+        KafkaTemplate<String, String> producer = mock(KafkaTemplate.class);
+        EnvelopeReader reader = mock(EnvelopeReader.class);
+        TopicsProperties topics = topics();
+        TopicPartition partition = new TopicPartition(topics.dlq(), 0);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>(topics.dlq(), 0, 7L, "conv-1", "{not-json");
+        record.headers().add(DlqHeaders.ORIGINAL_TOPIC, topics.received().getBytes(StandardCharsets.UTF_8));
+        when(factory.createConsumer()).thenReturn(consumer);
+        when(consumer.beginningOffsets(any())).thenReturn(Map.of(partition, 0L));
+        when(consumer.endOffsets(any())).thenReturn(Map.of(partition, 8L));
+        when(consumer.position(partition)).thenReturn(7L, 8L);
+        when(consumer.poll(any(java.time.Duration.class)))
+            .thenReturn(new ConsumerRecords<>(Map.of(partition, List.of(record))));
+        doThrow(new SchemaValidationException("Invalid event JSON")).when(reader).read(any(), any());
+
+        DlqReprocessor reprocessor = new DlqReprocessor(factory, producer, reader, topics);
+        assertThatThrownBy(() -> reprocessor.reprocess(0, 7, 8)).isInstanceOf(SchemaValidationException.class);
         verify(producer, never()).send(any(ProducerRecord.class));
     }
 }

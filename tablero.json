@@ -9,7 +9,7 @@
       "dependsOn": [],
       "assignedTo": null,
       "deliverables": "Plataforma de eventos levantable en platform/wa-event-platform (Kafka KRaft local con sus topics creados, productor y consumidor de referencia, retry y DLQ) y el catálogo de eventos versionado publicado en shared/contracts/events/ (un esquema por evento, con su versión).",
-      "status": "doing",
+      "status": "done",
       "createdAt": "2026-11-21T03:43:49.016Z",
       "createdBy": {
         "account": "opensoma.app@gmail.com",
@@ -21,33 +21,139 @@
         "run": "20261121-f233",
         "at": "2026-11-21T03:49:02.977Z"
       },
-      "doneAt": null,
-      "doneBy": null,
-      "note": null,
+      "doneAt": "2026-11-21T09:43:47.280Z",
+      "doneBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "note": "Sesión 20261121-f233 · rama feature/20261121-f233",
       "budgetUsd": null,
       "budgetTokens": null,
       "spent": {
-        "usd": 0,
-        "tokens": 736283,
+        "usd": 3.0755,
+        "tokens": 43843566,
         "runs": {
           "20261121-f233": {
-            "usd": 0,
+            "usd": 3.0755,
             "floor": "DESKTOP-JVEJTUF",
             "tools": {
-              "kilocode": 0
+              "kilocode": 0,
+              "claude-code": 3.0755,
+              "codex": 0,
+              "cursor": 0,
+              "copilot": 0,
+              "opencode": 0
             },
-            "tokens": 736283,
+            "tokens": 43843566,
             "toolTokens": {
-              "kilocode": 736283
+              "kilocode": 3345840,
+              "claude-code": 2101107,
+              "codex": 15101590,
+              "cursor": 15998386,
+              "opencode": 2468153,
+              "copilot": 4828490
             },
-            "loops": 0,
-            "redoTokens": 0,
+            "loops": 5,
+            "redoTokens": 24875248,
             "roles": {
               "analista": {
                 "kilocode": {
                   "tokens": 736283,
                   "steps": 1,
                   "redo": 0
+                }
+              },
+              "arquitecto": {
+                "kilocode": {
+                  "tokens": 0,
+                  "steps": 1,
+                  "redo": 0
+                },
+                "claude-code": {
+                  "tokens": 2101107,
+                  "steps": 1,
+                  "redo": 1
+                }
+              },
+              "tech-lead": {
+                "kilocode": {
+                  "tokens": 2609557,
+                  "steps": 2,
+                  "redo": 0
+                }
+              },
+              "dev-integracion": {
+                "codex": {
+                  "tokens": 12009165,
+                  "steps": 12,
+                  "redo": 6
+                },
+                "cursor": {
+                  "tokens": 8423831,
+                  "steps": 6,
+                  "redo": 4
+                }
+              },
+              "tester": {
+                "codex": {
+                  "tokens": 3092425,
+                  "steps": 7,
+                  "redo": 3
+                },
+                "claude-code": {
+                  "tokens": 0,
+                  "steps": 2,
+                  "redo": 0
+                },
+                "cursor": {
+                  "tokens": 2499673,
+                  "steps": 5,
+                  "redo": 4
+                }
+              },
+              "reviewer": {
+                "cursor": {
+                  "tokens": 4100571,
+                  "steps": 11,
+                  "redo": 4
+                }
+              },
+              "devops": {
+                "claude-code": {
+                  "tokens": 0,
+                  "steps": 1,
+                  "redo": 0
+                },
+                "copilot": {
+                  "tokens": 0,
+                  "steps": 1,
+                  "redo": 1
+                },
+                "cursor": {
+                  "tokens": 974311,
+                  "steps": 1,
+                  "redo": 1
+                }
+              },
+              "documentador": {
+                "opencode": {
+                  "tokens": 2468153,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "pr-publisher": {
+                "copilot": {
+                  "tokens": 1122276,
+                  "steps": 3,
+                  "redo": 2
+                }
+              },
+              "pr-reviewer": {
+                "copilot": {
+                  "tokens": 3706214,
+                  "steps": 3,
+                  "redo": 2
                 }
               }
             }
@@ -59,7 +165,7 @@
       "times": {
         "startedAt": "2026-11-21T03:49:02.977Z",
         "releasedAt": null,
-        "workedMs": 0,
+        "workedMs": 21284303,
         "stalledMs": 0,
         "waitingMs": 86445,
         "stalls": 0,
@@ -67,7 +173,7 @@
       },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T03:53:59.452Z"
+      "updatedAt": "2026-11-21T09:43:47.280Z"
     },
     {
       "id": "P-2",
@@ -942,6 +1048,14 @@
       "id": "P-4",
       "title": "H1 — Servicio de Usuarios",
       "floor": "Marcelo",
+      "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-21T09:43:47.280Z",
+      "kind": "finished",
+      "id": "P-1",
+      "title": "H0.1 — Plataforma de Eventos (Kafka)",
+      "floor": "DESKTOP-JVEJTUF",
       "account": "opensoma.app@gmail.com"
     }
   ],

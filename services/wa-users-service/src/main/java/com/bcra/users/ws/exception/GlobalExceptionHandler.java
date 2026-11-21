@@ -75,7 +75,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception exception) {
-        LOG.error("Error inesperado", exception);
+        LOG.error("Error inesperado: {}", exception.getClass().getSimpleName());
         return build(HttpStatus.INTERNAL_SERVER_ERROR, ErrorCode.INTERNAL_ERROR, "Error interno", List.of());
     }
 

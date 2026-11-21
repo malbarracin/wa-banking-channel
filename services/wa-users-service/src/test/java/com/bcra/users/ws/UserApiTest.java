@@ -3,6 +3,7 @@ package com.bcra.users.ws;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.util.UUID;
@@ -64,6 +65,54 @@ class UserApiTest {
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CONFLICT"))
                 .andExpect(jsonPath("$.message").value("El usuario ya existe"))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("12345678"))));
+    }
+
+    @Test
+    void updatesAllowedFieldsAndAuditsOnlyChangedNames() throws Exception {
+        String body = """
+                {"tipoDocumento":"DNI","numeroDocumento":"87654321","nombreCompleto":"Ejemplo",
+                 "fechaNacimiento":"1990-01-01","email":"old@example.invalid","telefono":"00000000"}
+                """;
+        var created = mvc.perform(post("/api/v1/users").header("X-Actor-Id", "test-actor")
+                .header("X-Actor-Role", "OPERACIONES").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn();
+        UUID id = UUID.fromString(mapper.readTree(created.getResponse().getContentAsString()).get("id").asText());
+        String update = """
+                {"nombreTratamiento":"Cliente","email":"new@example.invalid",
+                 "telefono":"11111111","preferencias":"ejemplo"}
+                """;
+        mvc.perform(patch("/api/v1/users/{id}", id).header("X-Actor-Id", "test-actor")
+                .header("X-Actor-Role", "OPERACIONES").header("X-Correlation-Id", "corr-update")
+                .contentType(MediaType.APPLICATION_JSON).content(update))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.email").value("new@example.invalid"));
+        users.flush();
+        var user = users.findById(id).orElseThrow();
+        assertThat(user.getNombreTratamiento()).isEqualTo("Cliente");
+        assertThat(user.getEmail()).isEqualTo("new@example.invalid");
+        assertThat(user.getTelefono()).isEqualTo("11111111");
+        assertThat(user.getPreferencias()).isEqualTo("ejemplo");
+        var event = events.findByUserIdOrderByCreatedAtDesc(id).stream()
+                .filter(item -> item.getAction() == AuditAction.ACTUALIZACION).findFirst().orElseThrow();
+        assertThat(event.getResultado()).isEqualTo(AuditResult.EXITOSO);
+        assertThat(event.getCorrelationId()).isEqualTo("corr-update");
+        assertThat(event.getDetalle()).containsExactly("nombreTratamiento", "email", "telefono", "preferencias");
+        mvc.perform(patch("/api/v1/users/{id}", id).header("X-Actor-Id", "test-actor")
+                .header("X-Actor-Role", "OPERACIONES").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"other@example.invalid\",\"numeroDocumento\":\"99999999\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        assertThat(users.findById(id).orElseThrow().getEmail()).isEqualTo("new@example.invalid");
+        mvc.perform(patch("/api/v1/users/{id}", id).header("X-Actor-Id", "test-actor")
+                .header("X-Actor-Role", "OPERACIONES").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"email\":\"invalid\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+        for (String role : java.util.List.of("SOPORTE", "SERVICIO_INTERNO")) {
+            mvc.perform(patch("/api/v1/users/{id}", id).header("X-Actor-Id", "test-actor")
+                    .header("X-Actor-Role", role).contentType(MediaType.APPLICATION_JSON).content(update))
+                    .andExpect(status().isForbidden());
+        }
+        mvc.perform(patch("/api/v1/users/{id}", UUID.randomUUID()).header("X-Actor-Id", "test-actor")
+                .header("X-Actor-Role", "OPERACIONES").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isNotFound());
     }
 
     @Test

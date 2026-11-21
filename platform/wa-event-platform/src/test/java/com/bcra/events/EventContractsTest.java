@@ -57,4 +57,57 @@ class EventContractsTest {
         ((ObjectNode) update.get("payload")).put("status", "UNKNOWN");
         assertThat(status.validate(update)).isNotEmpty();
     }
+
+    @Test
+    void receivedValidatesEachKindAndPhoneNumbers() throws Exception {
+        JsonSchema schema = schema("message-received");
+        ObjectNode message = event("MessageReceived", """
+            {"channel":"whatsapp","from":"+12025550123","to":"+12025550124","kind":"TEXT",
+             "text":{"body":"Hola"}}
+            """);
+        ObjectNode payload = (ObjectNode) message.get("payload");
+        assertThat(schema.validate(message)).isEmpty();
+        payload.remove("text");
+        assertThat(schema.validate(message)).isNotEmpty();
+        payload.put("kind", "LOCATION");
+        assertThat(schema.validate(message)).isNotEmpty();
+        payload.putObject("location").put("latitude", 10).put("longitude", 20);
+        assertThat(schema.validate(message)).isEmpty();
+        payload.put("from", "invalid");
+        assertThat(schema.validate(message)).isNotEmpty();
+    }
+
+    @Test
+    void readyEnforcesTextAndTemplateLimits() throws Exception {
+        JsonSchema schema = schema("message-ready-to-send");
+        ObjectNode message = event("MessageReadyToSend", """
+            {"to":"+12025550123","kind":"TEXT","text":{"body":"Hola"},"replyToMessageId":"SM123"}
+            """);
+        ObjectNode payload = (ObjectNode) message.get("payload");
+        assertThat(schema.validate(message)).isEmpty();
+        ((ObjectNode) payload.get("text")).put("body", "x".repeat(4097));
+        assertThat(schema.validate(message)).isNotEmpty();
+        payload.remove("text");
+        payload.put("kind", "TEMPLATE");
+        ObjectNode template = payload.putObject("template").put("name", "welcome").put("language", "es_AR");
+        var variables = template.putArray("variables");
+        for (int i = 0; i < 10; i++) {
+            variables.add("value");
+        }
+        assertThat(schema.validate(message)).isEmpty();
+        variables.add("extra");
+        assertThat(schema.validate(message)).isNotEmpty();
+    }
+
+    @Test
+    void envelopeRejectsMissingFieldsAndWrongEventType() throws Exception {
+        JsonSchema schema = schema("message-status");
+        ObjectNode message = event("MessageStatus", "{\"providerMessageId\":\"SM123\",\"status\":\"SENT\"}");
+        assertThat(schema.validate(message)).isEmpty();
+        message.put("eventType", "MessageReceived");
+        assertThat(schema.validate(message)).isNotEmpty();
+        message.put("eventType", "MessageStatus");
+        message.remove("correlationId");
+        assertThat(schema.validate(message)).isNotEmpty();
+    }
 }

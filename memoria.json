@@ -1,6 +1,36 @@
 {
  "items": [
   {
+   "id": "6g051vpr",
+   "texto": "wa-users-service autentica con JWT del gateway (Authorization Bearer); claims sub/role; config app.gateway.jwt.jwk-set-uri e issuer vía SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_*; contrato en shared/contracts/wa-users-service/gateway-trust.md. verify: python scripts/verify_ia.py",
+   "tipo": "decision",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-21T05:12:50.118Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "etwvylc9",
+   "texto": "El remoto origin solo tiene la rama main (no existe develop): los pull requests se abren contra main, que es la rama de partida de las corridas.",
+   "tipo": "dato",
+   "rol": "pr-publisher",
+   "run": null,
+   "at": "2026-11-21T04:54:53.972Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "ugssgaxu",
+   "texto": "El stack local se levanta desde la raíz con `docker compose up -d --build --wait` tras copiar .env.example a .env (USERS_DB_NAME, USERS_DB_USER, USERS_DB_PASSWORD; USERS_HTTP_PORT opcional, por defecto 8080 en el host); servicios wa-users-postgres y wa-users-service (perfil prod, Flyway migra al arrancar); la CI está en .github/workflows/wa-users-service.yml.",
+   "tipo": "comando",
+   "rol": "devops",
+   "run": null,
+   "at": "2026-11-21T04:48:12.695Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
    "id": "f0x5bcrh",
    "texto": "publish_version siempre abre audit.trace_operation; si el llamador también envuelve con trace_operation(\"ingestion\"), los eventos started/completed se duplican con el mismo correlationId. Preferir pasar correlation_id= o heredar sin envolver dos veces.",
    "tipo": "trampa",
@@ -19,6 +49,16 @@
    "at": "2026-11-21T04:38:28.514Z",
    "veces": 1,
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "436hf1l7",
+   "texto": "SecurityConfig deniega /v3/api-docs; el test del contrato consulta springdoc con filtros MockMvc desactivados, sin cambiar la exposición de producción.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-21T04:38:26.816Z",
+   "veces": 1,
+   "de": "Marcelo"
   },
   {
    "id": "ez5vkqv2",
@@ -71,6 +111,16 @@
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
   },
   {
+   "id": "kx6k79xs",
+   "texto": "En Windows, PYTHONIOENCODING=utf-8 evita que scripts/verify_ia.py falle al imprimir errores que contienen caracteres fuera de cp1252.",
+   "tipo": "trampa",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-21T04:22:43.431Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
    "id": "ovqhhl5o",
    "texto": "La verificación de IA se invoca como python scripts/verify_ia.py; si el entorno solo tiene python3 en PATH, falla antes del script. Documentar python3 en el README del componente y asegurar que el entorno de integración exponga python o use python3.",
    "tipo": "trampa",
@@ -89,6 +139,96 @@
    "at": "2026-11-21T04:12:28.533Z",
    "veces": 1,
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "51p7zty1",
+   "texto": "Pedido R-1 a DESKTOP-JVEJTUF: «Hola, como van con su trabajo, algun avance?» → P-1 (H0.1 — Plataforma de Eventos / Kafka) está en curso, en etapa de análisis y diseño. Terminado: la especificación (specs/plataforma-eventos/spec.md), la arquitectura completa (specs/plataforma-eventos/arquitectura.md",
+   "tipo": "dato",
+   "rol": null,
+   "run": null,
+   "at": "2026-11-21T04:05:23.720Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "iglmx34c",
+   "texto": "Para registrar el bit ejecutable de mvnw en Windows: git update-index --chmod=+x services/wa-users-service/mvnw; verificar con git ls-files --stage (debe mostrar 100755).",
+   "tipo": "comando",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-21T04:02:12.883Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "h82rzow6",
+   "texto": "En Windows se pudo ejecutar la verificación Maven con caché escribible configurando MAVEN_OPTS=-Dmaven.repo.local=./target/test-maven-cache.",
+   "tipo": "comando",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-21T03:59:29.967Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "eiag1wpi",
+   "texto": "En este entorno Windows la caché Maven de usuario es de solo lectura y faltan artefactos; ejecutar la verificación con una caché escribible y acceso a Maven Central.",
+   "tipo": "trampa",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-21T03:57:42.272Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "3jw6wyln",
+   "texto": "wa-users-service es Java (sin pyproject.toml): scripts/verify_ia.py debe correr `./mvnw -q verify` (mvnw.cmd en Windows) en services/wa-users-service en vez de los comandos uv; roles de X-Actor-Role asumidos: OPERACIONES, SOPORTE, SERVICIO_INTERNO.",
+   "tipo": "decision",
+   "rol": "tech-lead",
+   "run": null,
+   "at": "2026-11-21T03:54:27.372Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "pttq2b4t",
+   "texto": "specs/programa/programa.md y specs/programa/frentes.json están referenciados en memoria del director pero no existen físicamente en el repo (greenfield); los datos de identidad del servicio salieron de la orden del equipo y specs/wa-users-service/spec.md.",
+   "tipo": "trampa",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-21T03:51:54.022Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "zjjq7r2t",
+   "texto": "wa-users-service: identidad/rol viajan por headers HTTP (X-Correlation-Id, X-Actor-Id, X-Actor-Role), nunca por body ni prompt; documento se expone enmascarado (***1234); cambio de estado publica evento wa.users.status-changed desacoplado (outbox/tras commit).",
+   "tipo": "decision",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-21T03:51:54.011Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "c35h9mkc",
+   "texto": "Endpoints de wa-users-service bajo /api/v1: POST /users (alta), GET /users/{id} y GET /users/by-document (consulta), PATCH /users/{id} (datos permitidos), PATCH /users/{id}/status (estado), GET /users/{id}/audit. Error único ErrorResponse{code,message,details,timestamp} con GlobalExceptionHandler.",
+   "tipo": "dato",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-21T03:51:54.001Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "6n992s3j",
+   "texto": "wa-users-service es un servicio de dominio Java 21 + Spring Boot 3 (JPA/PostgreSQL, Maven ./mvnw, Lombok, MapStruct, JaCoCo 80%); paquete base com.bcra.users.ws, groupId com.bcra, puerto 8080. NO usa pgvector/Redis (eso es para componentes de IA).",
+   "tipo": "decision",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-21T03:51:53.958Z",
+   "veces": 1,
+   "de": "Marcelo"
   },
   {
    "id": "8ul3lb57",

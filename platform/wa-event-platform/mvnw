@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+BASE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+JAR="$BASE_DIR/.mvn/wrapper/maven-wrapper.jar"
+if [ ! -f "$JAR" ]; then
+  URL=$(sed -n 's/^wrapperUrl=//p' "$BASE_DIR/.mvn/wrapper/maven-wrapper.properties")
+  if command -v curl >/dev/null 2>&1; then curl -fsSL "$URL" -o "$JAR"; else wget -q "$URL" -O "$JAR"; fi
+fi
+exec "${JAVA_HOME:+$JAVA_HOME/bin/}java" -Dmaven.multiModuleProjectDirectory="$BASE_DIR" -classpath "$JAR" org.apache.maven.wrapper.MavenWrapperMain "$@"

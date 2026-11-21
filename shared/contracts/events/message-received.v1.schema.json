@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.bcra.local/wa/events/message-received.v1.schema.json",
+  "allOf": [
+    {"$ref": "envelope.v1.schema.json"},
+    {"properties": {
+      "eventType": {"const": "MessageReceived"},
+      "eventVersion": {"const": 1},
+      "payload": {
+        "type": "object", "additionalProperties": false,
+        "required": ["channel", "from", "to", "kind"],
+        "properties": {
+          "channel": {"const": "whatsapp"},
+          "from": {"type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$"},
+          "to": {"type": "string", "pattern": "^\\+[1-9][0-9]{7,14}$"},
+          "kind": {"enum": ["TEXT", "MEDIA", "LOCATION", "UNSUPPORTED"]},
+          "text": {"type": "object", "additionalProperties": false, "required": ["body"], "properties": {"body": {"type": "string", "minLength": 1, "maxLength": 4096}}},
+          "media": {"type": "object", "additionalProperties": false, "required": ["providerMediaId", "contentType"], "properties": {"providerMediaId": {"type": "string", "minLength": 1}, "contentType": {"type": "string", "minLength": 1}, "sizeBytes": {"type": "integer", "minimum": 0}}},
+          "location": {"type": "object", "additionalProperties": false, "required": ["latitude", "longitude"], "properties": {"latitude": {"type": "number", "minimum": -90, "maximum": 90}, "longitude": {"type": "number", "minimum": -180, "maximum": 180}}}
+        },
+        "allOf": [
+          {"if": {"properties": {"kind": {"const": "TEXT"}}, "required": ["kind"]}, "then": {"required": ["text"]}},
+          {"if": {"properties": {"kind": {"const": "MEDIA"}}, "required": ["kind"]}, "then": {"required": ["media"]}},
+          {"if": {"properties": {"kind": {"const": "LOCATION"}}, "required": ["kind"]}, "then": {"required": ["location"]}}
+        ]
+      }
+    }}
+  ]
+}

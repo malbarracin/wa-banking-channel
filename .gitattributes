@@ -1,0 +1,6 @@
+# El wrapper de Maven y los scripts de shell también se ejecutan en Linux
+# (contenedores y CI): siempre con fin de línea LF.
+mvnw text eol=lf
+*.sh text eol=lf
+mvnw.cmd text eol=crlf
+*.cmd text eol=crlf

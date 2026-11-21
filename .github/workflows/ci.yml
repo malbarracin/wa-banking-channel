@@ -1,0 +1,175 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify ${{ matrix.componente }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # Un componente por entrada; se agregan a medida que crece el canal.
+        componente: [platform/wa-event-platform]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      # Kafka y PostgreSQL no se declaran como servicios del job: las pruebas de
+      # integración levantan lo que necesitan con Testcontainers, sobre el Docker
+      # que ya trae el runner.
+      - name: verify
+        working-directory: ${{ matrix.componente }}
+        run: |
+          mkdir -p target
+          set +e
+          ./mvnw -q -B verify > target/verify.log 2>&1
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            echo "FALLÓ ${{ matrix.componente }}"
+            grep -E "\[ERROR\]|FAIL|Exception|Tests run:.*(Failures: [1-9]|Errors: [1-9])" target/verify.log | head -60
+            echo "::error::verify falló en ${{ matrix.componente }}; el log completo está en el artefacto verify-log"
+            exit "$code"
+          fi
+          echo "OK ${{ matrix.componente }}"
+          grep -E "Tests run:|Total time" target/verify.log | tail -5 || true
+
+      - name: log y reportes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-log-${{ strategy.job-index }}
+          path: |
+            ${{ matrix.componente }}/target/verify.log
+            ${{ matrix.componente }}/target/surefire-reports/
+            ${{ matrix.componente }}/target/site/jacoco/
+          if-no-files-found: warn
+          retention-days: 7
+
+  verificacion-del-repo:
+    name: scripts de verificación
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m unittest discover -s scripts -p "test_*.py" -v
+
+  imagen:
+    name: imagen ${{ matrix.componente }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - componente: platform/wa-event-platform
+            imagen: wa-event-platform
+            servicio: wa-event-platform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # El contexto es la raíz: la imagen necesita los contratos de shared/contracts/.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.componente }}/Dockerfile
+          push: false
+          load: true
+          tags: ${{ matrix.imagen }}:local
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Humo del stack: Kafka KRaft, los topics del catálogo y el componente
+      # sano. compose reutiliza la imagen ya construida (no la vuelve a armar).
+      - name: humo del stack
+        working-directory: ${{ matrix.componente }}
+        run: |
+          docker compose --profile app up -d --wait --wait-timeout 240 ${{ matrix.servicio }}
+          docker compose exec -T ${{ matrix.servicio }} wget -qO- http://127.0.0.1:8092/actuator/health
+
+      - name: logs del stack si falla
+        if: failure()
+        working-directory: ${{ matrix.componente }}
+        run: docker compose --profile app logs --tail 200
+
+      - name: bajar el stack
+        if: always()
+        working-directory: ${{ matrix.componente }}
+        run: docker compose --profile app down -v
+
+  dependencias:
+    name: OWASP Dependency-Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: verify
+    env:
+      # Se configura como secreto del repositorio; sin clave, el análisis se omite
+      # (la NVD limita las consultas anónimas). Nunca se escribe un valor acá.
+      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+    strategy:
+      fail-fast: false
+      matrix:
+        componente: [platform/wa-event-platform]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        if: env.NVD_API_KEY != ''
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: dependency-check
+        if: env.NVD_API_KEY != ''
+        working-directory: ${{ matrix.componente }}
+        run: |
+          mkdir -p target
+          set +e
+          ./mvnw -q -B -DnvdApiKey="$NVD_API_KEY" -DfailBuildOnCVSS=7 -DassemblyAnalyzerEnabled=false \
+            org.owasp:dependency-check-maven:12.1.3:check > target/dependency-check.log 2>&1
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            grep -E "\[ERROR\]|CVE-|One or more dependencies" target/dependency-check.log | head -40
+            echo "::error::dependencias con CVE alta en ${{ matrix.componente }}"
+            exit "$code"
+          fi
+          echo "OK sin CVE alta en ${{ matrix.componente }}"
+
+      - name: informe
+        if: always() && env.NVD_API_KEY != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-${{ strategy.job-index }}
+          path: ${{ matrix.componente }}/target/dependency-check-report.*
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: sin clave de la NVD
+        if: env.NVD_API_KEY == ''
+        run: echo "::notice::Configurar el secreto NVD_API_KEY para habilitar OWASP Dependency-Check"

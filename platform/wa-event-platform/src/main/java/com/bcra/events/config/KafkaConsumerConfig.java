@@ -19,6 +19,7 @@ public class KafkaConsumerConfig {
         configurer.configure(factory, consumerFactory);
         factory.setCommonErrorHandler(errorHandler);
         factory.getContainerProperties().setObservationEnabled(true);
+        factory.getContainerProperties().setDeliveryAttemptHeader(true);
         return factory;
     }
 }

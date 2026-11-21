@@ -8,13 +8,13 @@ import com.bcra.events.schema.SchemaValidator;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.header.Header;
-import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.springframework.stereotype.Component;
 
 @Component
 public class EnvelopeReader {
@@ -44,7 +44,13 @@ public class EnvelopeReader {
             EventEnvelope event = mapper.treeToValue(json, EventEnvelope.class);
             validator.validate(json, event.eventType(), event.eventVersion());
             eventType = event.eventType().name();
-            if (!event.conversationId().equals(record.key())
+            String expectedTopic = switch (event.eventType()) {
+                case MessageReceived -> "wa.message.received.v";
+                case MessageReadyToSend -> "wa.message.ready-to-send.v";
+                case MessageStatus -> "wa.message.status.v";
+            };
+            if (!record.topic().equals(expectedTopic + event.eventVersion())
+                || !event.conversationId().equals(record.key())
                 || !header(record, "correlationId").equals(event.correlationId())
                 || !header(record, "eventType").equals(event.eventType().name())
                 || !header(record, "eventVersion").equals(Integer.toString(event.eventVersion()))) {

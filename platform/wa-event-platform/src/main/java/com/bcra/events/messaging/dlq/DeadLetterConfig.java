@@ -12,6 +12,9 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.internals.RecordHeaders;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -23,26 +26,19 @@ import org.springframework.util.backoff.BackOff;
 
 @Configuration(proxyBeanMethods = false)
 public class DeadLetterConfig {
+    private static final Logger LOG = LoggerFactory.getLogger(DeadLetterConfig.class);
+
     @Bean
     public DefaultErrorHandler kafkaErrorHandler(KafkaTemplate<String, String> template, TopicsProperties topics,
                                                  EventMetrics metrics, DlqExceptionHeadersCreator headersCreator) {
-        DeadLetterPublishingRecoverer deadLetter = new DeadLetterPublishingRecoverer(template,
-            (record, exception) -> new TopicPartition(topics.dlq(), -1));
-        deadLetter.excludeHeader(DeadLetterPublishingRecoverer.HeaderNames.HeadersToAdd.EX_STACKTRACE);
-        deadLetter.setExceptionHeadersCreator(headersCreator);
-        deadLetter.setHeadersFunction((record, exception) -> {
-            RecordHeaders headers = new RecordHeaders();
-            headers.add(DlqHeaders.ATTEMPTS, attempts(record).getBytes(StandardCharsets.UTF_8));
-            headers.add(DlqHeaders.FAILED_AT, Instant.now().toString().getBytes(StandardCharsets.UTF_8));
-            return headers;
-        });
-
+        DeadLetterPublishingRecoverer deadLetter = deadLetterRecoverer(template, topics, headersCreator);
         DefaultErrorHandler handler = new DefaultErrorHandler((record, exception) -> {
             metrics.dlq(record.topic(), DlqFailureClassifier.classify(exception));
             deadLetter.accept(record, exception);
         }, backOff());
         handler.addNotRetryableExceptions(SchemaValidationException.class, JsonProcessingException.class,
             MismatchedInputException.class);
+        handler.setCommitRecovered(true);
         handler.setRetryListeners((record, ex, deliveryAttempt) -> {
             if (deliveryAttempt > 1) {
                 metrics.retried(record.topic());
@@ -51,7 +47,33 @@ public class DeadLetterConfig {
         return handler;
     }
 
-    private static BackOff backOff() {
+    public static DeadLetterPublishingRecoverer deadLetterRecoverer(KafkaTemplate<String, String> kafka,
+                                                                    TopicsProperties topics,
+                                                                    DlqExceptionHeadersCreator exceptionHeaders) {
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafka,
+            (record, exception) -> new TopicPartition(topics.dlq(), -1));
+        recoverer.setFailIfSendResultIsError(true);
+        recoverer.excludeHeader(DeadLetterPublishingRecoverer.HeaderNames.HeadersToAdd.EX_STACKTRACE);
+        recoverer.setExceptionHeadersCreator(exceptionHeaders);
+        recoverer.setHeadersFunction((record, exception) -> {
+            Header correlation = record.headers().lastHeader("correlationId");
+            if (correlation != null && correlation.value() != null) {
+                MDC.put("correlationId", new String(correlation.value(), StandardCharsets.UTF_8));
+            }
+            try {
+                LOG.error("Consumer failed; sending record to DLQ topic={}", topics.dlq(), exception);
+            } finally {
+                MDC.remove("correlationId");
+            }
+            RecordHeaders headers = new RecordHeaders();
+            headers.add(DlqHeaders.ATTEMPTS, attempts(record).getBytes(StandardCharsets.UTF_8));
+            headers.add(DlqHeaders.FAILED_AT, Instant.now().toString().getBytes(StandardCharsets.UTF_8));
+            return headers;
+        });
+        return recoverer;
+    }
+
+    public static BackOff backOff() {
         ExponentialBackOffWithMaxRetries backOff = new ExponentialBackOffWithMaxRetries(4);
         backOff.setInitialInterval(500L);
         backOff.setMultiplier(2.0);

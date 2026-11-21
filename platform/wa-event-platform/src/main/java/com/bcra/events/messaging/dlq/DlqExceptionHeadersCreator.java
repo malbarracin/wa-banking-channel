@@ -5,46 +5,66 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.kafka.common.header.Headers;
-import org.apache.kafka.common.header.internals.RecordHeader;
-import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer.ExceptionHeadersCreator;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer.HeaderNames;
 import org.springframework.stereotype.Component;
 
+/**
+ * Headers de excepción en DLQ: FQCN y mensaje truncado/saneado (teléfonos enmascarados); nunca stack trace.
+ */
 @Component
-public class DlqExceptionHeadersCreator implements DeadLetterPublishingRecoverer.ExceptionHeadersCreator {
-    private static final int MAX_MESSAGE_LENGTH = 200;
+public class DlqExceptionHeadersCreator implements ExceptionHeadersCreator {
     private static final Pattern PHONE = Pattern.compile("\\+[0-9]{6,15}");
 
     @Override
-    public void create(Headers headers, Exception exception, boolean overwrite,
-                       DeadLetterPublishingRecoverer.HeaderNames names) {
-        DeadLetterPublishingRecoverer.HeaderNames.ExceptionInfo info = names.getExceptionInfo();
-        add(headers, info.getExceptionFqcn(), exception.getClass().getName(), overwrite);
-        add(headers, info.getExceptionMessage(), sanitize(truncate(exception.getMessage())), overwrite);
+    public void create(Headers headers, Exception exception, boolean isKey, HeaderNames names) {
+        Throwable root = rootCause(exception);
+        HeaderNames.ExceptionInfo info = names.getExceptionInfo();
+        String fqcn = isKey ? info.getKeyExceptionFqcn() : info.getExceptionFqcn();
+        String message = isKey ? info.getKeyExceptionMessage() : info.getExceptionMessage();
+        String stacktrace = isKey ? info.getKeyExceptionStacktrace() : info.getExceptionStacktrace();
+        headers.remove(fqcn);
+        headers.remove(message);
+        headers.remove(stacktrace);
+        headers.add(fqcn, bytes(root.getClass().getName()));
+        headers.add(message, bytes(sanitize(root.getMessage())));
     }
 
     static String truncate(String message) {
         if (message == null) {
             return "";
         }
-        return message.length() <= MAX_MESSAGE_LENGTH ? message : message.substring(0, MAX_MESSAGE_LENGTH);
+        return message.length() <= DlqHeaders.EXCEPTION_MESSAGE_MAX
+            ? message
+            : message.substring(0, DlqHeaders.EXCEPTION_MESSAGE_MAX);
     }
 
-    static String sanitize(String message) {
-        Matcher matcher = PHONE.matcher(message);
-        StringBuilder sanitized = new StringBuilder();
+    static String sanitize(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "Consumer processing failed";
+        }
+        String cleaned = raw.replaceAll("[\\p{Cntrl}&&[^\t]]", " ").replaceAll("\\s+", " ").trim();
+        if (cleaned.isEmpty()) {
+            return "Consumer processing failed";
+        }
+        Matcher matcher = PHONE.matcher(cleaned);
+        StringBuilder masked = new StringBuilder();
         while (matcher.find()) {
-            matcher.appendReplacement(sanitized, Matcher.quoteReplacement(PhoneMasker.mask(matcher.group())));
+            matcher.appendReplacement(masked, Matcher.quoteReplacement(PhoneMasker.mask(matcher.group())));
         }
-        matcher.appendTail(sanitized);
-        return sanitized.toString();
+        matcher.appendTail(masked);
+        return truncate(masked.toString());
     }
 
-    private void add(Headers headers, String name, String value, boolean overwrite) {
-        if (overwrite) {
-            headers.remove(name);
-        } else if (headers.lastHeader(name) != null) {
-            return;
+    static Throwable rootCause(Throwable exception) {
+        Throwable current = exception;
+        while (current.getCause() != null && current.getCause() != current) {
+            current = current.getCause();
         }
-        headers.add(new RecordHeader(name, value.getBytes(StandardCharsets.UTF_8)));
+        return current;
+    }
+
+    private static byte[] bytes(String value) {
+        return value.getBytes(StandardCharsets.UTF_8);
     }
 }

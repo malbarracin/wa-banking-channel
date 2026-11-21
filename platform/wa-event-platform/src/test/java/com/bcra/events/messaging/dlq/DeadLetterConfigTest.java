@@ -55,7 +55,7 @@ class DeadLetterConfigTest {
 
         DeadLetterPublishingRecoverer.HeaderNames names = headerNames();
         Headers headers = new RecordHeaders();
-        creator.create(headers, new SchemaValidationException("boom +12025550123"), true, names);
+        creator.create(headers, new SchemaValidationException("boom +12025550123"), false, names);
         assertThat(new String(headers.lastHeader(names.getExceptionInfo().getExceptionFqcn()).value(),
             StandardCharsets.UTF_8)).isEqualTo(SchemaValidationException.class.getName());
         assertThat(new String(headers.lastHeader(names.getExceptionInfo().getExceptionMessage()).value(),

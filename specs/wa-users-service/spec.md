@@ -1,9 +1,9 @@
 ---
 title: Especificación — Servicio de Usuarios (H1)
-status: borrador
+status: aprobada
 source: https://app.notion.com/36875bb08ca78197a853e85505bf49a5 (página "👤 H1 —
   Servicio de Usuarios") y orden del equipo en el paso de analista
-updated: 2026-11-21T03:48:27.195Z
+updated: 2026-11-21T03:49:36.820Z
 ---
 
 # Especificación — Servicio de Usuarios (H1)

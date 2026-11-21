@@ -1,10 +1,10 @@
 ---
 title: Trazabilidad de fuentes — Servicio de Usuarios
-status: borrador
+status: aprobada
 source: Página de Notion
   https://app.notion.com/36875bb08ca78197a853e85505bf49a5; orden del paso de
   analista; reglas del rol analista; skill ia-specs
-updated: 2026-11-21T03:48:36.913Z
+updated: 2026-11-21T03:49:36.810Z
 ---
 
 # Trazabilidad de fuentes — Servicio de Usuarios (H1)

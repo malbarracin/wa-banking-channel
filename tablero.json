@@ -399,21 +399,23 @@
       "budgetUsd": null,
       "budgetTokens": null,
       "spent": {
-        "usd": 0,
-        "tokens": 852754,
+        "usd": 0.5094,
+        "tokens": 2483444,
         "runs": {
           "20261121-d525": {
-            "usd": 0,
+            "usd": 0.5094,
             "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
             "tools": {
-              "kilocode": 0
+              "kilocode": 0,
+              "claude-code": 0.5094
             },
-            "tokens": 852754,
+            "tokens": 2483444,
             "toolTokens": {
-              "kilocode": 852754
+              "kilocode": 2214946,
+              "claude-code": 268498
             },
             "loops": 0,
-            "redoTokens": 0,
+            "redoTokens": 268498,
             "roles": {
               "analista": {
                 "kilocode": {
@@ -421,13 +423,36 @@
                   "steps": 1,
                   "redo": 0
                 }
+              },
+              "arquitecto": {
+                "kilocode": {
+                  "tokens": 489895,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "tech-lead": {
+                "kilocode": {
+                  "tokens": 872297,
+                  "steps": 1,
+                  "redo": 0
+                },
+                "claude-code": {
+                  "tokens": 268498,
+                  "steps": 1,
+                  "redo": 1
+                }
               }
             }
           }
         }
       },
       "stalled": null,
-      "waiting": null,
+      "waiting": {
+        "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+        "text": "espera una respuesta",
+        "at": "2026-11-21T04:05:42.997Z"
+      },
       "times": {
         "startedAt": "2026-11-21T03:57:10.936Z",
         "releasedAt": null,
@@ -439,7 +464,7 @@
       },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T04:00:39.935Z"
+      "updatedAt": "2026-11-21T04:05:42.997Z"
     },
     {
       "id": "P-12",
@@ -727,6 +752,15 @@
       "account": "opensoma.app@gmail.com",
       "to": "Marcelo",
       "text": "P-1 (H0.1 — Plataforma de Eventos / Kafka) está en curso, en etapa de análisis y diseño. Terminado: la especificación (specs/plataforma-eventos/spec.md), la arquitectura completa (specs/plataforma-eventos/arquitectura.md, 455 líneas: topics wa.<entidad>.<hecho>.v<n>, sobre de eventos, claves de part"
+    },
+    {
+      "at": "2026-11-21T04:05:42.997Z",
+      "kind": "waiting",
+      "id": "P-11",
+      "title": "H8 — Base de conocimiento RAG",
+      "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com",
+      "text": "espera una respuesta"
     }
   ],
   "deadline": null,

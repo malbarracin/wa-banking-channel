@@ -765,6 +765,16 @@
       "title": "H8 — Base de conocimiento RAG",
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
       "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-21T04:09:30.344Z",
+      "kind": "requested",
+      "id": "R-2",
+      "title": "Como estas, necesitas ayuda?",
+      "floor": "DESKTOP-JVEJTUF",
+      "account": "opensoma.app@gmail.com",
+      "to": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "text": "Como estas, necesitas ayuda?"
     }
   ],
   "deadline": null,
@@ -799,7 +809,28 @@
       },
       "createdAt": "2026-11-21T04:02:59.503Z",
       "updatedAt": "2026-11-21T04:04:58.529Z"
+    },
+    {
+      "id": "R-2",
+      "text": "Como estas, necesitas ayuda?",
+      "from": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "to": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "run": null,
+      "question": null,
+      "task": null,
+      "role": null,
+      "look": null,
+      "status": "open",
+      "waitingFor": null,
+      "hold": null,
+      "messages": [],
+      "answer": null,
+      "createdAt": "2026-11-21T04:09:30.343Z",
+      "updatedAt": "2026-11-21T04:09:30.344Z"
     }
   ],
-  "reqSeq": 1
+  "reqSeq": 2
 }

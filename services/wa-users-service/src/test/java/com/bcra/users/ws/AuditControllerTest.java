@@ -11,12 +11,15 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 
 import com.bcra.users.ws.audit.entity.AuditAction;
 import com.bcra.users.ws.audit.entity.AuditEvent;
@@ -37,6 +40,7 @@ class AuditControllerTest {
     @Autowired private UserRepository users;
     @Autowired private AuditEventRepository events;
     @Autowired private AuditMapper mapper;
+    @Autowired @Qualifier("requestMappingHandlerMapping") private RequestMappingHandlerMapping mappings;
 
     @Test
     void historyIsDescendingAndContainsNoPersonalValues() throws Exception {
@@ -87,6 +91,11 @@ class AuditControllerTest {
 
     @Test
     void auditHasNoMutationEndpoints() throws Exception {
+        assertThat(mappings.getHandlerMethods().entrySet()).noneMatch(entry ->
+                entry.getKey().getPatternValues().stream().anyMatch(path -> path.contains("/audit"))
+                && (entry.getKey().getMethodsCondition().isEmpty()
+                || entry.getKey().getMethodsCondition().getMethods().stream().anyMatch(method ->
+                        method == RequestMethod.PUT || method == RequestMethod.PATCH || method == RequestMethod.DELETE)));
         UUID id = UUID.randomUUID();
         mvc.perform(put("/api/v1/users/{id}/audit", id).header("X-Actor-Id", "actor")
                 .header("X-Actor-Role", "OPERACIONES")).andExpect(status().isForbidden());

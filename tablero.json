@@ -399,27 +399,27 @@
       "budgetUsd": null,
       "budgetTokens": null,
       "spent": {
-        "usd": 2.1957,
-        "tokens": 8370780,
+        "usd": 2.9334,
+        "tokens": 19449056,
         "runs": {
           "20261121-d525": {
-            "usd": 2.1957,
+            "usd": 2.9334,
             "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
             "tools": {
               "kilocode": 0,
-              "claude-code": 2.1956,
+              "claude-code": 2.9333,
               "codex": 0,
               "cursor": 0
             },
-            "tokens": 8370780,
+            "tokens": 19449056,
             "toolTokens": {
               "kilocode": 4196893,
-              "claude-code": 793735,
-              "codex": 2290994,
-              "cursor": 1089158
+              "claude-code": 1064552,
+              "codex": 10819695,
+              "cursor": 3367916
             },
-            "loops": 2,
-            "redoTokens": 4732084,
+            "loops": 5,
+            "redoTokens": 8544938,
             "roles": {
               "analista": {
                 "kilocode": {
@@ -449,28 +449,28 @@
               },
               "dev-ia": {
                 "codex": {
-                  "tokens": 1336093,
-                  "steps": 3,
-                  "redo": 2
+                  "tokens": 6958697,
+                  "steps": 11,
+                  "redo": 5
                 },
                 "claude-code": {
-                  "tokens": 525237,
-                  "steps": 2,
-                  "redo": 2
+                  "tokens": 796054,
+                  "steps": 3,
+                  "redo": 3
                 }
               },
               "tester": {
                 "codex": {
-                  "tokens": 954901,
-                  "steps": 3,
-                  "redo": 2
+                  "tokens": 3860998,
+                  "steps": 12,
+                  "redo": 6
                 }
               },
               "reviewer": {
                 "cursor": {
-                  "tokens": 1089158,
-                  "steps": 3,
-                  "redo": 2
+                  "tokens": 3367916,
+                  "steps": 10,
+                  "redo": 4
                 }
               }
             }
@@ -490,7 +490,7 @@
       },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T04:23:34.367Z"
+      "updatedAt": "2026-11-21T04:44:57.656Z"
     },
     {
       "id": "P-12",

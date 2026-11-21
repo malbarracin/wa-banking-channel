@@ -31,7 +31,13 @@ public class EnvelopeReader {
             }
             EventEnvelope event = mapper.treeToValue(json, EventEnvelope.class);
             validator.validate(json, event.eventType(), event.eventVersion());
-            if (!event.conversationId().equals(record.key())
+            String expectedTopic = switch (event.eventType()) {
+                case MessageReceived -> "wa.message.received.v";
+                case MessageReadyToSend -> "wa.message.ready-to-send.v";
+                case MessageStatus -> "wa.message.status.v";
+            };
+            if (!record.topic().equals(expectedTopic + event.eventVersion())
+                || !event.conversationId().equals(record.key())
                 || !header(record, "correlationId").equals(event.correlationId())
                 || !header(record, "eventType").equals(event.eventType().name())
                 || !header(record, "eventVersion").equals(Integer.toString(event.eventVersion()))) {

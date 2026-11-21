@@ -1,0 +1,520 @@
+{
+  "version": 1,
+  "seq": 17,
+  "tasks": [
+    {
+      "id": "P-1",
+      "title": "H0.1 — Plataforma de Eventos (Kafka)",
+      "description": "Columna vertebral asincrónica del canal: topics con prefijo wa. y forma wa.<entidad>.<hecho>.v<n>, esquemas versionados, partición por conversationId para preservar el orden, reintentos, DLQ y observabilidad. Incluye el catálogo de eventos del canal (MessageReceived, MessageReadyToSend y los demás que fije este hito). No incluye lógica de negocio ni almacenamiento de dominio: Kafka es mensajería, no base de datos. Carpeta: platform/wa-event-platform. Java, grupo Maven com.bcra, paquete base com.bcra.events. Dominio: Plataforma. Especificación del hito: https://app.notion.com/3a675bb08ca781db9516c18960a48060",
+      "dependsOn": [],
+      "assignedTo": null,
+      "deliverables": "Plataforma de eventos levantable en platform/wa-event-platform (Kafka KRaft local con sus topics creados, productor y consumidor de referencia, retry y DLQ) y el catálogo de eventos versionado publicado en shared/contracts/events/ (un esquema por evento, con su versión).",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.016Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-2",
+      "title": "H0 — Gateway WhatsApp (Twilio)",
+      "description": "Única puerta de entrada y salida del canal: recibe los webhooks de Twilio, valida su firma, evita reprocesar duplicados, normaliza el mensaje y publica el evento de entrada; consume el evento de salida y envía la respuesta por Twilio. También procesa los callbacks de estado. No conversa, no orquesta y no resuelve negocio. Carpeta: gateway/wa-twilio-gateway. Java, paquete base com.bcra.gateway, puerto 8090 en la PC. Dominio: Canal. Especificación del hito: https://app.notion.com/3a675bb08ca781e8bebcca1e1697a495",
+      "dependsOn": [
+        "P-1"
+      ],
+      "assignedTo": null,
+      "deliverables": "Gateway corriendo en gateway/wa-twilio-gateway (puerto 8090) que valida webhooks firmados, publica el evento de entrada y envía el outbound según los esquemas de shared/contracts/events/; su contrato y handoff en shared/contracts/wa-twilio-gateway/handoff.md.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-3",
+      "title": "H0.2 — Orquestador del Canal",
+      "description": "Coordina el ciclo de vida de cada mensaje y los flujos multi-componente: consume los eventos de entrada, mantiene estado y correlación (correlationId de punta a punta), entrega el turno al agente, invoca capacidades de integración, maneja reintentos y compensaciones, y publica la respuesta de salida. No entiende lenguaje natural ni duplica la lógica de los servicios de dominio. Define y publica el contrato de turno que después implementa el agente. Carpeta: platform/wa-channel-orchestrator. Java, paquete base com.bcra.orchestrator, puerto 8091 en la PC. Dominio: Plataforma. Especificación del hito: https://app.notion.com/3a675bb08ca7812c9b8bed1723e9206f",
+      "dependsOn": [
+        "P-1"
+      ],
+      "assignedTo": null,
+      "deliverables": "Orquestador corriendo en platform/wa-channel-orchestrator (puerto 8091) con máquina de estados, idempotencia y orden por conversación; su contrato en shared/contracts/wa-channel-orchestrator/handoff.md y el contrato de turno del agente en shared/contracts/wa-conversation-agent/turn.md.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-4",
+      "title": "H1 — Servicio de Usuarios",
+      "description": "Alta y administración de clientes del banco: registro, consulta, actualización de los datos permitidos y estados operativos del usuario bancario. Es el dominio base: sin cliente en el banco no hay nada que vincular ni operar. No gestiona el vínculo con WhatsApp ni la credencial de sesión. Carpeta: services/wa-users-service. Java, paquete base com.bcra.users.ws, escucha en el 8080 dentro de su contenedor. Dominio: Usuarios. Especificación del hito: https://app.notion.com/36875bb08ca78197a853e85505bf49a5",
+      "dependsOn": [],
+      "assignedTo": null,
+      "deliverables": "Servicio corriendo en services/wa-users-service con sus endpoints de alta, consulta, actualización y estados, y su contrato publicado en shared/contracts/wa-users-service/openapi.yaml más su shared/contracts/wa-users-service/handoff.md.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-5",
+      "title": "H3 — Servicio Canal WhatsApp",
+      "description": "Vínculo entre un número de WhatsApp y un cliente del banco, verificación de identidad y estados y preferencias del canal. No recibe webhooks, no transporta mensajes y no orquesta el flujo técnico: eso es del gateway y del orquestador. Usa el servicio de usuarios para comprobar que el cliente existe. Carpeta: services/wa-channel-service. Java, paquete base com.bcra.channel.ws, 8080 en su contenedor. Dominio: Canal. Especificación del hito: https://app.notion.com/38275bb08ca781c0bc08d80366637aa5",
+      "dependsOn": [
+        "P-4"
+      ],
+      "assignedTo": null,
+      "deliverables": "Servicio corriendo en services/wa-channel-service con vinculación del número, verificación de identidad y estados del vínculo, consumiendo shared/contracts/wa-users-service/openapi.yaml, y su contrato publicado en shared/contracts/wa-channel-service/openapi.yaml más su handoff.md.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-6",
+      "title": "H2 — Servicio de Acceso y Sesión",
+      "description": "Emite, renueva y revoca la credencial de sesión que habilita operar por el canal: una credencial por vínculo activo, solo después de una verificación de identidad exitosa, con vigencia limitada, renovación sin repetir todo el proceso salvo riesgo o bloqueo, y revocación inmediata por bloqueo, desvinculación o fraude. Expone también la validación de la credencial que usan los servicios de producto. Trazabilidad sin secretos en el chat. Carpeta: services/wa-auth-service. Java, paquete base com.bcra.auth.ws, 8080 en su contenedor. Dominio: Usuarios. Especificación del hito: https://app.notion.com/38275bb08ca781c8b7d5f5a2c29b8770",
+      "dependsOn": [
+        "P-4",
+        "P-5"
+      ],
+      "assignedTo": null,
+      "deliverables": "Servicio corriendo en services/wa-auth-service que emite, renueva, revoca y valida la credencial de sesión sobre un vínculo verificado, y su contrato publicado en shared/contracts/wa-auth-service/openapi.yaml más su handoff.md (con cómo la validan H4, H5 y H6).",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-7",
+      "title": "H4 — Servicio de Cuentas",
+      "description": "Consulta de saldos y movimientos y transferencias de dinero respetando los límites del banco (montos, horarios y políticas de producto), con auditoría de las acciones relevantes. En el piloto se prioriza la consulta de saldo. Requiere credencial de sesión válida y vínculo activo: sin credencial no hay operación. Carpeta: services/wa-accounts-service. Java, paquete base com.bcra.accounts.ws, 8080 en su contenedor. Dominio: Cuentas. Especificación del hito: https://app.notion.com/36875bb08ca7815e8642e555eebdfc6a",
+      "dependsOn": [
+        "P-6"
+      ],
+      "assignedTo": null,
+      "deliverables": "Servicio corriendo en services/wa-accounts-service con consulta de saldo y movimientos y transferencias con límites, validando la credencial según shared/contracts/wa-auth-service/openapi.yaml, y su contrato publicado en shared/contracts/wa-accounts-service/openapi.yaml más su handoff.md.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-8",
+      "title": "H5 — Servicio de Tarjetas",
+      "description": "Consulta de tarjetas y consumos, bloqueo y desbloqueo, y registro del aviso de viaje, con auditoría de las acciones relevantes. Requiere credencial de sesión válida y vínculo activo. Puede avanzar en paralelo con H6. Carpeta: services/wa-cards-service. Java, paquete base com.bcra.cards.ws, 8080 en su contenedor. Dominio: Tarjetas. Especificación del hito: https://app.notion.com/36875bb08ca781bea9c8cb37c2ccdbbf",
+      "dependsOn": [
+        "P-6"
+      ],
+      "assignedTo": null,
+      "deliverables": "Servicio corriendo en services/wa-cards-service con tarjetas, consumos, bloqueo y desbloqueo y aviso de viaje, validando la credencial según shared/contracts/wa-auth-service/openapi.yaml, y su contrato publicado en shared/contracts/wa-cards-service/openapi.yaml más su handoff.md.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-9",
+      "title": "H6 — Servicio de Seguros",
+      "description": "Consulta de pólizas y coberturas y denuncia de siniestros, con auditoría de las acciones relevantes. Requiere credencial de sesión válida y vínculo activo. Puede avanzar en paralelo con H5. Carpeta: services/wa-insurance-service. Java, paquete base com.bcra.insurance.ws, 8080 en su contenedor. Dominio: Seguros. Especificación del hito: https://app.notion.com/36875bb08ca781129b47cd3ced785221",
+      "dependsOn": [
+        "P-6"
+      ],
+      "assignedTo": null,
+      "deliverables": "Servicio corriendo en services/wa-insurance-service con pólizas, coberturas y denuncia de siniestro, validando la credencial según shared/contracts/wa-auth-service/openapi.yaml, y su contrato publicado en shared/contracts/wa-insurance-service/openapi.yaml más su handoff.md.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-10",
+      "title": "H7 — Capa MCP (integración con servicios)",
+      "description": "Expone de forma segura y estructurada las capacidades de los servicios de dominio (H1 a H6) para que el agente consulte y opere sin lógica duplicada: una capacidad por operación de negocio, contexto de sesión, errores de negocio claros, auditoría y catálogo versionado. No reimplementa lógica de dominio y no conversa. Carpeta: ai/wa-mcp-layer. Puerto 8101 en la PC. Dominio: IA. Especificación del hito: https://app.notion.com/38375bb08ca78152aa2ee8a87168a5d3",
+      "dependsOn": [
+        "P-4",
+        "P-5",
+        "P-6",
+        "P-7",
+        "P-8",
+        "P-9"
+      ],
+      "assignedTo": null,
+      "deliverables": "Capa MCP corriendo en ai/wa-mcp-layer (puerto 8101) con una capacidad por operación de los servicios H1 a H6 según sus openapi.yaml de shared/contracts/, y su catálogo versionado publicado en shared/contracts/wa-mcp-layer/capabilities.md.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-11",
+      "title": "H8 — Base de conocimiento RAG",
+      "description": "Centraliza el conocimiento del banco (productos, políticas, FAQs y guías de respuesta) con ingesta de contenido aprobado, búsqueda y citas, para que el agente responda con precisión y sin inventar. Informa: no opera productos ni ejecuta operaciones. Es obligatorio en el desarrollo completo y avanza en paralelo con H7. Carpeta: ai/wa-knowledge-rag. Puerto 8102 en la PC. Dominio: IA. Especificación del hito: https://app.notion.com/38375bb08ca781e2accfdd9eff1722a4",
+      "dependsOn": [],
+      "assignedTo": null,
+      "deliverables": "Base de conocimiento corriendo en ai/wa-knowledge-rag (puerto 8102) con el contenido aprobado ingestado y búsqueda con citas, y su contrato de retrieval publicado en shared/contracts/wa-knowledge-rag/retrieval.md.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-12",
+      "title": "H9 — Agente conversacional WhatsApp",
+      "description": "Comprende la intención y conduce la conversación: onboarding del canal, productos y conocimiento. Informa con el RAG (H8) y opera con las capacidades MCP (H7). Recibe turnos normalizados del orquestador según el contrato de turno y le devuelve la respuesta; no habla con Twilio, no consume Kafka directo y no gestiona el ciclo técnico del mensaje. Cumple las reglas transversales: identidad verificada antes de operar productos sensibles, mensajes claros, privacidad y escalamiento humano cuando no puede resolver con seguridad. Carpeta: ai/wa-conversation-agent. Puerto 8103 en la PC. Dominio: IA. Especificación del hito: https://app.notion.com/38375bb08ca7813499c9d738fad34ebe",
+      "dependsOn": [
+        "P-3",
+        "P-10",
+        "P-11"
+      ],
+      "assignedTo": null,
+      "deliverables": "Agente corriendo en ai/wa-conversation-agent (puerto 8103) que implementa el contrato de turno shared/contracts/wa-conversation-agent/turn.md (publicado por H0.2), usa las capacidades de shared/contracts/wa-mcp-layer/capabilities.md y el retrieval de shared/contracts/wa-knowledge-rag/retrieval.md, con su evaluación de conversaciones en verde.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-13",
+      "title": "E2E — Runtime local (Compose) y prueba de humo",
+      "description": "Levanta todo el programa en una sola PC con Docker Compose (Kafka, gateway, orquestador, los seis servicios, MCP, RAG y agente, con Twilio simulado) y comprueba con una prueba de humo que un mensaje entra y sale de punta a punta. Define qué puerto de la PC le toca a cada servicio H1 a H6 (dentro de su contenedor escuchan en el 8080). Nunca un monolito: un contenedor por componente. Sin secretos reales en el repositorio, solo placeholders en .env.example. Carpeta: raíz del programa (docker-compose.yml y scripts/). Dominio: Plataforma. Especificación del hito: https://app.notion.com/41975bb08ca78192995cf7089f5a39f8",
+      "dependsOn": [
+        "P-2",
+        "P-3",
+        "P-12"
+      ],
+      "assignedTo": null,
+      "deliverables": "docker-compose.yml y .env.example en la raíz más scripts/ (bootstrap de topics, start, stop y reset) que levantan el stack completo con sus health checks en verde, y una prueba de humo documentada que muestra un mensaje entrando y saliendo de punta a punta.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-14",
+      "title": "QA — Pruebas de punta a punta del canal",
+      "description": "Prueba el sistema ya levantado como lo vive el cliente: los recorridos del roadmap, la resiliencia (duplicados, orden por conversación, DLQ, timeouts y caídas), los contratos entre componentes y el comportamiento del agente. No arregla el producto: deja los defectos con evidencia y el equipo dueño de cada uno. Carpeta: qa/e2e. Dominio: Plataforma. Especificación del hito: https://app.notion.com/41975bb08ca781dfb140e13d3e4daba7",
+      "dependsOn": [
+        "P-13"
+      ],
+      "assignedTo": null,
+      "deliverables": "Suites automatizadas en qa/e2e que corren contra el stack que levanta docker-compose.yml, y el reporte final con veredicto, cobertura y defectos por dueño en qa/e2e/reporte.md.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-15",
+      "title": "SEC — Auditoría de seguridad del canal",
+      "description": "Audita la seguridad del programa: código y dependencias, APIs de los servicios y de la capa MCP, seguridad del canal (firma del webhook, replay, secretos), la capa de IA (inyección de prompts, fuga de datos, envenenamiento del conocimiento) e infraestructura (contenedores, compose y CI). Solo sobre el repositorio y el stack local; no arregla el producto. Carpeta: seguridad/. Dominio: Plataforma. Especificación del hito: https://app.notion.com/41975bb08ca78166a6e2cbb5f7dc3dbb",
+      "dependsOn": [
+        "P-13"
+      ],
+      "assignedTo": null,
+      "deliverables": "Informe de auditoría en seguridad/informe.md con los hallazgos reproducibles sobre el stack que levanta docker-compose.yml, su severidad, el equipo dueño y la remediación propuesta, sin secretos ni datos personales en el texto.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-16",
+      "title": "REV — Revisión del programa (conformidad y contratos)",
+      "description": "Revisa el programa entero, no una tarea: que cada componente respete el límite que le fija el roadmap, que cada contrato de shared/contracts/ coincida entre quien lo publica y quien lo consume, y que las reglas transversales (identidad, privacidad, auditoría, límites del banco, escalamiento, idempotencia, orden por conversación y trazabilidad con correlationId) se cumplan de punta a punta. Solo lectura: no toca el producto. Según el roadmap arranca cuando el agente (H9) está entregado, que es el último componente que se construye. Carpeta: docs/revision/. Dominio: Plataforma. Especificación del hito: https://app.notion.com/41975bb08ca781339370f9e24c996eaf",
+      "dependsOn": [
+        "P-12"
+      ],
+      "assignedTo": null,
+      "deliverables": "Informe en docs/revision/informe.md con el estado por componente y por contrato de shared/contracts/, la matriz de reglas transversales, los hallazgos por dueño y los próximos pasos.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    },
+    {
+      "id": "P-17",
+      "title": "REL — Release 0.1.0 del programa",
+      "description": "Convierte todo lo construido en una versión: la rama principal con todo integrado y verificado, el CHANGELOG, la etiqueta v0.1.0 y su release publicada. Necesita dos aprobaciones de una persona: el plan de la release y su publicación. No desarrolla producto nuevo. Carpeta: raíz del programa (CHANGELOG.md). Dominio: Plataforma. Especificación del hito: https://app.notion.com/41975bb08ca781d296e9fc6db257136f",
+      "dependsOn": [
+        "P-14",
+        "P-15",
+        "P-16"
+      ],
+      "assignedTo": null,
+      "deliverables": "CHANGELOG.md en la raíz con la entrada de la versión, la rama principal con todo integrado y verificado (incluidos los veredictos de qa/e2e/reporte.md, seguridad/informe.md y docs/revision/informe.md), la etiqueta v0.1.0 y la release publicada con sus notas.",
+      "status": "todo",
+      "createdAt": "2026-11-21T03:43:49.017Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T03:43:49.017Z"
+    }
+  ],
+  "offices": {},
+  "log": [
+    {
+      "at": "2026-11-21T03:43:49.018Z",
+      "kind": "planned",
+      "id": null,
+      "title": null,
+      "floor": "DESKTOP-JVEJTUF",
+      "account": "opensoma.app@gmail.com",
+      "text": "17"
+    }
+  ],
+  "deadline": null,
+  "requests": [],
+  "reqSeq": 0
+}

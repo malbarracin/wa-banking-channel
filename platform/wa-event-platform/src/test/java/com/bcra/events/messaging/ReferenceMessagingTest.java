@@ -62,10 +62,36 @@ class ReferenceMessagingTest {
         assertThat(record.key()).isEqualTo(input.conversationId());
         assertThat(record.headers().lastHeader("eventType").value())
             .isEqualTo("MessageReceived".getBytes(StandardCharsets.UTF_8));
+        assertThat(record.headers().lastHeader("correlationId").value())
+            .isEqualTo(input.correlationId().getBytes(StandardCharsets.UTF_8));
+        assertThat(record.headers().lastHeader("eventVersion").value())
+            .isEqualTo("1".getBytes(StandardCharsets.UTF_8));
         assertThat(mapper.readTree(record.value()).get("eventId").asText()).isNotBlank();
         assertThatThrownBy(() -> publisher.publicar("wa.message.received.v2", input))
             .isInstanceOf(SchemaValidationException.class);
         assertThat(metrics.counter("wa_events_invalid_total", "stage", "produce").count()).isEqualTo(1);
+    }
+
+    @Test
+    void publisherCompletesTimestampAndCountsAsynchronousFailure() throws Exception {
+        @SuppressWarnings("unchecked")
+        KafkaTemplate<String, String> kafka = mock(KafkaTemplate.class);
+        CompletableFuture<org.springframework.kafka.support.SendResult<String, String>> failed =
+            CompletableFuture.failedFuture(new IllegalStateException("unavailable"));
+        when(kafka.send(any(ProducerRecord.class))).thenReturn(failed);
+        EventEnvelope original = event(null, "SM123");
+        EventEnvelope input = new EventEnvelope(null, original.eventType(), 1, null,
+            original.correlationId(), original.conversationId(), original.messageId(), original.payload());
+        EventPublisher publisher = new EventPublisher(kafka, mapper, validator, metrics);
+        assertThatThrownBy(() -> publisher.publicar("wa.message.received.v1", input).join())
+            .hasCauseInstanceOf(IllegalStateException.class);
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<ProducerRecord<String, String>> captured =
+            org.mockito.ArgumentCaptor.forClass(ProducerRecord.class);
+        verify(kafka).send(captured.capture());
+        assertThat(Instant.parse(mapper.readTree(captured.getValue().value()).get("occurredAt").asText()))
+            .isBeforeOrEqualTo(Instant.now());
+        assertThat(metrics.counter("wa_events_publish_failed_total").count()).isEqualTo(1);
     }
 
     @Test
@@ -92,9 +118,15 @@ class ReferenceMessagingTest {
         EnvelopeReader reader = new EnvelopeReader(mapper, validator);
         assertThatThrownBy(() -> reader.read(record, value -> {
             assertThat(MDC.get("messageId")).isEqualTo("SM123");
+            assertThat(MDC.get("correlationId")).isEqualTo(event.correlationId());
+            assertThat(MDC.get("conversationId")).isEqualTo(event.conversationId());
+            assertThat(MDC.get("eventType")).isEqualTo("MessageReceived");
             throw new IllegalStateException("effect failed");
         })).isInstanceOf(IllegalStateException.class);
         assertThat(MDC.get("messageId")).isNull();
+        assertThat(MDC.get("correlationId")).isNull();
+        assertThat(MDC.get("conversationId")).isNull();
+        assertThat(MDC.get("eventType")).isNull();
         record.headers().add("eventVersion", "2".getBytes(StandardCharsets.UTF_8));
         assertThatThrownBy(() -> reader.read(record, value -> { })).isInstanceOf(SchemaValidationException.class);
     }

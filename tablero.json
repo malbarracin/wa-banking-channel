@@ -153,23 +153,19 @@
         }
       },
       "stalled": null,
-      "waiting": {
-        "floor": "Marcelo",
-        "text": "espera una aprobación",
-        "at": "2026-11-21T03:48:50.535Z"
-      },
+      "waiting": null,
       "times": {
         "startedAt": "2026-11-21T03:45:29.742Z",
         "releasedAt": null,
         "workedMs": 0,
         "stalledMs": 0,
-        "waitingMs": 0,
+        "waitingMs": 47208,
         "stalls": 0,
         "reopened": 0
       },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T03:48:54.782Z"
+      "updatedAt": "2026-11-21T03:49:37.743Z"
     },
     {
       "id": "P-5",
@@ -593,6 +589,14 @@
       "id": "P-1",
       "title": "H0.1 — Plataforma de Eventos (Kafka)",
       "floor": "DESKTOP-JVEJTUF",
+      "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-21T03:49:37.743Z",
+      "kind": "answered",
+      "id": "P-4",
+      "title": "H1 — Servicio de Usuarios",
+      "floor": "Marcelo",
       "account": "opensoma.app@gmail.com"
     }
   ],

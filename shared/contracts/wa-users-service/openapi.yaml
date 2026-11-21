@@ -1,0 +1,210 @@
+openapi: 3.0.3
+info:
+  title: Servicio de usuarios
+  version: v1
+  description: Administración de usuarios bancarios. La identidad de los headers debe ser autenticada por el gateway.
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/v1/users:
+    post:
+      summary: Crear usuario activo
+      description: Rol permitido OPERACIONES. El documento completo es necesario para el alta.
+      parameters: [ { $ref: '#/components/parameters/ActorId' }, { $ref: '#/components/parameters/ActorRole' }, { $ref: '#/components/parameters/CorrelationId' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateUserRequest' }
+      responses:
+        '201':
+          description: Usuario creado
+          headers:
+            Location: { description: Ruta del usuario creado, schema: { type: string } }
+            X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' }
+          content: { application/json: { schema: { $ref: '#/components/schemas/UserResponse' } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '415': { $ref: '#/components/responses/UnsupportedMedia' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/users/{id}:
+    parameters: [ { $ref: '#/components/parameters/Id' } ]
+    get:
+      summary: Consultar por ID
+      description: Roles permitidos OPERACIONES y SERVICIO_INTERNO.
+      parameters: [ { $ref: '#/components/parameters/ActorId' }, { $ref: '#/components/parameters/ActorRole' }, { $ref: '#/components/parameters/CorrelationId' } ]
+      responses:
+        '200': { $ref: '#/components/responses/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+    patch:
+      summary: Actualizar campos permitidos
+      description: Rol permitido OPERACIONES. Los campos omitidos o nulos no cambian; se rechazan campos desconocidos.
+      parameters: [ { $ref: '#/components/parameters/ActorId' }, { $ref: '#/components/parameters/ActorRole' }, { $ref: '#/components/parameters/CorrelationId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/UpdateUserRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '415': { $ref: '#/components/responses/UnsupportedMedia' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/users/by-document:
+    get:
+      summary: Consultar por documento
+      description: Roles permitidos OPERACIONES y SERVICIO_INTERNO. El número completo viaja en la consulta.
+      parameters:
+        - { $ref: '#/components/parameters/ActorId' }
+        - { $ref: '#/components/parameters/ActorRole' }
+        - { $ref: '#/components/parameters/CorrelationId' }
+        - { name: tipo, in: query, required: true, schema: { $ref: '#/components/schemas/DocumentType' } }
+        - { name: numero, in: query, required: true, description: Número completo del documento., schema: { type: string, minLength: 1 }, example: '00000000' }
+      responses:
+        '200': { $ref: '#/components/responses/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/users/{id}/status:
+    patch:
+      summary: Cambiar estado
+      description: Rol permitido OPERACIONES. BAJA_LOGICA es terminal; las transiciones al mismo estado se rechazan.
+      parameters: [ { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/ActorId' }, { $ref: '#/components/parameters/ActorRole' }, { $ref: '#/components/parameters/CorrelationId' } ]
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/ChangeStatusRequest' } } }
+      responses:
+        '200': { $ref: '#/components/responses/User' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '415': { $ref: '#/components/responses/UnsupportedMedia' }
+        '500': { $ref: '#/components/responses/InternalError' }
+  /api/v1/users/{id}/audit:
+    get:
+      summary: Consultar historial de auditoría
+      description: Roles permitidos OPERACIONES y SOPORTE.
+      parameters: [ { $ref: '#/components/parameters/Id' }, { $ref: '#/components/parameters/ActorId' }, { $ref: '#/components/parameters/ActorRole' }, { $ref: '#/components/parameters/CorrelationId' } ]
+      responses:
+        '200':
+          description: Historial
+          headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
+          content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/AuditEventResponse' } } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/InternalError' }
+components:
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string, format: uuid }, example: '00000000-0000-4000-8000-000000000001' }
+    ActorId: { name: X-Actor-Id, in: header, required: true, schema: { type: string, minLength: 1 }, example: actor-ejemplo }
+    ActorRole: { name: X-Actor-Role, in: header, required: true, schema: { type: string, enum: [OPERACIONES, SOPORTE, SERVICIO_INTERNO] }, example: OPERACIONES }
+    CorrelationId: { name: X-Correlation-Id, in: header, required: false, description: Si falta o es inválido se genera un UUID., schema: { type: string, pattern: '^[A-Za-z0-9._-]{1,64}$' }, example: ejemplo-1 }
+  headers:
+    CorrelationId: { description: Identificador de correlación efectivo., schema: { type: string }, example: ejemplo-1 }
+  responses:
+    User:
+      description: Usuario encontrado o modificado
+      headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/UserResponse' } } }
+    BadRequest:
+      description: BAD_REQUEST para solicitud malformada o VALIDATION_ERROR para datos inválidos.
+      headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' }, example: { code: VALIDATION_ERROR, message: La solicitud tiene datos inválidos, details: [], timestamp: '2026-01-01T00:00:00Z' } } }
+    Unauthorized:
+      description: UNAUTHORIZED, identidad requerida.
+      headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' }, example: { code: UNAUTHORIZED, message: Identidad requerida, details: [], timestamp: '2026-01-01T00:00:00Z' } } }
+    Forbidden:
+      description: FORBIDDEN, rol sin permiso.
+      headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' }, example: { code: FORBIDDEN, message: Acceso denegado, details: [], timestamp: '2026-01-01T00:00:00Z' } } }
+    NotFound:
+      description: NOT_FOUND, usuario inexistente.
+      headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' }, example: { code: NOT_FOUND, message: No se encontró el usuario, details: [], timestamp: '2026-01-01T00:00:00Z' } } }
+    Conflict:
+      description: CONFLICT, documento duplicado o transición inválida.
+      headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' }, example: { code: CONFLICT, message: No se permite el cambio de estado solicitado, details: [], timestamp: '2026-01-01T00:00:00Z' } } }
+    UnsupportedMedia:
+      description: BAD_REQUEST, tipo de contenido no admitido.
+      headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' }, example: { code: BAD_REQUEST, message: Tipo de contenido no admitido, details: [], timestamp: '2026-01-01T00:00:00Z' } } }
+    InternalError:
+      description: INTERNAL_ERROR, error interno.
+      headers: { X-Correlation-Id: { $ref: '#/components/headers/CorrelationId' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' }, example: { code: INTERNAL_ERROR, message: Error interno, details: [], timestamp: '2026-01-01T00:00:00Z' } } }
+  schemas:
+    DocumentType: { type: string, enum: [DNI, PASAPORTE, CUIL] }
+    UserStatus: { type: string, enum: [ACTIVO, SUSPENDIDO, BAJA_LOGICA] }
+    CreateUserRequest:
+      type: object
+      required: [tipoDocumento, numeroDocumento, nombreCompleto, fechaNacimiento, email, telefono]
+      properties:
+        tipoDocumento: { $ref: '#/components/schemas/DocumentType' }
+        numeroDocumento: { type: string, minLength: 1, maxLength: 64, example: '00000000' }
+        nombreCompleto: { type: string, minLength: 1, maxLength: 255, example: Persona Ejemplo }
+        fechaNacimiento: { type: string, format: date, example: '1990-01-01', description: Fecha anterior a la actual. }
+        email: { type: string, format: email, maxLength: 255, example: ejemplo@example.invalid }
+        telefono: { type: string, minLength: 1, maxLength: 64, example: '00000000' }
+    UpdateUserRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        nombreTratamiento: { type: string, nullable: true, maxLength: 255, pattern: '.*\S.*', example: Ejemplo }
+        email: { type: string, nullable: true, format: email, maxLength: 255, pattern: '.*\S.*', example: ejemplo@example.invalid }
+        telefono: { type: string, nullable: true, maxLength: 64, pattern: '.*\S.*', example: '00000000' }
+        preferencias: { type: string, nullable: true, maxLength: 2048, example: Sin preferencias }
+    ChangeStatusRequest:
+      type: object
+      required: [nuevoEstado, motivo]
+      properties:
+        nuevoEstado: { $ref: '#/components/schemas/UserStatus' }
+        motivo: { type: string, minLength: 1, maxLength: 2048, example: Solicitud de ejemplo }
+    UserResponse:
+      type: object
+      properties:
+        id: { type: string, format: uuid, example: '00000000-0000-4000-8000-000000000001' }
+        tipoDocumento: { $ref: '#/components/schemas/DocumentType' }
+        numeroDocumentoEnmascarado: { type: string, example: '***0000' }
+        nombreCompleto: { type: string, example: Persona Ejemplo }
+        estado: { $ref: '#/components/schemas/UserStatus' }
+        email: { type: string, example: ejemplo@example.invalid }
+        telefono: { type: string, example: '00000000' }
+        createdAt: { type: string, format: date-time, example: '2026-01-01T00:00:00Z' }
+        updatedAt: { type: string, format: date-time, example: '2026-01-01T00:00:00Z' }
+    AuditEventResponse:
+      type: object
+      properties:
+        action: { type: string, enum: [ALTA, ACTUALIZACION, CAMBIO_ESTADO] }
+        resultado: { type: string, enum: [EXITOSO, RECHAZADO] }
+        fecha: { type: string, format: date-time, example: '2026-01-01T00:00:00Z' }
+        correlationId: { type: string, example: ejemplo-1 }
+        actor: { type: string, example: 'OPERACIONES:actor-ejemplo' }
+        resumen: { type: array, items: { type: string }, example: [estado] }
+    ErrorResponse:
+      type: object
+      required: [code, message, details, timestamp]
+      properties:
+        code: { type: string, enum: [VALIDATION_ERROR, BAD_REQUEST, NOT_FOUND, CONFLICT, INTERNAL_ERROR, UNAUTHORIZED, FORBIDDEN] }
+        message: { type: string }
+        details: { type: array, items: { $ref: '#/components/schemas/FieldError' } }
+        timestamp: { type: string, format: date-time }
+    FieldError:
+      type: object
+      properties:
+        field: { type: string }
+        message: { type: string }

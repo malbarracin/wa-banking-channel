@@ -381,13 +381,18 @@
       "dependsOn": [],
       "assignedTo": null,
       "deliverables": "Base de conocimiento corriendo en ai/wa-knowledge-rag (puerto 8102) con el contenido aprobado ingestado y búsqueda con citas, y su contrato de retrieval publicado en shared/contracts/wa-knowledge-rag/retrieval.md.",
-      "status": "todo",
+      "status": "doing",
       "createdAt": "2026-11-21T03:43:49.017Z",
       "createdBy": {
         "account": "opensoma.app@gmail.com",
         "floor": "DESKTOP-JVEJTUF"
       },
-      "claim": null,
+      "claim": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+        "run": "20261121-d525",
+        "at": "2026-11-21T03:57:10.935Z"
+      },
       "doneAt": null,
       "doneBy": null,
       "note": null,
@@ -396,10 +401,18 @@
       "spent": null,
       "stalled": null,
       "waiting": null,
-      "times": null,
+      "times": {
+        "startedAt": "2026-11-21T03:57:10.936Z",
+        "releasedAt": null,
+        "workedMs": 0,
+        "stalledMs": 0,
+        "waitingMs": 0,
+        "stalls": 0,
+        "reopened": 0
+      },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T03:43:49.017Z"
+      "updatedAt": "2026-11-21T03:57:10.936Z"
     },
     {
       "id": "P-12",
@@ -641,6 +654,14 @@
       "id": "P-1",
       "title": "H0.1 — Plataforma de Eventos (Kafka)",
       "floor": "DESKTOP-JVEJTUF",
+      "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-21T03:57:10.936Z",
+      "kind": "claimed",
+      "id": "P-11",
+      "title": "H8 — Base de conocimiento RAG",
+      "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
       "account": "opensoma.app@gmail.com"
     }
   ],

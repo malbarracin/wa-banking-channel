@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: wa-users-service
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+  mvc:
+    problemdetails:
+      enabled: false
+server:
+  port: 8080
+  error:
+    include-stacktrace: never
+    include-message: never
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+logging:
+  level:
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: OFF

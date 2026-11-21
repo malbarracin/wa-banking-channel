@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:users;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ''
+  flyway:
+    enabled: false
+app:
+  gateway:
+    jwt:
+      jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:http://127.0.0.1:9/jwks}
+      issuer: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI:https://gateway.local/iam}

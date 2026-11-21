@@ -1,0 +1,46 @@
+# Entorno local del canal. Las variables salen de .env (copiar .env.example y completar); .env no va a git.
+name: wa-banking-channel
+
+services:
+  wa-users-postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${USERS_DB_NAME:?definir USERS_DB_NAME en .env}
+      POSTGRES_USER: ${USERS_DB_USER:?definir USERS_DB_USER en .env}
+      POSTGRES_PASSWORD: ${USERS_DB_PASSWORD:?definir USERS_DB_PASSWORD en .env}
+    volumes:
+      - wa-users-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  wa-users-service:
+    build:
+      context: ./services/wa-users-service
+    image: wa-users-service:local
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:postgresql://wa-users-postgres:5432/${USERS_DB_NAME:?definir USERS_DB_NAME en .env}
+      DB_USER: ${USERS_DB_USER:?definir USERS_DB_USER en .env}
+      DB_PASSWORD: ${USERS_DB_PASSWORD:?definir USERS_DB_PASSWORD en .env}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ${USERS_GATEWAY_JWK_SET_URI:?definir USERS_GATEWAY_JWK_SET_URI en .env}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${USERS_GATEWAY_JWT_ISSUER:?definir USERS_GATEWAY_JWT_ISSUER en .env}
+    ports:
+      - "${USERS_HTTP_PORT:-8080}:8080"
+    depends_on:
+      wa-users-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+volumes:
+  wa-users-postgres-data:

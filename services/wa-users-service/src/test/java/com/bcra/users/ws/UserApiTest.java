@@ -56,10 +56,14 @@ class UserApiTest {
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("12345678"))));
         mvc.perform(get("/api/v1/users/by-document").param("tipo", "DNI").param("numero", "12345678")
                 .header("X-Actor-Id", "test-actor").header("X-Actor-Role", "OPERACIONES"))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id.toString()));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.numeroDocumentoEnmascarado").value("***5678"))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("12345678"))));
         mvc.perform(post("/api/v1/users").header("X-Actor-Id", "test-actor")
                 .header("X-Actor-Role", "OPERACIONES").contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CONFLICT"));
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.message").value("El usuario ya existe"))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("12345678"))));
     }
 
     @Test

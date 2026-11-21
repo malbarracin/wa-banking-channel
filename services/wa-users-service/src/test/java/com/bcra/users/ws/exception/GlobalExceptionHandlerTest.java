@@ -2,6 +2,7 @@ package com.bcra.users.ws.exception;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @WebMvcTest(controllers = GlobalExceptionHandlerTest.TestController.class)
@@ -59,6 +61,27 @@ class GlobalExceptionHandlerTest {
         assertContract(mvc.perform(get("/test/missing")).andExpect(status().isNotFound()).andReturn(), "NOT_FOUND");
         for (String path : new String[]{"/test/duplicate", "/test/status"}) {
             assertContract(mvc.perform(get(path)).andExpect(status().isConflict()).andReturn(), "CONFLICT");
+        }
+    }
+
+    @Test
+    void springClientErrorsUseCommonContract() throws Exception {
+        assertContract(mvc.perform(get("/test/header")).andExpect(status().isBadRequest()).andReturn(), "BAD_REQUEST");
+        assertContract(mvc.perform(delete("/test")).andExpect(status().isMethodNotAllowed()).andReturn(), "BAD_REQUEST");
+        assertContract(mvc.perform(post("/test").contentType(MediaType.TEXT_PLAIN).content("text"))
+                .andExpect(status().isUnsupportedMediaType()).andReturn(), "BAD_REQUEST");
+        assertContract(mvc.perform(get("/nonexistent")).andExpect(status().isNotFound()).andReturn(), "NOT_FOUND");
+    }
+
+    @Test
+    void correlationFilterReplacesInvalidIds() throws Exception {
+        CorrelationIdFilter filter = new CorrelationIdFilter();
+        for (String invalidId : new String[] {"bad value", "x".repeat(65)}) {
+            var request = new org.springframework.mock.web.MockHttpServletRequest();
+            var response = new org.springframework.mock.web.MockHttpServletResponse();
+            request.addHeader(CorrelationIdFilter.HEADER, invalidId);
+            filter.doFilter(request, response, (req, res) -> { });
+            assertThat(UUID.fromString(response.getHeader(CorrelationIdFilter.HEADER))).isNotNull();
         }
     }
 
@@ -105,7 +128,9 @@ class GlobalExceptionHandlerTest {
 
     @RestController
     static class TestController {
-        @PostMapping("/test") void validate(@Valid @RequestBody Request request) { }
+        @PostMapping(value = "/test", consumes = MediaType.APPLICATION_JSON_VALUE)
+        void validate(@Valid @RequestBody Request request) { }
+        @GetMapping("/test/header") void header(@RequestHeader("X-Actor-Id") String actorId) { }
         @GetMapping("/test/parameter") void parameter(@RequestParam int number) { }
         @GetMapping("/test/illegal") void illegal() { throw new IllegalArgumentException(); }
         @GetMapping("/test/missing") void missing() { throw new UserNotFoundException(); }

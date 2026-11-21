@@ -9,11 +9,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -30,15 +34,33 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraint(ConstraintViolationException exception) {
         List<FieldError> details = exception.getConstraintViolations().stream()
-                .map(error -> new FieldError(error.getPropertyPath().toString(), error.getMessage()))
+                .map(error -> {
+                    String path = error.getPropertyPath().toString();
+                    return new FieldError(path.substring(path.lastIndexOf('.') + 1), error.getMessage());
+                })
                 .toList();
         return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, "La solicitud tiene datos inválidos", details);
     }
 
     @ExceptionHandler({IllegalArgumentException.class, HttpMessageNotReadableException.class,
-            MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})
+            MethodArgumentTypeMismatchException.class, ServletRequestBindingException.class})
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception exception) {
         return build(HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST, "La solicitud no es válida", List.of());
+    }
+
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<ErrorResponse> handleMissingResource(Exception exception) {
+        return build(HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, "No se encontró el recurso", List.of());
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleUnsupportedMethod(HttpRequestMethodNotSupportedException exception) {
+        return build(HttpStatus.METHOD_NOT_ALLOWED, ErrorCode.BAD_REQUEST, "Método no permitido", List.of());
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException exception) {
+        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ErrorCode.BAD_REQUEST, "Tipo de contenido no admitido", List.of());
     }
 
     @ExceptionHandler(NotFoundException.class)

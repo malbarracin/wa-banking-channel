@@ -31,7 +31,7 @@ class SecurityTest {
     static class TestController {
         private final CurrentActor actor;
         TestController(CurrentActor actor) { this.actor = actor; }
-        @RequestMapping({"/api/v1/users", "/api/v1/users/{id}", "/api/v1/users/{id}/audit",
+        @RequestMapping({"/api/v1/users", "/api/v1/users/{id}",
                 "/api/v1/users/{id}/status"})
         CurrentActor.Actor handle() { return actor.get().orElseThrow(); }
     }
@@ -58,8 +58,8 @@ class SecurityTest {
                 .andExpect(jsonPath("$.details").isArray()).andExpect(jsonPath("$.timestamp").isString());
         mvc.perform(get("/api/v1/users/1").header("X-Actor-Id", "actor").header("X-Actor-Role", "SOPORTE"))
                 .andExpect(status().isForbidden());
-        mvc.perform(get("/api/v1/users/1/audit").header("X-Actor-Id", "actor")
-                .header("X-Actor-Role", "SOPORTE")).andExpect(status().isOk());
+        mvc.perform(get("/api/v1/users/00000000-0000-0000-0000-000000000001/audit").header("X-Actor-Id", "actor")
+                .header("X-Actor-Role", "SOPORTE")).andExpect(status().isNotFound());
         mvc.perform(get("/api/v1/users/by-document").header("X-Actor-Id", "actor")
                 .header("X-Actor-Role", "SERVICIO_INTERNO")).andExpect(status().isOk());
         mvc.perform(get("/api/v1/users/1/audit").header("X-Actor-Id", "actor")

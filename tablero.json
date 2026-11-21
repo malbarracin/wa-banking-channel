@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "seq": 18,
+  "seq": 19,
   "tasks": [
     {
       "id": "P-1",
@@ -890,6 +890,33 @@
       "work": null,
       "integratedAt": null,
       "updatedAt": "2026-11-21T12:25:20.308Z"
+    },
+    {
+      "id": "P-19",
+      "title": "Resolver el choque de P-4 al integrar",
+      "description": "Al integrar los frentes, lo de **P-4 H1 — Servicio de Usuarios** (rama `feature/20261121-e564`) choca con lo ya integrado (P-1).\n\nArchivos en conflicto:\n- `specs/fuentes/origen.md`\n\nLanzá una sesión desde esta tarea que parta de la sesión 20261121-e564, traiga lo de los otros frentes y resuelva el choque. Después se vuelve a integrar.",
+      "dependsOn": [],
+      "assignedTo": "Marcelo",
+      "deliverables": null,
+      "status": "todo",
+      "createdAt": "2026-11-21T12:25:48.577Z",
+      "createdBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF"
+      },
+      "claim": null,
+      "doneAt": null,
+      "doneBy": null,
+      "note": null,
+      "budgetUsd": null,
+      "budgetTokens": null,
+      "spent": null,
+      "stalled": null,
+      "waiting": null,
+      "times": null,
+      "work": null,
+      "integratedAt": null,
+      "updatedAt": "2026-11-21T12:25:48.577Z"
     }
   ],
   "offices": {},
@@ -1089,6 +1116,14 @@
       "at": "2026-11-21T12:25:20.308Z",
       "kind": "created",
       "id": "P-18",
+      "title": "Resolver el choque de P-4 al integrar",
+      "floor": "DESKTOP-JVEJTUF",
+      "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-21T12:25:48.577Z",
+      "kind": "created",
+      "id": "P-19",
       "title": "Resolver el choque de P-4 al integrar",
       "floor": "DESKTOP-JVEJTUF",
       "account": "opensoma.app@gmail.com"

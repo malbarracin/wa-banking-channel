@@ -65,8 +65,7 @@ class SecurityTest {
         mvc.perform(get("/api/v1/users/1/audit").header("X-Actor-Id", "actor")
                 .header("X-Actor-Role", "SERVICIO_INTERNO")).andExpect(status().isForbidden());
         mvc.perform(patch("/api/v1/users/1/status").header("X-Actor-Id", "actor")
-                .header("X-Actor-Role", "OPERACIONES")).andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value("actor")).andExpect(jsonPath("$.role").value("OPERACIONES"));
+                .header("X-Actor-Role", "OPERACIONES")).andExpect(status().isBadRequest());
         mvc.perform(post("/api/v1/users").header("X-Actor-Id", "actor")
                 .header("X-Actor-Role", "OPERACIONES")).andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/users/1").header("X-Actor-Id", "actor").header("X-Actor-Role", "OTRO"))

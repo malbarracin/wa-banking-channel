@@ -717,6 +717,16 @@
       "account": "opensoma.app@gmail.com",
       "to": "DESKTOP-JVEJTUF",
       "text": "Hola, como van con su trabajo, algun avance?"
+    },
+    {
+      "at": "2026-11-21T04:04:58.530Z",
+      "kind": "request_answered",
+      "id": "R-1",
+      "title": "Hola, como van con su trabajo, algun avance?",
+      "floor": "DESKTOP-JVEJTUF",
+      "account": "opensoma.app@gmail.com",
+      "to": "Marcelo",
+      "text": "P-1 (H0.1 — Plataforma de Eventos / Kafka) está en curso, en etapa de análisis y diseño. Terminado: la especificación (specs/plataforma-eventos/spec.md), la arquitectura completa (specs/plataforma-eventos/arquitectura.md, 455 líneas: topics wa.<entidad>.<hecho>.v<n>, sobre de eventos, claves de part"
     }
   ],
   "deadline": null,
@@ -734,13 +744,23 @@
       "task": null,
       "role": null,
       "look": null,
-      "status": "open",
+      "status": "answered",
       "waitingFor": null,
       "hold": null,
       "messages": [],
-      "answer": null,
+      "answer": {
+        "text": "P-1 (H0.1 — Plataforma de Eventos / Kafka) está en curso, en etapa de análisis y diseño. Terminado: la especificación (specs/plataforma-eventos/spec.md), la arquitectura completa (specs/plataforma-eventos/arquitectura.md, 455 líneas: topics wa.<entidad>.<hecho>.v<n>, sobre de eventos, claves de partición por conversación, idempotencia, retry, DLQ y observabilidad) y 3 ADRs en docs/adr/ (Kafka como backbone asíncrono, at-least-once con idempotencia, partición por conversación). Falta: la implementación del componente en platform/wa-event-platform (la carpeta todavía no existe) y publicar el catálogo de eventos versionado en shared/contracts/events/. El tablero de esta oficina aún no tiene tareas creadas y no hay fecha objetivo, así que no hay ritmo medible. Importante para ustedes: la arquitectura define que el gateway (H0) y el orquestador (H0.2) se implementan contra ese documento y contra los contratos publicados, no contra código de este componente; si lo que necesitan son los nombres de topics y la forma de los eventos, eso ya está decidido y escrito. Estado general del proyecto: 0 frentes terminados, 3 en curso, 14 sin empezar (de 17).",
+        "files": [],
+        "by": {
+          "account": "opensoma.app@gmail.com",
+          "floor": "DESKTOP-JVEJTUF"
+        },
+        "at": "2026-11-21T04:04:58.529Z",
+        "front": null,
+        "auto": true
+      },
       "createdAt": "2026-11-21T04:02:59.503Z",
-      "updatedAt": "2026-11-21T04:02:59.503Z"
+      "updatedAt": "2026-11-21T04:04:58.529Z"
     }
   ],
   "reqSeq": 1

@@ -6,5 +6,5 @@ if not exist "%WRAPPER_JAR%" powershell -NoProfile -Command "$u = (Get-Content -
 if not exist "%WRAPPER_JAR%" exit /b 1
 set "JAVA_EXE=java"
 if defined JAVA_HOME set "JAVA_EXE=%JAVA_HOME%\bin\java.exe"
-"%JAVA_EXE%" "-Dmaven.multiModuleProjectDirectory=%BASE_DIR%" -classpath "%WRAPPER_JAR%" org.apache.maven.wrapper.MavenWrapperMain %*
+"%JAVA_EXE%" "-Dmaven.multiModuleProjectDirectory=%BASE_DIR%." -classpath "%WRAPPER_JAR%" org.apache.maven.wrapper.MavenWrapperMain %*
 exit /b %ERRORLEVEL%

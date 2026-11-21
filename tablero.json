@@ -134,7 +134,7 @@
       "dependsOn": [],
       "assignedTo": null,
       "deliverables": "Servicio corriendo en services/wa-users-service con sus endpoints de alta, consulta, actualización y estados, y su contrato publicado en shared/contracts/wa-users-service/openapi.yaml más su shared/contracts/wa-users-service/handoff.md.",
-      "status": "doing",
+      "status": "done",
       "createdAt": "2026-11-21T03:43:49.017Z",
       "createdBy": {
         "account": "opensoma.app@gmail.com",
@@ -146,33 +146,119 @@
         "run": "20261121-e564",
         "at": "2026-11-21T03:45:29.741Z"
       },
-      "doneAt": null,
-      "doneBy": null,
-      "note": null,
+      "doneAt": "2026-11-21T05:16:51.219Z",
+      "doneBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "Marcelo"
+      },
+      "note": "Sesión 20261121-e564 · rama feature/20261121-e564",
       "budgetUsd": null,
       "budgetTokens": null,
       "spent": {
-        "usd": 0,
-        "tokens": 1090274,
+        "usd": 13.543,
+        "tokens": 33622359,
         "runs": {
           "20261121-e564": {
-            "usd": 0,
+            "usd": 13.543,
             "floor": "Marcelo",
             "tools": {
-              "kilocode": 0
+              "kilocode": 0,
+              "claude-code": 13.5432,
+              "codex": 0,
+              "cursor": 0,
+              "opencode": 0,
+              "copilot": 0
             },
-            "tokens": 1090274,
+            "tokens": 33622359,
             "toolTokens": {
-              "kilocode": 1090274
+              "kilocode": 2087183,
+              "claude-code": 5909475,
+              "codex": 18898464,
+              "cursor": 2639365,
+              "opencode": 2596865,
+              "copilot": 1491007
             },
-            "loops": 0,
-            "redoTokens": 0,
+            "loops": 2,
+            "redoTokens": 6924924,
             "roles": {
               "analista": {
                 "kilocode": {
                   "tokens": 1090274,
                   "steps": 1,
                   "redo": 0
+                }
+              },
+              "arquitecto": {
+                "kilocode": {
+                  "tokens": 996909,
+                  "steps": 2,
+                  "redo": 1
+                }
+              },
+              "tech-lead": {
+                "kilocode": {
+                  "tokens": 0,
+                  "steps": 1,
+                  "redo": 0
+                },
+                "claude-code": {
+                  "tokens": 890586,
+                  "steps": 1,
+                  "redo": 1
+                }
+              },
+              "dev-ia": {
+                "codex": {
+                  "tokens": 14077430,
+                  "steps": 13,
+                  "redo": 3
+                },
+                "cursor": {
+                  "tokens": 2639365,
+                  "steps": 2,
+                  "redo": 2
+                }
+              },
+              "tester": {
+                "codex": {
+                  "tokens": 4821034,
+                  "steps": 11,
+                  "redo": 2
+                }
+              },
+              "reviewer": {
+                "claude-code": {
+                  "tokens": 3792371,
+                  "steps": 10,
+                  "redo": 1
+                }
+              },
+              "devops": {
+                "claude-code": {
+                  "tokens": 426953,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "documentador": {
+                "opencode": {
+                  "tokens": 2596865,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "pr-publisher": {
+                "claude-code": {
+                  "tokens": 799565,
+                  "steps": 2,
+                  "redo": 1
+                }
+              },
+              "pr-reviewer": {
+                "copilot": {
+                  "tokens": 1491007,
+                  "steps": 2,
+                  "redo": 1
                 }
               }
             }
@@ -184,7 +270,7 @@
       "times": {
         "startedAt": "2026-11-21T03:45:29.742Z",
         "releasedAt": null,
-        "workedMs": 0,
+        "workedMs": 5481478,
         "stalledMs": 0,
         "waitingMs": 47208,
         "stalls": 0,
@@ -192,7 +278,7 @@
       },
       "work": null,
       "integratedAt": null,
-      "updatedAt": "2026-11-21T03:49:37.743Z"
+      "updatedAt": "2026-11-21T05:16:51.219Z"
     },
     {
       "id": "P-5",
@@ -848,6 +934,14 @@
       "id": "P-11",
       "title": "H8 — Base de conocimiento RAG",
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-21T05:16:51.219Z",
+      "kind": "finished",
+      "id": "P-4",
+      "title": "H1 — Servicio de Usuarios",
+      "floor": "Marcelo",
       "account": "opensoma.app@gmail.com"
     }
   ],

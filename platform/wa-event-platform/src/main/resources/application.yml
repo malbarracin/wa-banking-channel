@@ -9,6 +9,10 @@ spring:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     consumer:
       enable-auto-commit: false
+      auto-offset-reset: earliest
+      max-poll-records: 10
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     listener:
       ack-mode: manual_immediate
 management:
@@ -20,18 +24,37 @@ logging:
   structured:
     format:
       console: ecs
+wa:
+  topics:
+    received: wa.message.received.v1
+    ready-to-send: wa.message.ready-to-send.v1
+    status: wa.message.status.v1
+    dlq: wa.message.dlq.v1
+    consumer-groups:
+      gateway: wa-twilio-gateway
+      orchestrator: wa-channel-orchestrator
+      reference: wa-event-platform-reference
 ---
 spring:
   config:
     activate:
       on-profile: local
+  kafka:
+    consumer:
+      group-id: wa-event-platform-reference
 ---
 spring:
   config:
     activate:
       on-profile: dev
+  kafka:
+    consumer:
+      group-id: wa-event-platform-reference
 ---
 spring:
   config:
     activate:
       on-profile: test
+  kafka:
+    consumer:
+      group-id: wa-event-platform-reference

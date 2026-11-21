@@ -61,6 +61,15 @@ class ObservabilityTest {
     }
 
     @Test
+    void actuatorExposesHealthInfoPrometheusWithOwnKafkaIndicator() throws Exception {
+        String yaml = Files.readString(Path.of("src/main/resources/application.yml"));
+        assertThat(yaml).contains("include: health,info,prometheus");
+        assertThat(Files.readString(Path.of("pom.xml"))).contains("micrometer-registry-prometheus");
+        assertThat(org.springframework.boot.actuate.health.HealthIndicator.class
+            .isAssignableFrom(KafkaHealthIndicator.class)).isTrue();
+    }
+
+    @Test
     void listenerFactoryEnablesObservationForLagMetrics() throws Exception {
         String yaml = Files.readString(Path.of("src/main/resources/application.yml"));
         assertThat(yaml).contains("observation-enabled: true");

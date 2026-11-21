@@ -707,9 +707,41 @@
       "title": "H8 — Base de conocimiento RAG",
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
       "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-21T04:02:59.503Z",
+      "kind": "requested",
+      "id": "R-1",
+      "title": "Hola, como van con su trabajo, algun avance?",
+      "floor": "Marcelo",
+      "account": "opensoma.app@gmail.com",
+      "to": "DESKTOP-JVEJTUF",
+      "text": "Hola, como van con su trabajo, algun avance?"
     }
   ],
   "deadline": null,
-  "requests": [],
-  "reqSeq": 0
+  "requests": [
+    {
+      "id": "R-1",
+      "text": "Hola, como van con su trabajo, algun avance?",
+      "from": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "Marcelo"
+      },
+      "to": "DESKTOP-JVEJTUF",
+      "run": null,
+      "question": null,
+      "task": null,
+      "role": null,
+      "look": null,
+      "status": "open",
+      "waitingFor": null,
+      "hold": null,
+      "messages": [],
+      "answer": null,
+      "createdAt": "2026-11-21T04:02:59.503Z",
+      "updatedAt": "2026-11-21T04:02:59.503Z"
+    }
+  ],
+  "reqSeq": 1
 }

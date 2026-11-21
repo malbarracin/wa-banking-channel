@@ -1,8 +1,8 @@
 ---
 title: Trazabilidad de fuentes
-status: borrador
+status: aprobada
 source: null
-updated: 2026-11-21T03:51:59.761Z
+updated: 2026-11-21T03:53:57.435Z
 ---
 
 # Trazabilidad de fuentes

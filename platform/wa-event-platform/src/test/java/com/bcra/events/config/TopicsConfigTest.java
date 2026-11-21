@@ -17,10 +17,39 @@ import org.springframework.boot.actuate.health.Status;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.io.ResourceLoader;
+import org.springframework.boot.env.YamlPropertySourceLoader;
+import org.springframework.core.io.ClassPathResource;
 
 class TopicsConfigTest {
     private final TopicsProperties topics = new TopicsProperties("received", "ready", "status", "dlq",
         new TopicsProperties.ConsumerGroups("gateway", "orchestrator", "reference"));
+
+    @Test
+    void applicationConfigDeclaresPilotTopicsConsumerSettingsAndGroups() throws Exception {
+        var documents = new YamlPropertySourceLoader().load("application", new ClassPathResource("application.yml"));
+        var config = documents.get(0);
+        assertThat(config.getProperty("server.port")).isEqualTo("${SERVER_PORT:8092}");
+        assertThat(config.getProperty("spring.kafka.bootstrap-servers"))
+            .isEqualTo("${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}");
+        assertThat(config.getProperty("wa.topics.received")).isEqualTo("wa.message.received.v1");
+        assertThat(config.getProperty("wa.topics.ready-to-send")).isEqualTo("wa.message.ready-to-send.v1");
+        assertThat(config.getProperty("wa.topics.status")).isEqualTo("wa.message.status.v1");
+        assertThat(config.getProperty("wa.topics.dlq")).isEqualTo("wa.message.dlq.v1");
+        assertThat(config.getProperty("spring.kafka.consumer.enable-auto-commit")).isEqualTo(false);
+        assertThat(config.getProperty("spring.kafka.consumer.max-poll-records")).isEqualTo(10);
+        assertThat(config.getProperty("spring.kafka.listener.ack-mode")).isEqualTo("manual_immediate");
+        assertThat(config.getProperty("spring.kafka.consumer.key-deserializer"))
+            .isEqualTo("org.apache.kafka.common.serialization.StringDeserializer");
+        assertThat(config.getProperty("spring.kafka.consumer.value-deserializer"))
+            .isEqualTo("org.apache.kafka.common.serialization.StringDeserializer");
+        assertThat(config.getProperty("wa.topics.consumer-groups.gateway")).isEqualTo("wa-twilio-gateway");
+        assertThat(config.getProperty("wa.topics.consumer-groups.orchestrator")).isEqualTo("wa-channel-orchestrator");
+        assertThat(config.getProperty("wa.topics.consumer-groups.reference")).isEqualTo("wa-event-platform-reference");
+        assertThat(documents.subList(1, documents.size())).hasSize(3).allSatisfy(document -> {
+            assertThat(document.getProperty("spring.config.activate.on-profile")).isIn("local", "dev", "test");
+            assertThat(document.getProperty("spring.kafka.consumer.group-id")).isEqualTo("wa-event-platform-reference");
+        });
+    }
 
     @Test
     void declaresTopicsWithRetentionAndPartitions() {

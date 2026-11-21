@@ -1,0 +1,15 @@
+target/
+tests/
+src/test/
+.env
+.env.*
+!.env.example
+*.log
+.git
+.gitignore
+.idea/
+.vscode/
+*.iml
+README.md
+Dockerfile
+.dockerignore

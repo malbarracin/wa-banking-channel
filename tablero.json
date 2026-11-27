@@ -77,7 +77,7 @@
       "dependsOn": [],
       "assignedTo": null,
       "deliverables": "El servicio funcionando en services/wa-users-service y su contrato en shared/contracts/wa-users-service/openapi.yaml y shared/contracts/wa-users-service/handoff.md",
-      "status": "doing",
+      "status": "done",
       "createdAt": "2026-11-27T20:52:35.267Z",
       "createdBy": {
         "account": "opensoma.app@gmail.com",
@@ -89,29 +89,125 @@
         "run": "20261127-5175",
         "at": "2026-11-27T20:54:13.444Z"
       },
-      "doneAt": null,
-      "doneBy": null,
-      "note": null,
+      "doneAt": "2026-11-27T22:45:33.683Z",
+      "doneBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "Marcelo"
+      },
+      "note": "Sesión 20261127-5175 · rama feature/20261127-5175",
       "budgetUsd": null,
       "budgetTokens": null,
       "spent": {
-        "usd": 0,
-        "tokens": 0,
+        "usd": 8.012,
+        "tokens": 40362541,
         "runs": {
           "20261127-5175": {
-            "usd": 0,
+            "usd": 8.012,
             "floor": "Marcelo",
             "tools": {
-              "kiro": 0
+              "kiro": 0,
+              "kilocode": 0,
+              "claude-code": 8.0121,
+              "codex": 0,
+              "cursor": 0,
+              "copilot": 0
             },
-            "tokens": 0,
-            "toolTokens": {},
-            "loops": 0,
-            "redoTokens": 0,
+            "tokens": 40362541,
+            "toolTokens": {
+              "claude-code": 8710632,
+              "codex": 22505696,
+              "cursor": 7394300,
+              "copilot": 1751913
+            },
+            "loops": 8,
+            "redoTokens": 22816386,
             "roles": {
               "analista": {
                 "kiro": {
                   "tokens": 0,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "arquitecto": {
+                "kiro": {
+                  "tokens": 0,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "tech-lead": {
+                "kilocode": {
+                  "tokens": 0,
+                  "steps": 1,
+                  "redo": 0
+                },
+                "claude-code": {
+                  "tokens": 1693221,
+                  "steps": 4,
+                  "redo": 1
+                }
+              },
+              "dev-backend": {
+                "codex": {
+                  "tokens": 13094532,
+                  "steps": 14,
+                  "redo": 9
+                },
+                "cursor": {
+                  "tokens": 5971596,
+                  "steps": 5,
+                  "redo": 4
+                }
+              },
+              "tester": {
+                "codex": {
+                  "tokens": 7274352,
+                  "steps": 12,
+                  "redo": 7
+                },
+                "claude-code": {
+                  "tokens": 2444687,
+                  "steps": 4,
+                  "redo": 3
+                }
+              },
+              "reviewer": {
+                "codex": {
+                  "tokens": 2136812,
+                  "steps": 9,
+                  "redo": 4
+                },
+                "claude-code": {
+                  "tokens": 2192216,
+                  "steps": 3,
+                  "redo": 2
+                }
+              },
+              "devops": {
+                "claude-code": {
+                  "tokens": 2380508,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "documentador": {
+                "cursor": {
+                  "tokens": 1422704,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "pr-publisher": {
+                "copilot": {
+                  "tokens": 394328,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "pr-reviewer": {
+                "copilot": {
+                  "tokens": 1357585,
                   "steps": 1,
                   "redo": 0
                 }
@@ -125,7 +221,7 @@
       "times": {
         "startedAt": "2026-11-27T20:54:13.444Z",
         "releasedAt": null,
-        "workedMs": 0,
+        "workedMs": 6680239,
         "stalledMs": 0,
         "waitingMs": 101433,
         "stalls": 0,
@@ -134,7 +230,7 @@
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T20:59:06.800Z"
+      "updatedAt": "2026-11-27T22:45:33.683Z"
     },
     {
       "id": "P-3",
@@ -744,6 +840,14 @@
       "id": "P-1",
       "title": "El canal transporta sus mensajes de forma asíncrona, ordenada y sin perderlos",
       "floor": "DESKTOP-JVEJTUF",
+      "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-27T22:45:33.683Z",
+      "kind": "finished",
+      "id": "P-2",
+      "title": "Un cliente del banco se puede dar de alta, consultar y administrar",
+      "floor": "Marcelo",
       "account": "opensoma.app@gmail.com"
     }
   ],

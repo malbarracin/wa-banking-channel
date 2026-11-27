@@ -1,0 +1,6 @@
+# App corriendo en tu máquina (./mvnw spring-boot:run) contra el PostgreSQL del docker-compose.
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:${DB_PORT:5432}/${DB_NAME:wa_users}
+    username: ${DB_USERNAME:app}
+    password: ${DB_PASSWORD}

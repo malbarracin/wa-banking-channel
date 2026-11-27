@@ -1,0 +1,6 @@
+# Roles requeridos por tipo de contenido y para los parámetros del banco.
+faq: [area_duena, compliance]
+guia: [area_duena, compliance]
+politica: [area_duena, compliance]
+mensaje: [area_duena, compliance]
+parameter: [area_duena, compliance]

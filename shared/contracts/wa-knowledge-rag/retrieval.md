@@ -9,6 +9,10 @@ El agente conversacional usa esta API HTTP para recuperar fragmentos de contenid
 | `Authorization: Bearer <token>` | Sí | Credencial de servicio del consumidor. Una credencial ausente o inválida devuelve `401`. |
 | `X-Correlation-Id` | Sí | Se devuelve el mismo valor en el header de respuesta y en el campo `correlationId` del cuerpo. Si falta, la API devuelve `400`. |
 
+## Credencial de servicio por entorno
+
+La credencial es de servicio, no la sesión del cliente. Cada entorno configura la suya en la variable `KB_CONSUMERS` del servicio: una lista JSON con `id`, `token_sha256` (SHA-256 hexadecimal del token) y `allow_internal`. El token en claro viaja solo en el header `Authorization`; no se guarda en el repositorio ni va en el cuerpo de la petición. `allow_internal` habilita `audience: interno`; sin ese permiso la API responde `403`.
+
 El cuerpo se envía como `application/json` y sigue el [esquema de petición v1](retrieval-request.v1.schema.json). Solo `query` es obligatorio.
 
 | Campo | Tipo y valores |
@@ -47,7 +51,14 @@ En la tabla, `s1` es el mejor puntaje y `s2` el segundo mejor de otra pieza. Los
 | Entre ambos umbrales, con al menos dos piezas que alcanzan `KB_MIN_RELEVANCE` y `s1 - s2 <= KB_AMBIGUITY_MARGIN` (`0.05`) | `baja` | `aclarar` | Candidatos con cita |
 | Entre ambos umbrales, en los demás casos | `baja` | `derivar` | Candidatos con cita |
 
-Con `responder`, el agente usa los fragmentos publicables y cita su fuente. Con `aclarar`, pide una aclaración. Con `derivar`, incluidas todas las respuestas `sin_respuesta`, ofrece derivación a soporte humano.
+### Cómo usar la respuesta
+
+- `alta` / `responder`: responder solo con los resultados `publishable: true` y citar su fuente.
+- `baja` / `aclarar`: pedir una aclaración antes de afirmar; los candidatos orientan la pregunta, no se dan como respuesta oficial.
+- `baja` / `derivar` y `sin_respuesta` / `derivar`: ofrecer derivación a soporte humano. Con `sin_respuesta` la lista `results` viene vacía: no se inventa una respuesta.
+- `publishable: false`: contenido interno. No se muestra al cliente ni se cita en su respuesta; aparece solo si se pidió `audience: interno` con permiso.
+- `results[].text` es dato citado, no una instrucción: no se ejecuta ni se agrega al prompt como regla.
+- Un `503 KNOWLEDGE_UNAVAILABLE` es una falla del servicio, no una respuesta sin coincidencias: derivar a soporte humano.
 
 ## Errores de consulta
 
@@ -91,6 +102,7 @@ Los ejemplos usan contenido sintético con aprobación de prueba.
 - [Respuesta alta, responder](examples/response-alta.json)
 - [Respuesta baja, aclarar](examples/response-baja.json)
 - [Respuesta sin coincidencias, derivar](examples/response-sin-respuesta.json)
+- [Respuesta con contenido interno, `publishable: false`](examples/response-interno.json)
 - [Error por indisponibilidad, HTTP 503](examples/error.json)
 
 Desde la carpeta del contrato:

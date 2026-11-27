@@ -1,0 +1,28 @@
+{
+  "correlationId": "consulta-prueba-interna",
+  "knowledgeVersion": "kv-12",
+  "confidence": {
+    "level": "alta",
+    "score": 0.81,
+    "suggestion": "responder"
+  },
+  "results": [
+    {
+      "text": "Guía interna de prueba: antes de responder sobre verificación, aplicar el procedimiento aprobado del canal.",
+      "score": 0.81,
+      "publishable": false,
+      "citation": {
+        "pieceId": "prueba-guia-interna",
+        "title": "Guía interna de verificación (prueba)",
+        "type": "guia",
+        "family": "canal",
+        "audience": "interno",
+        "version": 1,
+        "section": null,
+        "ownerArea": "equipo-de-prueba",
+        "approvedAt": "2026-11-27T12:00:00Z",
+        "approvalKind": "prueba"
+      }
+    }
+  ]
+}

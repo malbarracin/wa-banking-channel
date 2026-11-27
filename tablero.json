@@ -199,24 +199,20 @@
         }
       },
       "stalled": null,
-      "waiting": {
-        "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
-        "text": "espera una aprobación",
-        "at": "2026-11-27T21:03:48.896Z"
-      },
+      "waiting": null,
       "times": {
         "startedAt": "2026-11-27T20:57:46.138Z",
         "releasedAt": null,
         "workedMs": 0,
         "stalledMs": 0,
-        "waitingMs": 92201,
+        "waitingMs": 111499,
         "stalls": 0,
         "reopened": 0
       },
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T21:03:55.444Z"
+      "updatedAt": "2026-11-27T21:04:08.194Z"
     },
     {
       "id": "P-4",
@@ -737,6 +733,14 @@
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
       "account": "opensoma.app@gmail.com",
       "text": "espera una aprobación"
+    },
+    {
+      "at": "2026-11-27T21:04:08.194Z",
+      "kind": "answered",
+      "id": "P-3",
+      "title": "El banco tiene su conocimiento aprobado disponible para responder con citas",
+      "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com"
     }
   ],
   "deadline": null,

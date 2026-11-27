@@ -37,13 +37,18 @@
       "dependsOn": [],
       "assignedTo": null,
       "deliverables": "El servicio funcionando en services/wa-users-service y su contrato en shared/contracts/wa-users-service/openapi.yaml y shared/contracts/wa-users-service/handoff.md",
-      "status": "todo",
+      "status": "doing",
       "createdAt": "2026-11-27T20:52:35.267Z",
       "createdBy": {
         "account": "opensoma.app@gmail.com",
         "floor": "DESKTOP-JVEJTUF"
       },
-      "claim": null,
+      "claim": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "Marcelo",
+        "run": "20261127-5175",
+        "at": "2026-11-27T20:54:13.444Z"
+      },
       "doneAt": null,
       "doneBy": null,
       "note": null,
@@ -52,11 +57,19 @@
       "spent": null,
       "stalled": null,
       "waiting": null,
-      "times": null,
+      "times": {
+        "startedAt": "2026-11-27T20:54:13.444Z",
+        "releasedAt": null,
+        "workedMs": 0,
+        "stalledMs": 0,
+        "waitingMs": 0,
+        "stalls": 0,
+        "reopened": 0
+      },
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T20:52:35.267Z"
+      "updatedAt": "2026-11-27T20:54:13.444Z"
     },
     {
       "id": "P-3",
@@ -529,6 +542,14 @@
       "floor": "DESKTOP-JVEJTUF",
       "account": "opensoma.app@gmail.com",
       "text": "17"
+    },
+    {
+      "at": "2026-11-27T20:54:13.444Z",
+      "kind": "claimed",
+      "id": "P-2",
+      "title": "Un cliente del banco se puede dar de alta, consultar y administrar",
+      "floor": "Marcelo",
+      "account": "opensoma.app@gmail.com"
     }
   ],
   "deadline": null,

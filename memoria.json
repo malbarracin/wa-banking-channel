@@ -1,6 +1,86 @@
 {
  "items": [
   {
+   "id": "icwh8291",
+   "texto": "wa-users-service OpenApiConfig usa LinkedHashMap (método ordered) para components.examples; evita diff espurio en openapi.yaml entre verifies. Documentación en services/wa-users-service/delivery/ y contrato en shared/contracts/wa-users-service/.",
+   "tipo": "dato",
+   "rol": "documentador",
+   "run": null,
+   "at": "2026-11-27T22:39:39.792Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "8qz40n1k",
+   "texto": "El mvnw de wa-users-service es un script propio que descarga Maven con curl y unzip: en imágenes alpine hay que hacer apk add curl unzip antes de usarlo, y en esta PC los puertos 5432, 8080 y 15432 ya están ocupados (usá APP_PORT/DB_PORT en .env para el compose).",
+   "tipo": "trampa",
+   "rol": "devops",
+   "run": null,
+   "at": "2026-11-27T22:35:49.249Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "ninsgbiv",
+   "texto": "wa-users-service: OpenApiConfig arma components.examples con Map.of, que no tiene orden fijo; cada verify reordena las claves en shared/contracts/wa-users-service/openapi.yaml/json y deja un diff sin cambios reales (se arregla con LinkedHashMap).",
+   "tipo": "trampa",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-27T22:22:10.488Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "asmk34tr",
+   "texto": "wa-users-service OpenAPI: @ExampleObject(ref=...) necesita name o sale example:null; components.examples deben ser Map/objetos (no String JSON); no poner allowableValues en enums @Schema porque springdoc duplica el enum.",
+   "tipo": "trampa",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T22:20:24.573Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "4rl9cmoz",
+   "texto": "wa-users-service: OpenApiExportTest escribe shared/contracts/wa-users-service/openapi.yaml (y delivery/openapi/) desde /v3/api-docs.yaml en cada verify; correr desde services/wa-users-service con .\\mvnw.cmd -q -B clean verify y el log fuera de target/.",
+   "tipo": "comando",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T22:13:12.954Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "y2wekulm",
+   "texto": "UserService.update debe usar findByIdForUpdate igual que changeStatus: sin bloqueo, un PATCH de datos puede reescribir status y deshacer una suspensión concurrente.",
+   "tipo": "trampa",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T22:05:38.072Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "tqzyksi5",
+   "texto": "wa-users-service: el cambio de estado se prueba con UserStatusChangeIntegrationTest y AlternateStatusPolicyTest (mapa bank.users.allowed-transitions.INACTIVE=ACTIVE). Correr desde services/wa-users-service: .\\mvnw.cmd -q -B clean verify; el log no puede ir a target/ porque clean lo borra.",
+   "tipo": "dato",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T21:45:18.844Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "xa0sbuoz",
+   "texto": "En Windows con core.filemode=false hay que marcar el wrapper con git update-index --chmod=+x services/wa-users-service/mvnw para que quede 100755; si no, en Unix ./mvnw falla por permiso denegado.",
+   "tipo": "trampa",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T21:17:52.205Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
    "id": "h7xhklam",
    "texto": "Base de conocimiento (ai/wa-knowledge-rag): el texto de las preguntas frecuentes mínimas lo redacta el equipo como borrador, solo con lo que dicen las especificaciones H3–H6/H9 y sin cifras (van como parámetros). Se publica únicamente con la aprobación registrada del área dueña y de compliance; en desarrollo y pruebas la registra el equipo, marcada como aprobación de prueba, y no sirve para un entorno real.",
    "tipo": "decision",
@@ -9,6 +89,16 @@
    "at": "2026-11-27T21:03:40.126Z",
    "veces": 1,
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "waebf4qx",
+   "texto": "wa-users-service: el historial de auditoría se expone en GET /api/v1/users/{id}/audit (AuditController en audit/controller), y PATCH /api/v1/users/{id} rechaza con 400 BAD_REQUEST cualquier campo fuera de bank.users.updatable-fields en vez de ignorarlo.",
+   "tipo": "decision",
+   "rol": "tech-lead",
+   "run": null,
+   "at": "2026-11-27T21:02:55.731Z",
+   "veces": 1,
+   "de": "Marcelo"
   },
   {
    "id": "sgvc0zrs",
@@ -49,6 +139,26 @@
    "at": "2026-11-27T21:01:27.214Z",
    "veces": 1,
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "6fp2te3f",
+   "texto": "wa-users-service no activa api.versioning: todos los endpoints van bajo /api/v1/ sin paquetes de versión; el versionado se activará solo si un cambio rompe a los clientes.",
+   "tipo": "decision",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-27T21:00:31.329Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "vu8i6z5k",
+   "texto": "wa-users-service usa dos módulos de dominio (user y audit) bajo el paquete base com.bcra.users.ws; los cinco configurables del banco (campos mínimos del alta, campo de unicidad, campos actualizables, política de privacidad y transiciones de estado) se leen de application.yml bajo el prefijo bank.users.*.",
+   "tipo": "decision",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-27T21:00:29.392Z",
+   "veces": 1,
+   "de": "Marcelo"
   },
   {
    "id": "dqw5wqk7",

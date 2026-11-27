@@ -23,6 +23,7 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST, "Campo no actualizable",
                 List.of(new FieldError(exception.getField(), "Campo no permitido")));
     }
+
     @ExceptionHandler(UserValidationException.class)
     public ResponseEntity<ErrorResponse> userValidation(UserValidationException exception) {
         return response(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, "Validation failed", exception.getDetails());
@@ -41,6 +42,7 @@ public class GlobalExceptionHandler {
                 new FieldError("newStatus", exception.getNewStatus().name()),
                 new FieldError("reason", "TRANSICION_NO_PERMITIDA")));
     }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> validation(MethodArgumentNotValidException exception) {
         List<FieldError> details = exception.getBindingResult().getFieldErrors().stream()

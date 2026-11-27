@@ -122,7 +122,7 @@ public class UserService {
     /** Actualiza y audita los campos autorizados en una sola transacción. */
     @Transactional
     public UserResponse update(UUID id, UpdateUserRequest request, Set<String> fields, String actor) {
-        User user = repository.findById(id).orElseThrow(UserNotFoundException::new);
+        User user = repository.findByIdForUpdate(id).orElseThrow(UserNotFoundException::new);
         List<FieldError> errors = new ArrayList<>();
         validator.validate(request).forEach(violation -> errors.add(
                 new FieldError(violation.getPropertyPath().toString(), violation.getMessage())));

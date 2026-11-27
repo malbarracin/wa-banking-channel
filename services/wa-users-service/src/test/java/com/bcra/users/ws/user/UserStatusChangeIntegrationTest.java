@@ -36,6 +36,45 @@ class UserStatusChangeIntegrationTest {
     @Autowired private ObjectMapper json;
 
     @Test
+    @DisplayName("Actualización y suspensión concurrentes dejan SUSPENDED, el dato nuevo y una sola auditoría")
+    void serializesConcurrentUpdateAndStatusChange() throws Exception {
+        UUID id = createActiveCustomer();
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var update = executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                return mvc.perform(patch("/api/v1/users/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Ana Actualizada\"}"))
+                        .andReturn().getResponse().getStatus();
+            });
+            var suspend = executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                return patchStatus(id, "SUSPENDED", "operador-concurrencia")
+                        .andReturn().getResponse().getStatus();
+            });
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            assertThat(java.util.List.of(update.get(10, TimeUnit.SECONDS), suspend.get(10, TimeUnit.SECONDS)))
+                    .containsOnly(200);
+        }
+        var customer = users.findById(id).orElseThrow();
+        assertThat(customer.getStatus()).isEqualTo(UserStatus.SUSPENDED);
+        assertThat(customer.getDisplayName()).isEqualTo("Ana Actualizada");
+        var changes = audits.findByUserIdOrderByOccurredAtAsc(id).stream()
+                .filter(entry -> entry.getAction() == AuditAction.CAMBIO_ESTADO
+                        && entry.getResult() == AuditResult.OK)
+                .toList();
+        assertThat(changes).hasSize(1);
+        assertThat(changes.get(0).getPreviousStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(changes.get(0).getNewStatus()).isEqualTo(UserStatus.SUSPENDED);
+        assertThat(changes.get(0).getActor()).isEqualTo("operador-concurrencia");
+        assertThat(changes.get(0).getOccurredAt()).isNotNull();
+    }
+
+    @Test
     @DisplayName("Los cambios concurrentes validan el estado confirmado y auditan solo cambios efectivos")
     void serializesConcurrentStatusChanges() throws Exception {
         UUID id = createActiveCustomer();

@@ -10,9 +10,48 @@
   "sprints": [],
   "goals": {},
   "loose": {
-    "usd": 0,
-    "tokens": 0,
-    "runs": {},
+    "usd": 4.909,
+    "tokens": 4068805,
+    "runs": {
+      "20261127-fe2a": {
+        "usd": 4.909,
+        "floor": "DESKTOP-JVEJTUF",
+        "tools": {
+          "claude-code": 4.909,
+          "codex": 0
+        },
+        "tokens": 4068805,
+        "toolTokens": {
+          "claude-code": 3400837,
+          "codex": 667968
+        },
+        "loops": 0,
+        "redoTokens": 0,
+        "roles": {
+          "product-owner": {
+            "claude-code": {
+              "tokens": 3400837,
+              "steps": 1,
+              "redo": 0
+            }
+          },
+          "analista": {
+            "codex": {
+              "tokens": 443903,
+              "steps": 1,
+              "redo": 0
+            }
+          },
+          "scrum-master": {
+            "codex": {
+              "tokens": 224065,
+              "steps": 1,
+              "redo": 0
+            }
+          }
+        }
+      }
+    },
     "rest": {
       "usd": 0,
       "tokens": 0,

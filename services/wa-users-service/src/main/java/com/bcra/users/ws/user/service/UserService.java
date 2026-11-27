@@ -106,7 +106,7 @@ public class UserService {
         UserStatus previous = user.getStatus();
         UserStatus target = request.status();
         List<String> allowed = policy.allowedTransitions().getOrDefault(previous.name(), List.of());
-        if (!allowed.contains(target.name())) {
+        if (previous == target || !allowed.contains(target.name())) {
             throw new InvalidStatusTransitionException(previous, target);
         }
         Instant now = Instant.now();

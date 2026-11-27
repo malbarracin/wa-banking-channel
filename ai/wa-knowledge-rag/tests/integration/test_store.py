@@ -357,6 +357,26 @@ def test_configuration_changes_required_roles_and_real_rejects_test(kb, tmp_path
         assert approvals.find(connection, piece_id=subject)[0]["is_test"] is False
 
 
+def test_invalid_policy_rejection_is_audited(kb, tmp_path: Path, migrated: Settings) -> None:
+    subject = "politica-invalida-prueba"
+    path = tmp_path / "pieza.md"
+    write_piece(path, subject)
+    kb("ingest", str(path))
+    kb("submit", subject)
+    policy = tmp_path / "approval-policy.yaml"
+    policy.write_text("faq: [area_duena]\n", encoding="utf-8")
+
+    rejection = kb("approve", subject, "--role", "area_duena", ok=False, KB_APPROVAL_POLICY_PATH=str(policy))
+
+    assert "La política debe definir los roles" in rejection.err
+    with transaction(migrated) as connection:
+        assert approvals.find(connection, piece_id=subject) == []
+        assert piece_versions.find(connection, piece_id=subject)[0]["status"] == "en_revision"
+        events = audit.find(connection, subject=subject, action="reject")
+        assert [(row["version"], row["role"]) for row in events] == [(1, "sistema")]
+        assert events[0]["at"].tzinfo
+
+
 def test_parameter_versions_and_approval(kb, tmp_path: Path, migrated: Settings) -> None:
     name = "horario_prueba"
     path = tmp_path / "content/parameters/parametros.yaml"

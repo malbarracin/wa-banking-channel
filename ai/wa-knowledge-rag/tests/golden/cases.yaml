@@ -1,0 +1,67 @@
+# Set dorado de consultas (español) → pieza esperada + nivel/sugerencia.
+# R1/R2 y ambigüedad calibran KB_CONFIDENCE_THRESHOLD / KB_MIN_RELEVANCE /
+# KB_AMBIGUITY_MARGIN / KB_LEXICAL_BONUS. Los datos personales son sintéticos.
+cases:
+  - id: R1
+    query: "¿Cuál es el horario para transferir?"
+    family: cuentas
+    expected_piece: cuentas-horario-transferencias
+    expected_level: alta
+    expected_suggestion: responder
+
+  - id: R2
+    query: "¿Cuál es el catálogo de criptomonedas del banco virtual?"
+    expected_levels: [sin_respuesta, baja]
+    expected_suggestion: derivar
+    expect_no_invented_text: true
+
+  - id: ambigua-fuera-alcance
+    query: "¿Qué trámites quedan fuera del chat?"
+    expected_level: baja
+    expected_suggestion: aclarar
+    expected_candidates:
+      - cuentas-fuera-de-alcance
+      - tarjetas-fuera-de-alcance
+      - seguros-fuera-de-alcance
+
+  - id: familia-cuentas
+    query: "¿A quién le puedo transferir?"
+    family: cuentas
+    expected_piece: cuentas-destinatarios
+    expected_level: alta
+    expected_suggestion: responder
+
+  - id: familia-tarjetas
+    query: "¿Qué hago si perdí mi tarjeta o me la robaron?"
+    family: tarjetas
+    expected_piece: tarjetas-perdida-o-robo
+    expected_level: alta
+    expected_suggestion: responder
+
+  - id: familia-seguros
+    query: "¿Cómo denuncio un siniestro?"
+    family: seguros
+    expected_piece: seguros-siniestro
+    expected_level: alta
+    expected_suggestion: responder
+
+  - id: familia-canal
+    query: "¿Qué puedo hacer con el asistente de WhatsApp?"
+    family: canal
+    expected_piece: canal-asistente
+    expected_level: alta
+    expected_suggestion: responder
+
+  - id: pii-dni-horario
+    query: "Mi DNI es 30111222, ¿cuál es el horario para transferir?"
+    family: cuentas
+    expected_piece: cuentas-horario-transferencias
+    expected_levels: [alta, baja]
+    contains_synthetic_pii: true
+
+  - id: pii-telefono-siniestro
+    query: "Mi teléfono es 202-555-0199, ¿cómo denuncio un siniestro?"
+    family: seguros
+    expected_piece: seguros-siniestro
+    expected_levels: [alta, baja]
+    contains_synthetic_pii: true

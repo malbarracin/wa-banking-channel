@@ -8,6 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import com.bcra.users.ws.audit.entity.AuditAction;
 import com.bcra.users.ws.audit.entity.AuditResult;
 import com.bcra.users.ws.audit.repository.AuditRepository;
@@ -31,6 +34,37 @@ class UserStatusChangeIntegrationTest {
     @Autowired private UserRepository users;
     @Autowired private AuditRepository audits;
     @Autowired private ObjectMapper json;
+
+    @Test
+    @DisplayName("Los cambios concurrentes validan el estado confirmado y auditan solo cambios efectivos")
+    void serializesConcurrentStatusChanges() throws Exception {
+        UUID id = createActiveCustomer();
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                return patchStatus(id, "INACTIVE", "operador-1").andReturn().getResponse().getStatus();
+            });
+            var second = executor.submit(() -> {
+                ready.countDown();
+                start.await();
+                return patchStatus(id, "INACTIVE", "operador-2").andReturn().getResponse().getStatus();
+            });
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            assertThat(java.util.List.of(first.get(10, TimeUnit.SECONDS), second.get(10, TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(200, 409);
+        }
+        assertThat(users.findById(id).orElseThrow().getStatus()).isEqualTo(UserStatus.INACTIVE);
+        var changes = audits.findByUserIdOrderByOccurredAtAsc(id).stream()
+                .filter(entry -> entry.getAction() == AuditAction.CAMBIO_ESTADO).toList();
+        assertThat(changes).hasSize(1);
+        assertThat(changes.get(0).getPreviousStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(changes.get(0).getNewStatus()).isEqualTo(UserStatus.INACTIVE);
+        assertThat(changes.get(0).getResult()).isEqualTo(AuditResult.OK);
+    }
 
     @Test
     @DisplayName("ACTIVE→SUSPENDED, SUSPENDED→ACTIVE y ACTIVE/SUSPENDED→INACTIVE con auditoría y consulta")

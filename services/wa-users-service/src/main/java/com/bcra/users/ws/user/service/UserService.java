@@ -102,7 +102,7 @@ public class UserService {
      */
     @Transactional
     public UserResponse changeStatus(UUID id, ChangeUserStatusRequest request) {
-        User user = repository.findById(id).orElseThrow(UserNotFoundException::new);
+        User user = repository.findByIdForUpdate(id).orElseThrow(UserNotFoundException::new);
         UserStatus previous = user.getStatus();
         UserStatus target = request.status();
         List<String> allowed = policy.allowedTransitions().getOrDefault(previous.name(), List.of());

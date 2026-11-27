@@ -55,24 +55,20 @@
         }
       },
       "stalled": null,
-      "waiting": {
-        "floor": "DESKTOP-JVEJTUF",
-        "text": "espera una aprobación",
-        "at": "2026-11-27T21:03:02.049Z"
-      },
+      "waiting": null,
       "times": {
         "startedAt": "2026-11-27T20:56:51.824Z",
         "releasedAt": null,
         "workedMs": 0,
         "stalledMs": 0,
-        "waitingMs": 0,
+        "waitingMs": 212111,
         "stalls": 0,
         "reopened": 0
       },
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T21:03:20.826Z"
+      "updatedAt": "2026-11-27T21:06:34.160Z"
     },
     {
       "id": "P-2",
@@ -740,6 +736,14 @@
       "id": "P-3",
       "title": "El banco tiene su conocimiento aprobado disponible para responder con citas",
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-27T21:06:34.160Z",
+      "kind": "answered",
+      "id": "P-1",
+      "title": "El canal transporta sus mensajes de forma asíncrona, ordenada y sin perderlos",
+      "floor": "DESKTOP-JVEJTUF",
       "account": "opensoma.app@gmail.com"
     }
   ],

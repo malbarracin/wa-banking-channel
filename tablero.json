@@ -392,9 +392,38 @@
       "note": null,
       "budgetUsd": null,
       "budgetTokens": null,
-      "spent": null,
+      "spent": {
+        "usd": 0,
+        "tokens": 0,
+        "runs": {
+          "20261127-1704": {
+            "usd": 0,
+            "floor": "Marcelo",
+            "tools": {
+              "kiro": 0
+            },
+            "tokens": 0,
+            "toolTokens": {},
+            "loops": 0,
+            "redoTokens": 0,
+            "roles": {
+              "analista": {
+                "kiro": {
+                  "tokens": 0,
+                  "steps": 1,
+                  "redo": 0
+                }
+              }
+            }
+          }
+        }
+      },
       "stalled": null,
-      "waiting": null,
+      "waiting": {
+        "floor": "Marcelo",
+        "text": "espera una aprobación",
+        "at": "2026-11-27T23:00:54.837Z"
+      },
       "times": {
         "startedAt": "2026-11-27T22:58:51.757Z",
         "releasedAt": null,
@@ -407,7 +436,7 @@
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T22:58:51.757Z"
+      "updatedAt": "2026-11-27T23:00:54.837Z"
     },
     {
       "id": "P-7",
@@ -888,6 +917,15 @@
       "title": "Un número de WhatsApp queda vinculado a un cliente con su identidad verificada",
       "floor": "Marcelo",
       "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-27T23:00:54.837Z",
+      "kind": "waiting",
+      "id": "P-6",
+      "title": "Un número de WhatsApp queda vinculado a un cliente con su identidad verificada",
+      "floor": "Marcelo",
+      "account": "opensoma.app@gmail.com",
+      "text": "espera una aprobación"
     }
   ],
   "deadline": null,

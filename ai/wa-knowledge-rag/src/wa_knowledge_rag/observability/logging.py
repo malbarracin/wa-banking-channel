@@ -6,6 +6,8 @@ from contextlib import contextmanager
 import structlog
 from structlog.contextvars import bind_contextvars, get_contextvars, merge_contextvars, reset_contextvars
 
+from wa_knowledge_rag.security.pii import mask_log_pii
+
 
 @contextmanager
 def correlation_context(correlation_id: str) -> Iterator[None]:
@@ -27,6 +29,8 @@ def configure_logging() -> None:
             merge_contextvars,
             structlog.processors.add_log_level,
             structlog.processors.TimeStamper(fmt="iso", utc=True),
+            structlog.processors.format_exc_info,
+            mask_log_pii,
             structlog.processors.JSONRenderer(),
         ],
     )

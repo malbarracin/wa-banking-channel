@@ -52,10 +52,10 @@ def create_app(settings: Settings | None = None, *, embedder: Embedder | None = 
 
     @app.middleware("http")
     async def correlate(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-        correlation_id = request.headers.get(_CORRELATION_HEADER, "")
+        correlation_id = request.headers.get(_CORRELATION_HEADER, "").strip()
         with correlation_context(correlation_id):
             try:
-                if request.url.path == "/v1/retrieve" and request.method == "POST" and not correlation_id.strip():
+                if request.url.path == "/v1/retrieve" and request.method == "POST" and not correlation_id:
                     raise ApiError("VALIDATION_ERROR")
                 response = await call_next(request)
             except ApiError as error:
@@ -90,9 +90,10 @@ def create_app(settings: Settings | None = None, *, embedder: Embedder | None = 
 
         correlation_id = get_correlation_id() or ""
         filters: RetrievalFilters = {}
-        if "family" in body.filters.model_fields_set:
+        # An empty list means "no filter", the same as omitting the field.
+        if body.filters.family:
             filters["family"] = [family.value for family in body.filters.family]
-        if "type" in body.filters.model_fields_set:
+        if body.filters.type:
             filters["type"] = [piece_type.value for piece_type in body.filters.type]
 
         started = perf_counter()
@@ -110,20 +111,6 @@ def create_app(settings: Settings | None = None, *, embedder: Embedder | None = 
                     top_k=body.topK,
                 )
                 response = RetrieveResponse.model_validate(data)
-                latency_ms = (perf_counter() - started) * 1000
-                cited = [f"{item.citation.pieceId}@{item.citation.version}" for item in response.results]
-                with transaction(settings, query=True) as connection:
-                    query_log.insert(
-                        connection,
-                        correlation_id=correlation_id,
-                        consumer_id=consumer.id,
-                        release_no=int(response.knowledgeVersion.removeprefix("kv-")),
-                        cited=cited,
-                        level=response.confidence.level,
-                        top_score=response.confidence.score,
-                        latency_ms=latency_ms,
-                        query_len=len(body.query),
-                    )
             except (KnowledgeUnavailable, EmbeddingProviderUnavailable, psycopg.Error) as error:
                 if isinstance(error, EmbeddingProviderUnavailable) or isinstance(
                     error.__cause__, EmbeddingProviderUnavailable
@@ -131,6 +118,10 @@ def create_app(settings: Settings | None = None, *, embedder: Embedder | None = 
                     metrics.embedding_errors.inc()
                 logger.warning("kb_retrieve_unavailable", consumerId=consumer.id)
                 raise ApiError("KNOWLEDGE_UNAVAILABLE") from None
+
+        latency_ms = (perf_counter() - started) * 1000
+        cited = [f"{item.citation.pieceId}@{item.citation.version}" for item in response.results]
+        _record_query(settings, response, consumer, cited, latency_ms, len(body.query))
 
         metrics.retrieved.labels(response.confidence.level).inc()
         logger.info(
@@ -155,6 +146,32 @@ def create_app(settings: Settings | None = None, *, embedder: Embedder | None = 
         return Response(metrics.render(settings), headers={"Content-Type": CONTENT_TYPE_LATEST})
 
     return app
+
+
+def _record_query(
+    settings: Settings,
+    response: RetrieveResponse,
+    consumer: Consumer,
+    cited: list[str],
+    latency_ms: float,
+    query_len: int,
+) -> None:
+    """Write the query audit row; a failure here never discards a valid answer."""
+    try:
+        with transaction(settings, query=True) as connection:
+            query_log.insert(
+                connection,
+                correlation_id=response.correlationId,
+                consumer_id=consumer.id,
+                release_no=int(response.knowledgeVersion.removeprefix("kv-")),
+                cited=cited,
+                level=response.confidence.level,
+                top_score=response.confidence.score,
+                latency_ms=latency_ms,
+                query_len=query_len,
+            )
+    except psycopg.Error:
+        logger.warning("kb_query_log_failed", consumerId=consumer.id, knowledgeVersion=response.knowledgeVersion)
 
 
 def main() -> None:

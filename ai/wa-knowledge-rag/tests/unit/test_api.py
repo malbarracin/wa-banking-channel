@@ -151,3 +151,54 @@ def test_unconfigured_app_is_closed():
         assert client.get("/health").status_code == 503
         response = client.post("/v1/retrieve", headers=AUTH | CORRELATION, json=REQUEST)
         assert_error(response, 401, "UNAUTHENTICATED", CORRELATION["X-Correlation-Id"])
+
+
+def _stub_retrieve(monkeypatch):
+    result = json.loads((CONTRACT / "examples/response-sin-respuesta.json").read_text())
+    result["correlationId"] = CORRELATION["X-Correlation-Id"]
+    retrieve = Mock(return_value=result)
+    monkeypatch.setattr("wa_knowledge_rag.api.app.retrieve", retrieve)
+    return retrieve
+
+
+def test_query_log_failure_keeps_valid_answer(client, monkeypatch):
+    http, _ = client
+    _stub_retrieve(monkeypatch)
+    monkeypatch.setattr("wa_knowledge_rag.api.app.transaction", MagicMock())
+    log = Mock()
+    log.insert.side_effect = psycopg.OperationalError("private detail")
+    monkeypatch.setattr("wa_knowledge_rag.api.app.query_log", log)
+    warnings = []
+    monkeypatch.setattr(
+        "wa_knowledge_rag.api.app.logger.warning", lambda event, **fields: warnings.append((event, fields))
+    )
+
+    response = http.post("/v1/retrieve", headers=AUTH | CORRELATION, json=REQUEST)
+
+    assert response.status_code == 200
+    schema = json.loads((CONTRACT / "retrieval-response.v1.schema.json").read_text())
+    Draft202012Validator(schema).validate(response.json())
+    assert "private detail" not in response.text
+    assert [event for event, _ in warnings] == ["kb_query_log_failed"]
+    assert "private detail" not in repr(warnings)
+
+
+def test_empty_filter_lists_mean_no_filter(client, monkeypatch):
+    http, _ = client
+    retrieve = _stub_retrieve(monkeypatch)
+    monkeypatch.setattr("wa_knowledge_rag.api.app.transaction", MagicMock())
+    monkeypatch.setattr("wa_knowledge_rag.api.app.query_log", Mock())
+
+    body = REQUEST | {"filters": {"family": [], "type": ["faq"]}}
+    response = http.post("/v1/retrieve", headers=AUTH | CORRELATION, json=body)
+
+    assert response.status_code == 200
+    assert retrieve.call_args.kwargs["filters"] == {"type": ["faq"]}
+
+
+def test_blank_correlation_id_is_not_echoed(client):
+    http, embedder = client
+    response = http.post("/v1/retrieve", headers=AUTH | {"X-Correlation-Id": "   "}, json=REQUEST)
+
+    assert_error(response, 400, "VALIDATION_ERROR", "")
+    embedder.embed_query.assert_not_called()

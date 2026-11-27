@@ -1,0 +1,45 @@
+{
+  "correlationId": "consulta-prueba-2",
+  "knowledgeVersion": "kv-12",
+  "confidence": {
+    "level": "baja",
+    "score": 0.6,
+    "suggestion": "aclarar"
+  },
+  "results": [
+    {
+      "text": "Esta sección reúne información general sobre tarjetas.",
+      "score": 0.6,
+      "publishable": true,
+      "citation": {
+        "pieceId": "prueba-tarjetas",
+        "title": "Información sobre tarjetas (prueba)",
+        "type": "faq",
+        "family": "tarjetas",
+        "audience": "publico",
+        "version": 1,
+        "section": null,
+        "ownerArea": "equipo-de-prueba",
+        "approvedAt": "2026-11-27T12:00:00Z",
+        "approvalKind": "prueba"
+      }
+    },
+    {
+      "text": "Esta sección reúne información general sobre cuentas.",
+      "score": 0.58,
+      "publishable": true,
+      "citation": {
+        "pieceId": "prueba-cuentas",
+        "title": "Información sobre cuentas (prueba)",
+        "type": "faq",
+        "family": "cuentas",
+        "audience": "publico",
+        "version": 1,
+        "section": null,
+        "ownerArea": "equipo-de-prueba",
+        "approvedAt": "2026-11-27T12:00:00Z",
+        "approvalKind": "prueba"
+      }
+    }
+  ]
+}

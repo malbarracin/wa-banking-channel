@@ -24,3 +24,13 @@ Con `KB_DATABASE_URL`, `GOOGLE_API_KEY` y `KB_CONSUMERS` configuradas, ejecutá 
 El servicio escucha en `KB_PORT` (8102 por defecto). Usá `GET /health` para comprobar la
 disponibilidad y `GET /metrics` para consultar las métricas Prometheus. El formato de
 `KB_CONSUMERS` se muestra en `config/consumers.example.yaml` y se carga como JSON.
+
+## Cobertura de las preguntas frecuentes
+
+Ejecutá `uv run kb coverage` para comprobar que los borradores cubren los temas de
+`content/coverage.yaml`. Con PostgreSQL configurado, `uv run kb coverage --published`
+comprueba las preguntas frecuentes públicas y vigentes de la publicación activa. Los dos
+comandos salen con código distinto de cero si falta algún tema.
+
+Las piezas se redactaron a partir de la tabla de contenido mínimo de H8. Los parámetros de
+`content/parameters/parametros.yaml` son candidatos sintéticos exclusivos de desarrollo y pruebas.

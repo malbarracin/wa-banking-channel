@@ -8,6 +8,7 @@ from psycopg import Error
 
 from wa_knowledge_rag.config import Settings
 from wa_knowledge_rag.content import Family
+from wa_knowledge_rag.coverage import check_coverage
 from wa_knowledge_rag.store.database import transaction
 from wa_knowledge_rag.store.migrate import migrate
 from wa_knowledge_rag.workflow.approvals import approve, submit
@@ -40,6 +41,8 @@ def _parser() -> ArgumentParser:
     listing = commands.add_parser("list", help="Listar las versiones de las piezas")
     listing.add_argument("--family", choices=list(Family))
     listing.add_argument("--status", choices=list(Status))
+    coverage = commands.add_parser("coverage", help="Comprobar la cobertura de las preguntas frecuentes mínimas")
+    coverage.add_argument("--published", action="store_true", help="Comprobar la versión activa en PostgreSQL")
     return parser
 
 
@@ -71,6 +74,12 @@ def _run(args: Namespace, settings: Settings) -> list[str]:
         return []
     if args.command == "ingest":
         return _ingest(args, settings)
+    if args.command == "coverage":
+        errors = check_coverage(CONTENT, settings, published=args.published)
+        if not errors:
+            scope = "publicación activa" if args.published else "archivos fuente"
+            print(f"Cobertura completa en {scope}.")
+        return errors
 
     parameter_approval = args.command == "params" and args.parameter_command == "approve"
     with transaction(settings) as connection:

@@ -1351,7 +1351,12 @@
               "reopened": 0
             },
             "text": "P-2 «Un cliente del banco se puede dar de alta, consultar y administrar» volvió 8 veces: era grande o no estaba claro. Partir los ítems parecidos y escribir sus criterios de aceptación antes de arrancar.",
-            "status": "open"
+            "status": "accepted",
+            "by": {
+              "account": "opensoma.app@gmail.com",
+              "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+            },
+            "at": "2026-11-27T23:45:17.157Z"
           },
           {
             "id": "carried:1",

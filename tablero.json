@@ -375,13 +375,18 @@
       ],
       "assignedTo": null,
       "deliverables": "El servicio funcionando en services/wa-channel-service y su contrato en shared/contracts/wa-channel-service/openapi.yaml y shared/contracts/wa-channel-service/handoff.md",
-      "status": "todo",
+      "status": "doing",
       "createdAt": "2026-11-27T20:52:35.267Z",
       "createdBy": {
         "account": "opensoma.app@gmail.com",
         "floor": "DESKTOP-JVEJTUF"
       },
-      "claim": null,
+      "claim": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "Marcelo",
+        "run": "20261127-1704",
+        "at": "2026-11-27T22:58:51.757Z"
+      },
       "doneAt": null,
       "doneBy": null,
       "note": null,
@@ -390,11 +395,19 @@
       "spent": null,
       "stalled": null,
       "waiting": null,
-      "times": null,
+      "times": {
+        "startedAt": "2026-11-27T22:58:51.757Z",
+        "releasedAt": null,
+        "workedMs": 0,
+        "stalledMs": 0,
+        "waitingMs": 0,
+        "stalls": 0,
+        "reopened": 0
+      },
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T20:52:35.267Z"
+      "updatedAt": "2026-11-27T22:58:51.757Z"
     },
     {
       "id": "P-7",
@@ -867,6 +880,14 @@
       "floor": "Marcelo",
       "account": "opensoma.app@gmail.com",
       "text": "1"
+    },
+    {
+      "at": "2026-11-27T22:58:51.757Z",
+      "kind": "claimed",
+      "id": "P-6",
+      "title": "Un número de WhatsApp queda vinculado a un cliente con su identidad verificada",
+      "floor": "Marcelo",
+      "account": "opensoma.app@gmail.com"
     }
   ],
   "deadline": null,

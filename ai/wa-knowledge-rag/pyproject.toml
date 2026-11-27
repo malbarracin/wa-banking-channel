@@ -49,3 +49,6 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = ["integration: necesita Docker", "evals: usa el modelo real"]
 addopts = "-m 'not evals'"
+
+[tool.hatch.build.targets.wheel.force-include]
+"migrations" = "wa_knowledge_rag/migrations"

@@ -1,7 +1,7 @@
 import json
 from hashlib import sha256
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import MagicMock, Mock
 
 import psycopg
 import pytest
@@ -89,6 +89,25 @@ def test_rejected_before_retrieval(client, headers, body, status, code, correlat
     if status == 401:
         assert response.headers["WWW-Authenticate"] == "Bearer"
     embedder.embed_query.assert_not_called()
+
+
+def test_accepts_integral_json_number_for_top_k(client, monkeypatch):
+    http, _ = client
+    body = REQUEST | {"topK": 5.0}
+    schema = json.loads((CONTRACT / "retrieval-request.v1.schema.json").read_text())
+    Draft202012Validator(schema).validate(body)
+    result = json.loads((CONTRACT / "examples/response-sin-respuesta.json").read_text())
+    result["correlationId"] = CORRELATION["X-Correlation-Id"]
+    retrieve = Mock(return_value=result)
+    monkeypatch.setattr("wa_knowledge_rag.api.app.retrieve", retrieve)
+    monkeypatch.setattr("wa_knowledge_rag.api.app.transaction", MagicMock())
+    monkeypatch.setattr("wa_knowledge_rag.api.app.query_log", Mock())
+
+    response = http.post("/v1/retrieve", headers=AUTH | CORRELATION, json=body)
+
+    assert response.status_code == 200, response.json()
+    assert retrieve.call_args.kwargs["top_k"] == 5
+    assert type(retrieve.call_args.kwargs["top_k"]) is int
 
 
 @pytest.mark.parametrize(

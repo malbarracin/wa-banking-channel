@@ -10,7 +10,7 @@ from wa_knowledge_rag.config import Settings
 from wa_knowledge_rag.content import Family
 from wa_knowledge_rag.store.database import transaction
 from wa_knowledge_rag.store.migrate import migrate
-from wa_knowledge_rag.workflow.approvals import approve, load_policy, submit
+from wa_knowledge_rag.workflow.approvals import approve, submit
 from wa_knowledge_rag.workflow.ingest import CONTENT, ingest_parameters, ingest_piece, inventory
 from wa_knowledge_rag.workflow.states import Status
 
@@ -88,7 +88,7 @@ def _run(args: Namespace, settings: Settings) -> list[str]:
                 role=args.role,
                 is_test=args.test,
                 real=settings.environment == "real",
-                policy=load_policy(settings.approval_policy_path),
+                policy_path=settings.approval_policy_path,
             )
         else:
             return ingest_parameters(connection)

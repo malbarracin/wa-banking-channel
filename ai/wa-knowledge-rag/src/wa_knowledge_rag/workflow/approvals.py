@@ -80,10 +80,22 @@ def approve(
     role: str,
     is_test: bool,
     real: bool,
-    policy: dict[str, set[str]],
+    policy_path: Path,
 ) -> str | None:
     lock_subject(connection, kind, subject)
     current = latest_version(connection, kind, subject)
+    try:
+        policy = load_policy(policy_path)
+    except ValueError as policy_error:
+        record(
+            connection,
+            "reject",
+            subject=subject if current is not None else "desconocido",
+            version=current["version"] if current is not None else None,
+            subject_kind=kind,
+        )
+        return str(policy_error)
+
     if current is None:
         record(connection, "reject", subject="desconocido", subject_kind=kind)
         return "Versión inexistente"

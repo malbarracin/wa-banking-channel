@@ -8,6 +8,7 @@ import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -50,8 +51,11 @@ class AlternatePolicyTest {
     }
 
     @Test
+    @DisplayName("Las altas concurrentes crean un solo cliente y una sola auditoría")
     void concurrentCreationsAllowOnlyOneCustomer() throws Exception {
         String body = "{\"contactEmail\":\"" + UUID.randomUUID() + "@example.com\"}";
+        long userCount = jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class);
+        long auditCount = jdbc.queryForObject("SELECT COUNT(*) FROM audit_entries", Long.class);
         CountDownLatch start = new CountDownLatch(1);
         try (var executor = Executors.newFixedThreadPool(2)) {
             var first = executor.submit(() -> {
@@ -68,5 +72,7 @@ class AlternatePolicyTest {
             assertThat(java.util.List.of(first.get(15, TimeUnit.SECONDS), second.get(15, TimeUnit.SECONDS)))
                     .containsExactlyInAnyOrder(201, 409);
         }
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users", Long.class)).isEqualTo(userCount + 1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_entries", Long.class)).isEqualTo(auditCount + 1);
     }
 }

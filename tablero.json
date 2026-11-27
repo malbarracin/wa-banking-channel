@@ -508,24 +508,20 @@
         }
       },
       "stalled": null,
-      "waiting": {
-        "floor": "Marcelo",
-        "text": "espera una aprobación",
-        "at": "2026-11-27T23:00:54.837Z"
-      },
+      "waiting": null,
       "times": {
         "startedAt": "2026-11-27T22:58:51.757Z",
         "releasedAt": null,
         "workedMs": 0,
         "stalledMs": 0,
-        "waitingMs": 0,
+        "waitingMs": 410096,
         "stalls": 0,
         "reopened": 0
       },
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T23:00:54.837Z"
+      "updatedAt": "2026-11-27T23:07:44.933Z"
     },
     {
       "id": "P-7",
@@ -1022,6 +1018,14 @@
       "id": "P-3",
       "title": "El banco tiene su conocimiento aprobado disponible para responder con citas",
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-27T23:07:44.933Z",
+      "kind": "answered",
+      "id": "P-6",
+      "title": "Un número de WhatsApp queda vinculado a un cliente con su identidad verificada",
+      "floor": "Marcelo",
       "account": "opensoma.app@gmail.com"
     }
   ],

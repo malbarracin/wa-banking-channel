@@ -1362,7 +1362,12 @@
               "ids": "P-1, P-3"
             },
             "text": "2 ítems no se terminaron y pasan al sprint que sigue (P-1, P-3): el sprint era grande para las oficinas que hay.",
-            "status": "open"
+            "status": "accepted",
+            "by": {
+              "account": "opensoma.app@gmail.com",
+              "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+            },
+            "at": "2026-11-27T23:45:12.031Z"
           }
         ]
       }

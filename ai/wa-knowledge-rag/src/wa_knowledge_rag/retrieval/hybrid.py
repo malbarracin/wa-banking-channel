@@ -17,6 +17,7 @@ eligible AS NOT MATERIALIZED (
     JOIN kb_chunk c USING (piece_id, version, rendered_hash)
     JOIN kb_piece_version p USING (piece_id, version)
     WHERE c.embedding_model = %(model)s
+      AND (NOT %(real)s OR i.approval_kind = 'real')
       AND p.status IN ('aprobada', 'publicada')
       AND p.valid_from <= now() AND (p.valid_to IS NULL OR p.valid_to > now())
       AND c.audience = p.audience
@@ -65,11 +66,14 @@ top_pieces AS (
     SELECT id, rrf, score FROM best_per_piece ORDER BY rrf DESC, score DESC, id LIMIT %(top_k)s
 )
 SELECT active.release_no, c.piece_id, p.title, p.type, p.family, p.audience,
-       c.version, c.section, p.owner_area, c.text, top.score, approval.approved_at, approval.is_test
+       c.version, c.section, p.owner_area, c.text, top.score,
+       coalesce(i.approved_at, approval.approved_at) AS approved_at,
+       coalesce(i.approval_kind = 'prueba', approval.is_test) AS is_test
 FROM active
 LEFT JOIN top_pieces top ON true
 LEFT JOIN kb_chunk c ON c.id = top.id
 LEFT JOIN kb_piece_version p USING (piece_id, version)
+LEFT JOIN kb_release_item i ON (i.release_no, i.piece_id) = (active.release_no, c.piece_id)
 LEFT JOIN LATERAL (
     SELECT max(a.approved_at) AS approved_at, bool_or(a.is_test) AS is_test
     FROM kb_approval a
@@ -90,6 +94,7 @@ def search(
     types: Sequence[str] | None,
     lexical_bonus: float,
     top_k: int,
+    real: bool = False,
 ) -> list[DictRow]:
     """Return ranked pieces, or a release-only row when no chunk matches."""
     # HNSW applies release and metadata filters after scanning the index.
@@ -100,6 +105,7 @@ def search(
             "query": query,
             "vector": Vector(embedding),
             "model": model,
+            "real": real,
             "internal": internal,
             "families": list(families) if families is not None else None,
             "types": list(types) if types is not None else None,

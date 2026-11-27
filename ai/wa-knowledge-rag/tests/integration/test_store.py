@@ -32,6 +32,7 @@ def test_migrations_and_indexes(migrated: Settings) -> None:
         assert {row["name"] for row in connection.execute("SELECT name FROM kb_schema_migration")} == {
             "0001_init.sql",
             "0002_piece_section.sql",
+            "0003_release_provenance.sql",
         }
         assert connection.execute("SELECT extname FROM pg_extension WHERE extname = 'vector'").fetchone()
         tables = connection.execute("SELECT tablename FROM pg_tables WHERE schemaname = 'public'").fetchall()

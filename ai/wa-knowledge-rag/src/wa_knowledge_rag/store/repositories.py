@@ -73,7 +73,7 @@ piece_versions = VersionRepository("kb_piece_version", json_columns=("source_ref
 approvals = Repository("kb_approval")
 parameter_versions = Repository("kb_parameter_version")
 releases = ReleaseRepository("kb_release")
-release_items = Repository("kb_release_item")
+release_items = Repository("kb_release_item", json_columns=("parameter_versions",))
 chunks = ChunkRepository("kb_chunk")
 audit = Repository("kb_audit", json_columns=("detail",))
 query_log = Repository("kb_query_log", json_columns=("cited",))

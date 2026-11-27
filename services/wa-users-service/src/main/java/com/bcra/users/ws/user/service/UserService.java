@@ -3,6 +3,7 @@ package com.bcra.users.ws.user.service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import com.bcra.users.ws.audit.entity.AuditResult;
@@ -102,12 +103,22 @@ public class UserService {
         if (!errors.isEmpty()) {
             throw new UserValidationException(errors);
         }
+        Set<String> changedFields = new java.util.HashSet<>(fields);
+        changedFields.removeIf(field -> switch (field) {
+            case "displayName" -> Objects.equals(user.getDisplayName(), request.displayName());
+            case "contactEmail" -> Objects.equals(user.getContactEmail(), request.contactEmail());
+            case "contactPhone" -> Objects.equals(user.getContactPhone(), request.contactPhone());
+            default -> throw new IllegalArgumentException("Campo de actualización desconocido");
+        });
+        if (changedFields.isEmpty()) {
+            return filter(mapper.toResponse(user), false);
+        }
         mapper.updateEntity(request, user);
         Instant now = Instant.now();
         user.setUpdatedAt(now);
         repository.saveAndFlush(user);
         audit.registerModification(id, actor == null || actor.isBlank() ? "system" : actor,
-                AuditResult.OK, now, fields);
+                AuditResult.OK, now, changedFields);
         return filter(mapper.toResponse(user), false);
     }
 

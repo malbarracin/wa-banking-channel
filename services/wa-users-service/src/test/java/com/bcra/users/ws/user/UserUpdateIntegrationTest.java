@@ -68,6 +68,41 @@ class UserUpdateIntegrationTest {
         assertThat(audits.findByUserIdOrderByOccurredAtAsc(id)).isEmpty();
     }
 
+    @Test
+    @DisplayName("Rechaza correo vacío sin persistir cambios ni registrar auditoría")
+    void rechazaCorreoVacio() throws Exception {
+        UUID id = crearCliente();
+
+        mvc.perform(patch("/api/v1/users/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"displayName\":\"Otro\",\"contactEmail\":\"\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details[0].field").value("contactEmail"));
+
+        var cliente = users.findById(id).orElseThrow();
+        assertThat(cliente.getDisplayName()).isEqualTo("Ana");
+        assertThat(cliente.getContactEmail()).isNull();
+        assertThat(audits.findByUserIdOrderByOccurredAtAsc(id)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("Audita solo los campos que cambian y omite auditoría cuando no hay cambios")
+    void auditaSoloCamposModificados() throws Exception {
+        UUID id = crearCliente();
+        Instant fechaAnterior = users.findById(id).orElseThrow().getUpdatedAt();
+
+        mvc.perform(patch("/api/v1/users/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"displayName\":\"Ana\"}"))
+                .andExpect(status().isOk());
+        assertThat(users.findById(id).orElseThrow().getUpdatedAt()).isEqualTo(fechaAnterior);
+        assertThat(audits.findByUserIdOrderByOccurredAtAsc(id)).isEmpty();
+
+        mvc.perform(patch("/api/v1/users/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"displayName\":\"Ana\",\"contactEmail\":\"nuevo@example.com\"}"))
+                .andExpect(status().isOk());
+        assertThat(audits.findByUserIdOrderByOccurredAtAsc(id)).singleElement()
+                .satisfies(entrada -> assertThat(entrada.getChangedFields()).isEqualTo("contactEmail"));
+    }
+
     private UUID crearCliente() {
         UUID id = UUID.randomUUID();
         jdbc.update("INSERT INTO users (id, external_id, uniqueness_field, display_name, status, created_at, updated_at) "

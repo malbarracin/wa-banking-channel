@@ -42,6 +42,10 @@ class AuditControllerTest {
                 .andExpect(jsonPath("$[1].changedFields").value("displayName"));
         mvc.perform(get("/api/v1/users/{id}/audit", UUID.randomUUID())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
-        mvc.perform(get("/api/v1/users/not-a-uuid/audit")).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/v1/users/not-a-uuid/audit"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists());
     }
 }

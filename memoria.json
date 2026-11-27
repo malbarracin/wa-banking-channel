@@ -1,0 +1,35 @@
+{
+ "items": [
+  {
+   "id": "dqw5wqk7",
+   "texto": "Hay seis definiciones del banco que la especificación deja abiertas a propósito (datos mínimos del alta, política de verificación de identidad, vigencia de la credencial, límites y horarios de transferencia con su umbral de doble confirmación, ventana y tope de movimientos/consumos, proceso de aprobación del conocimiento): no se inventan valores, cada componente las implementa como parámetro configurable. Están listadas en specs/scrum/backlog.md.",
+   "tipo": "decision",
+   "rol": "product-owner",
+   "run": null,
+   "at": "2026-11-27T20:47:13.007Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "rrr7gz9y",
+   "texto": "El repositorio arranca vacío (solo specs/): los 17 componentes del programa se construyen desde cero, cada uno en su carpeta, y no hay código previo que reutilizar.",
+   "tipo": "dato",
+   "rol": "product-owner",
+   "run": null,
+   "at": "2026-11-27T20:47:08.945Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "qylarpbf",
+   "texto": "La especificación funcional completa de cada hito está en su propia página del tablero de Notion «Hitos — Canal WhatsApp Banco» (base de datos collection://b417f9f7-affc-4ece-a4bb-d753c65c2d3c, 17 filas con Orden, Carpeta del componente y Objetivo del hito): la página del roadmap sola no alcanza, hay que abrir la fila del hito que se está trabajando.",
+   "tipo": "dato",
+   "rol": "product-owner",
+   "run": null,
+   "at": "2026-11-27T20:47:07.561Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  }
+ ],
+ "forgotten": {}
+}

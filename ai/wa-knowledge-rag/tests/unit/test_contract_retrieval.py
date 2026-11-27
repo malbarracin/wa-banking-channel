@@ -219,3 +219,19 @@ def test_default_thresholds_match_contract() -> None:
     assert settings.ambiguity_margin == 0.05
     assert settings.lexical_bonus == 0.05
     assert settings.port == 8102
+
+
+def test_internal_error_matches_published_schema(
+    client: tuple[TestClient, Mock], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    http, _ = client
+    monkeypatch.setattr("wa_knowledge_rag.api.app.retrieve", Mock(side_effect=RuntimeError("private detail")))
+
+    response = http.post("/v1/retrieve", headers=HEADERS, json=REQUEST)
+
+    assert response.status_code == 500
+    payload = response.json()
+    _schema("error.v1.schema.json").validate(payload)
+    assert payload["code"] == "INTERNAL_ERROR"
+    assert payload["correlationId"] == response.headers["X-Correlation-Id"] == CORRELATION
+    assert "private detail" not in response.text

@@ -3,6 +3,7 @@ package com.bcra.users.ws.exception;
 import java.time.Instant;
 import java.util.List;
 import com.bcra.users.ws.user.exception.DuplicateUserException;
+import com.bcra.users.ws.user.exception.InvalidStatusTransitionException;
 import com.bcra.users.ws.user.exception.UserValidationException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> duplicate(DuplicateUserException exception) {
         return response(HttpStatus.CONFLICT, ErrorCode.CONFLICT, exception.getMessage(),
                 List.of(new FieldError(exception.getField(), "DUPLICADO")));
+    }
+
+    @ExceptionHandler(InvalidStatusTransitionException.class)
+    public ResponseEntity<ErrorResponse> invalidTransition(InvalidStatusTransitionException exception) {
+        return response(HttpStatus.CONFLICT, ErrorCode.CONFLICT, exception.getMessage(), List.of(
+                new FieldError("previousStatus", exception.getPreviousStatus().name()),
+                new FieldError("newStatus", exception.getNewStatus().name()),
+                new FieldError("reason", "TRANSICION_NO_PERMITIDA")));
     }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> validation(MethodArgumentNotValidException exception) {

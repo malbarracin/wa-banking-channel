@@ -26,9 +26,40 @@
       "note": null,
       "budgetUsd": null,
       "budgetTokens": null,
-      "spent": null,
+      "spent": {
+        "usd": 1.9501,
+        "tokens": 1049309,
+        "runs": {
+          "20261127-57e1": {
+            "usd": 1.9501,
+            "floor": "DESKTOP-JVEJTUF",
+            "tools": {
+              "claude-code": 1.9501
+            },
+            "tokens": 1049309,
+            "toolTokens": {
+              "claude-code": 1049309
+            },
+            "loops": 0,
+            "redoTokens": 0,
+            "roles": {
+              "analista": {
+                "claude-code": {
+                  "tokens": 1049309,
+                  "steps": 1,
+                  "redo": 0
+                }
+              }
+            }
+          }
+        }
+      },
       "stalled": null,
-      "waiting": null,
+      "waiting": {
+        "floor": "DESKTOP-JVEJTUF",
+        "text": "espera una aprobación",
+        "at": "2026-11-27T21:03:02.049Z"
+      },
       "times": {
         "startedAt": "2026-11-27T20:56:51.824Z",
         "releasedAt": null,
@@ -41,7 +72,7 @@
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T20:56:51.825Z"
+      "updatedAt": "2026-11-27T21:03:02.049Z"
     },
     {
       "id": "P-2",
@@ -680,6 +711,15 @@
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
       "account": "opensoma.app@gmail.com",
       "text": "espera una respuesta"
+    },
+    {
+      "at": "2026-11-27T21:03:02.048Z",
+      "kind": "waiting",
+      "id": "P-1",
+      "title": "El canal transporta sus mensajes de forma asíncrona, ordenada y sin perderlos",
+      "floor": "DESKTOP-JVEJTUF",
+      "account": "opensoma.app@gmail.com",
+      "text": "espera una aprobación"
     }
   ],
   "deadline": null,

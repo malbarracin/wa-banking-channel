@@ -14,8 +14,8 @@ El cuerpo se envía como `application/json` y sigue el [esquema de petición v1]
 | Campo | Tipo y valores |
 | --- | --- |
 | `query` | Texto de 1 a 1000 caracteres. |
-| `filters.family` | Lista opcional de familias. Valores admitidos: `cuentas`, `tarjetas`, `seguros`, `canal`. |
-| `filters.type` | Lista opcional de tipos. Valores admitidos: `faq`, `guia`, `politica`, `mensaje`. |
+| `filters.family` | Lista opcional de familias. Valores admitidos: `cuentas`, `tarjetas`, `seguros`, `canal`. Una lista vacía equivale a no filtrar. |
+| `filters.type` | Lista opcional de tipos. Valores admitidos: `faq`, `guia`, `politica`, `mensaje`. Una lista vacía equivale a no filtrar. |
 | `audience` | `publico` por defecto, con acceso solo a contenido público. `interno` incluye contenido público e interno y requiere que el consumidor esté habilitado por configuración. |
 | `topK` | Entero de 1 a 10. Por defecto, 5. |
 

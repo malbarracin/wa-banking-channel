@@ -17,3 +17,10 @@ Las operaciones de varios repositorios comparten una conexión de `store.databas
 Para consultas, usá `transaction(settings, query=True)` para limitar cada sentencia a dos segundos.
 
 Con Docker disponible, ejecutá `uv run pytest -m integration` para probar el esquema y los repositorios.
+
+## API de consulta
+
+Con `KB_DATABASE_URL`, `GOOGLE_API_KEY` y `KB_CONSUMERS` configuradas, ejecutá `uv run kb-api`.
+El servicio escucha en `KB_PORT` (8102 por defecto). Usá `GET /health` para comprobar la
+disponibilidad y `GET /metrics` para consultar las métricas Prometheus. El formato de
+`KB_CONSUMERS` se muestra en `config/consumers.example.yaml` y se carga como JSON.

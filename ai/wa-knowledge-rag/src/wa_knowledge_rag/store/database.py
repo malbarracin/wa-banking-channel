@@ -5,6 +5,7 @@ from contextlib import contextmanager
 
 import psycopg
 from pgvector.psycopg import register_vector
+from psycopg.conninfo import make_conninfo
 from psycopg.rows import DictRow, dict_row
 
 from wa_knowledge_rag.config import Settings
@@ -23,7 +24,10 @@ def database_url(settings: Settings) -> str:
 @contextmanager
 def transaction(settings: Settings, *, query: bool = False) -> Iterator[psycopg.Connection[DictRow]]:
     """Share one transaction across repositories, with rollback on failure."""
-    with psycopg.connect(database_url(settings), row_factory=dict_row) as connection:
+    url = database_url(settings)
+    if query:
+        url = make_conninfo(url, connect_timeout=2)
+    with psycopg.connect(url, row_factory=dict_row) as connection:
         if query:
             connection.execute("SET LOCAL statement_timeout = '2s'")
         register_vector(connection)

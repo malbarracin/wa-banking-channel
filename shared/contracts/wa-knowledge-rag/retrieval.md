@@ -65,13 +65,19 @@ Un `503` indica una falla del servicio. Una consulta ejecutada sin coincidencias
 
 ## `GET /health`
 
-Disponible sin autenticación. Devuelve `200` con el estado de la base, del índice y la versión activa.
+Disponible sin autenticación. No exige `Authorization` ni `X-Correlation-Id`.
+
+Éxito (`200`): base, extensión `vector`, índices HNSW/GIN y versión activa disponibles.
 
 ```json
 {"status":"ok","database":"ok","index":"ok","knowledgeVersion":"kv-12"}
 ```
 
-Devuelve `503` con `status: "degraded"` si falta la base de datos, la extensión `vector` o una versión activa.
+Degradado (`503`) si falta la base de datos, la extensión `vector`, los índices HNSW/GIN o una versión activa. `database` e `index` valen `ok` o `unavailable`; `knowledgeVersion` es `kv-N` con versión activa y `null` si no hay.
+
+```json
+{"status":"degraded","database":"ok","index":"unavailable","knowledgeVersion":null}
+```
 
 ## Versionado
 

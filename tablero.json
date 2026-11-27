@@ -228,7 +228,7 @@
         "reopened": 0
       },
       "work": null,
-      "integratedAt": null,
+      "integratedAt": "2026-11-27T22:57:47.603Z",
       "sprint": null,
       "updatedAt": "2026-11-27T22:45:33.683Z"
     },
@@ -849,6 +849,15 @@
       "title": "Un cliente del banco se puede dar de alta, consultar y administrar",
       "floor": "Marcelo",
       "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-27T22:57:47.603Z",
+      "kind": "integrated",
+      "id": null,
+      "title": null,
+      "floor": "Marcelo",
+      "account": "opensoma.app@gmail.com",
+      "text": "P-2"
     }
   ],
   "deadline": null,

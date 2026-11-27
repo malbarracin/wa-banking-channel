@@ -105,6 +105,7 @@ def retrieve(
                 types=filters.get("type"),
                 lexical_bonus=settings.lexical_bonus,
                 top_k=top_k,
+                real=settings.environment == "real",
             )
     except (psycopg.Error, EmbeddingProviderUnavailable) as error:
         raise KnowledgeUnavailable() from error

@@ -11,7 +11,7 @@ from wa_knowledge_rag.audit import record
 from wa_knowledge_rag.content import load_piece
 from wa_knowledge_rag.ingestion.params import load_parameters
 from wa_knowledge_rag.ingestion.validate import validate_piece
-from wa_knowledge_rag.security.pii import contains_instruction, detect_pii
+from wa_knowledge_rag.security.pii import contains_instruction, detect_pii, is_phone
 from wa_knowledge_rag.store.repositories import parameter_versions, piece_versions
 from wa_knowledge_rag.workflow.approvals import latest_version, lock_subject
 from wa_knowledge_rag.workflow.states import Status
@@ -21,7 +21,7 @@ _SLUG = re.compile(r"[a-z0-9]+(?:[-_][a-z0-9]+)*")
 
 
 def ingest_piece(
-    connection: Connection[DictRow], path: Path, *, proposal: bool, max_chars: int
+    connection: Connection[DictRow], path: Path, *, proposal: bool, max_chars: int, changed_only: bool = False
 ) -> tuple[tuple[str, ...], str | None]:
     subject = "desconocido"
     version = None
@@ -69,11 +69,13 @@ def ingest_piece(
             valid_from=valid_from,
             valid_to=valid_to,
         )
+    elif changed_only:
+        return (), None
     record(connection, "ingest", subject=subject, version=version)
     return warnings, None
 
 
-def ingest_parameters(connection: Connection[DictRow]) -> list[str]:
+def ingest_parameters(connection: Connection[DictRow], *, changed_only: bool = False) -> list[str]:
     try:
         candidates = load_parameters()
     except (OSError, UnicodeError, ValueError):
@@ -95,7 +97,7 @@ def ingest_parameters(connection: Connection[DictRow]) -> list[str]:
             not value.strip()
             or "{{" in value
             or contains_instruction(value)
-            or detect_pii(value, approved_values={value} if _is_phone(value) else ())
+            or detect_pii(value, approved_values={value} if is_phone(value) else ())
         ):
             record(connection, "reject", subject=name, version=version or None, subject_kind="parameter")
             errors.append("Valor de parámetro inválido")
@@ -110,17 +112,10 @@ def ingest_parameters(connection: Connection[DictRow]) -> list[str]:
                 value=value,
                 is_test=candidate.is_test,
             )
+        elif changed_only:
+            continue
         record(connection, "ingest", subject=name, version=version, subject_kind="parameter")
     return errors
-
-
-def _is_phone(value: str) -> bool:
-    findings = detect_pii(value)
-    return (
-        len(findings) == 1
-        and findings[0].kind == "telefono"
-        and (findings[0].start, findings[0].end) == (0, len(value))
-    )
 
 
 def inventory(connection: Connection[DictRow], *, family: str | None, status: str | None) -> list[DictRow]:

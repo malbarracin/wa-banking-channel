@@ -105,7 +105,7 @@ def test_missing_compliance(knowledge: tuple[Command, CountingEmbedder]) -> None
     assert not embedder.documents
 
 
-def test_parameters_must_be_approved(knowledge: tuple[Command, CountingEmbedder]) -> None:
+def test_parameters_must_be_approved(knowledge: tuple[Command, CountingEmbedder], migrated: Settings) -> None:
     run, embedder = knowledge
     approve_piece(run, "horario", "Transferencias: {{horario_transferencias}}.")
     run("publish", "horario", error="Parámetro sin valor aprobado: horario_transferencias")
@@ -114,6 +114,9 @@ def test_parameters_must_be_approved(knowledge: tuple[Command, CountingEmbedder]
     assert len(embedder.documents) == 1
     assert "horario de prueba" in embedder.documents[0]
     assert "{{" not in embedder.documents[0]
+    with transaction(migrated) as connection:
+        (chunk,) = connection.execute("SELECT text FROM kb_chunk WHERE piece_id = 'horario'").fetchall()
+        assert chunk["text"].strip() == "Transferencias: horario de prueba."
 
 
 def test_real_rejects_test_approvals(
@@ -171,6 +174,18 @@ def test_release_replace_retire_and_rollback(knowledge: tuple[Command, CountingE
     assert result["knowledgeVersion"] == "kv-6"
     assert [item["citation"]["version"] for item in result["results"]] == [1]
     assert len(embedder.documents) == 2
+    with transaction(migrated) as connection:
+        operations = connection.execute(
+            "SELECT action, release_no FROM kb_audit WHERE action IN ('publish', 'retire', 'rollback') ORDER BY id"
+        ).fetchall()
+        assert [(row["action"], row["release_no"]) for row in operations] == [
+            ("publish", 1),
+            ("publish", 2),
+            ("retire", 3),
+            ("rollback", 4),
+            ("rollback", 5),
+            ("rollback", 6),
+        ]
 
 
 def test_sync_expiration_and_noop(knowledge: tuple[Command, CountingEmbedder], migrated: Settings) -> None:
@@ -182,8 +197,15 @@ def test_sync_expiration_and_noop(knowledge: tuple[Command, CountingEmbedder], m
     assert len(embedder.documents) == 1
     with transaction(migrated) as connection:
         connection.execute("UPDATE kb_piece_version SET valid_to = '2001-01-01T00:00:00Z' WHERE version = 1")
+    query = "Ayuda oficial para el canal."
+    before_sync = retrieve(migrated, embedder, query=query, correlation_id="prueba", audience="publico")
+    assert before_sync["knowledgeVersion"] == "kv-1"
+    assert before_sync["results"] == []
     assert run("sync") == "kv-2"
     assert run("sync") == "kv-2"
+    after_sync = retrieve(migrated, embedder, query=query, correlation_id="prueba", audience="publico")
+    assert after_sync["knowledgeVersion"] == "kv-2"
+    assert after_sync["results"] == []
     assert len(embedder.documents) == 1
     with transaction(migrated) as connection:
         (active,) = releases.find(connection, is_active=True)

@@ -94,24 +94,20 @@
         }
       },
       "stalled": null,
-      "waiting": {
-        "floor": "Marcelo",
-        "text": "espera una aprobación",
-        "at": "2026-11-27T20:57:25.367Z"
-      },
+      "waiting": null,
       "times": {
         "startedAt": "2026-11-27T20:54:13.444Z",
         "releasedAt": null,
         "workedMs": 0,
         "stalledMs": 0,
-        "waitingMs": 0,
+        "waitingMs": 101433,
         "stalls": 0,
         "reopened": 0
       },
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T20:57:25.367Z"
+      "updatedAt": "2026-11-27T20:59:06.800Z"
     },
     {
       "id": "P-3",
@@ -629,6 +625,14 @@
       "id": "P-3",
       "title": "El banco tiene su conocimiento aprobado disponible para responder con citas",
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-27T20:59:06.800Z",
+      "kind": "answered",
+      "id": "P-2",
+      "title": "Un cliente del banco se puede dar de alta, consultar y administrar",
+      "floor": "Marcelo",
       "account": "opensoma.app@gmail.com"
     }
   ],

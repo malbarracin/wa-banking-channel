@@ -43,6 +43,11 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, "La solicitud tiene datos inválidos", details);
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorResponse> handleClientBadRequest(BadRequestException exception) {
+        return build(HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST, exception.getMessage(), List.of());
+    }
+
     @ExceptionHandler({
             IllegalArgumentException.class,
             HttpMessageNotReadableException.class,

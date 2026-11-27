@@ -106,8 +106,8 @@ def retrieve(
                 lexical_bonus=settings.lexical_bonus,
                 top_k=top_k,
             )
-    except (psycopg.Error, EmbeddingProviderUnavailable):
-        raise KnowledgeUnavailable() from None
+    except (psycopg.Error, EmbeddingProviderUnavailable) as error:
+        raise KnowledgeUnavailable() from error
 
     if not rows:
         raise KnowledgeUnavailable()

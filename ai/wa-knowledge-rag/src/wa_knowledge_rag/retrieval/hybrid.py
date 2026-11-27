@@ -3,8 +3,10 @@
 from collections.abc import Sequence
 
 from pgvector import Vector
-from psycopg import Connection
+from psycopg import Connection, OperationalError
 from psycopg.rows import DictRow
+
+from wa_knowledge_rag.store.indexes import indexes_ready
 
 _SEARCH = """
 WITH active AS (
@@ -92,6 +94,8 @@ def search(
     top_k: int,
 ) -> list[DictRow]:
     """Return ranked pieces, or a release-only row when no chunk matches."""
+    if not indexes_ready(connection):
+        raise OperationalError("Los índices de recuperación no están disponibles.")
     # HNSW applies release and metadata filters after scanning the index.
     connection.execute("SET LOCAL hnsw.iterative_scan = strict_order")
     return connection.execute(

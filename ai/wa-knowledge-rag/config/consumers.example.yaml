@@ -1,0 +1,5 @@
+# Convertí esta lista a JSON para configurar KB_CONSUMERS.
+# Completá token_sha256 con el SHA-256 hexadecimal de la credencial de servicio.
+- id: wa-conversation-agent
+  token_sha256: ""
+  allow_internal: true

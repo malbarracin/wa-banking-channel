@@ -1,0 +1,108 @@
+name: ia
+
+on:
+  push:
+    paths:
+      - "ai/**"
+      - "shared/contracts/**"
+      - "scripts/verify_ia.py"
+      - ".github/workflows/ia.yml"
+  pull_request:
+    paths:
+      - "ai/**"
+      - "shared/contracts/**"
+      - "scripts/verify_ia.py"
+      - ".github/workflows/ia.yml"
+  workflow_dispatch:
+
+jobs:
+  quality:
+    name: quality gates
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai/wa-knowledge-rag
+    services:
+      kb-postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: kb
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: wa_knowledge
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U kb -d wa_knowledge"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      KB_DATABASE_URL: postgresql://kb:ci@localhost:5432/wa_knowledge
+      KB_ENVIRONMENT: test
+      KB_APPROVAL_POLICY_PATH: config/approval-policy.yaml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.9"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Verify IA components
+        working-directory: .
+        run: python scripts/verify_ia.py
+
+      - name: Integration tests
+        run: uv run --frozen pytest -m integration -q --no-header -rfE --tb=short
+
+      - name: Content coverage
+        run: uv run --frozen kb coverage
+
+      - name: Migrate and verify-pii
+        run: |
+          uv run --frozen kb db migrate
+          uv run --frozen kb verify-pii
+
+      - name: Dependency audit
+        run: uv run --frozen --with pip-audit pip-audit
+
+      - name: Compose config
+        run: |
+          cp .env.example .env
+          cp .env.compose.example .env.compose
+          printf 'POSTGRES_PASSWORD=ci\n' >> .env.compose
+          docker compose --env-file .env.compose config >/dev/null
+
+      - name: Build image
+        run: docker compose --env-file .env.compose build wa-knowledge-rag
+
+  evals:
+    name: agent evals (manual)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai/wa-knowledge-rag
+    env:
+      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.9"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Sync
+        run: uv sync --frozen
+
+      - name: Run evals
+        run: uv run --frozen pytest -m evals -q --no-header -rfE --tb=short

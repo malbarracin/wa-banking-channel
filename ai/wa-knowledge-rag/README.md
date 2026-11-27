@@ -25,6 +25,31 @@ El servicio escucha en `KB_PORT` (8102 por defecto). Usá `GET /health` para com
 disponibilidad y `GET /metrics` para consultar las métricas Prometheus. El formato de
 `KB_CONSUMERS` se muestra en `config/consumers.example.yaml` y se carga como JSON.
 
+`GET /health` responde **200** cuando hay una publicación activa (`knowledgeVersion` = `kv-N`).
+Sin release activa (solo migrado, o base vacía) responde **503** con `status: degraded`; la API
+sigue escuchando y el healthcheck del contenedor lo trata como vivo.
+
+## Contenedores
+
+Desde esta carpeta, copiá `.env.example` a `.env` y `.env.compose.example` a `.env.compose`.
+Completá `POSTGRES_PASSWORD`, `GOOGLE_API_KEY` y `KB_CONSUMERS` (sin subir esos archivos).
+
+```bash
+docker compose --env-file .env.compose up --build
+```
+
+Servicios:
+
+| Servicio | Rol |
+|----------|-----|
+| `kb-postgres` | PostgreSQL 16 + pgvector (`pgvector/pgvector:pg16`) |
+| `wa-knowledge-rag` | Corre `kb db migrate` y después la API en el puerto 8102 (usuario no root) |
+| `wa-knowledge-rag-sync` | Ejecuta `kb sync --loop` con intervalo `KB_SYNC_INTERVAL` (por defecto `24h`) |
+
+El scheduler de sync es un servicio del compose (no cron del host): reutiliza la misma imagen y el
+entrypoint con `command: ["sync"]`. Tras el primer arranque, publicá el contenido mínimo con
+aprobaciones de prueba (`docs/proceso-de-contenido.md`) para que `/health` pase a 200.
+
 ## Cobertura de las preguntas frecuentes
 
 Ejecutá `uv run kb coverage` para comprobar que los borradores cubren los temas de

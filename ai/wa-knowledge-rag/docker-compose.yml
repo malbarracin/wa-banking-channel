@@ -1,0 +1,63 @@
+services:
+  kb-postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-kb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.compose}
+      POSTGRES_DB: ${POSTGRES_DB:-wa_knowledge}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - kb_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  wa-knowledge-rag:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: wa-knowledge-rag:local
+    command: ["api"]
+    env_file:
+      - .env
+    environment:
+      KB_DATABASE_URL: postgresql://${POSTGRES_USER:-kb}:${POSTGRES_PASSWORD}@kb-postgres:5432/${POSTGRES_DB:-wa_knowledge}
+      KB_PORT: ${KB_PORT:-8102}
+    ports:
+      - "${KB_PORT:-8102}:8102"
+    depends_on:
+      kb-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "/app/docker/healthcheck.py"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 45s
+
+  wa-knowledge-rag-sync:
+    image: wa-knowledge-rag:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["sync"]
+    env_file:
+      - .env
+    environment:
+      KB_DATABASE_URL: postgresql://${POSTGRES_USER:-kb}:${POSTGRES_PASSWORD}@kb-postgres:5432/${POSTGRES_DB:-wa_knowledge}
+      KB_SYNC_INTERVAL: ${KB_SYNC_INTERVAL:-24h}
+    depends_on:
+      kb-postgres:
+        condition: service_healthy
+      wa-knowledge-rag:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+
+volumes:
+  kb_postgres_data:

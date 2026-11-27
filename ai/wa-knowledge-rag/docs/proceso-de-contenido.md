@@ -184,7 +184,7 @@ Sin argumentos, vuelve al contenido de la release padre inmediata. En todos los 
 uv run kb sync
 ```
 
-Ingesta solo lo cambiado en `content/`, publica lo aprobado pendiente y refleja vencimientos de vigencia. Si no hay cambios aprobados ni vencimientos, no crea release. La frecuencia la define `KB_SYNC_INTERVAL` (por defecto `24h`); un scheduler externo (cron o servicio del compose) debe disparar `kb sync` con ese intervalo. Para una corrida local continua:
+Ingesta solo lo cambiado en `content/`, publica lo aprobado pendiente y refleja vencimientos de vigencia. Si no hay cambios aprobados ni vencimientos, no crea release. La frecuencia la define `KB_SYNC_INTERVAL` (por defecto `24h`). En Docker Compose el servicio `wa-knowledge-rag-sync` ejecuta `kb sync --loop` con ese intervalo (`docker compose --env-file .env.compose up`). Para una corrida local continua sin compose:
 
 ```bash
 uv run kb sync --loop

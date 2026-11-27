@@ -1618,7 +1618,12 @@
               "reopened": 0
             },
             "text": "P-3 «El banco tiene su conocimiento aprobado disponible para responder con citas» volvió 9 veces: era grande o no estaba claro. Partir los ítems parecidos y escribir sus criterios de aceptación antes de arrancar.",
-            "status": "open"
+            "status": "accepted",
+            "by": {
+              "account": "opensoma.app@gmail.com",
+              "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+            },
+            "at": "2026-11-27T23:44:46.724Z"
           },
           {
             "id": "carried:2",

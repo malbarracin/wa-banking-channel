@@ -1,5 +1,12 @@
 package com.bcra.users.ws.audit.entity;
 
+import io.swagger.v3.oas.annotations.media.Schema;
+
+/** Resultado de la operación auditada. */
+@Schema(description = "Resultado de la operación", allowableValues = {"OK", "ERROR"})
 public enum AuditResult {
-    OK, ERROR
+    /** Operación aplicada con éxito. */
+    OK,
+    /** Operación rechazada o fallida. */
+    ERROR
 }

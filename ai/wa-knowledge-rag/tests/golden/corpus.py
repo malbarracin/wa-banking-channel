@@ -22,10 +22,11 @@ type Command = Callable[..., str]
 
 
 class _ClosableEmbedder:
-    """CLI registers provider.close() on the ExitStack; FakeEmbedder has none."""
+    """Satisfy the CLI ExitStack close callback without touching a caller-owned embedder."""
 
-    def __init__(self, inner: Embedder) -> None:
+    def __init__(self, inner: Embedder, *, owns_inner: bool) -> None:
         self._inner = inner
+        self._owns_inner = owns_inner
 
     def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
         return self._inner.embed_documents(texts)
@@ -34,6 +35,8 @@ class _ClosableEmbedder:
         return self._inner.embed_query(text)
 
     def close(self) -> None:
+        if not self._owns_inner:
+            return
         closer = getattr(self._inner, "close", None)
         if callable(closer):
             closer()
@@ -62,8 +65,9 @@ def publish_minimum_corpus(
     monkeypatch.setenv("KB_ENVIRONMENT", "test")
     monkeypatch.chdir(tmp_path)
 
+    owns_inner = embedder is None
     inner: Embedder = embedder or FakeEmbedder(migrated.embedding_dimensions)
-    provider = _ClosableEmbedder(inner)
+    provider = _ClosableEmbedder(inner, owns_inner=owns_inner)
     monkeypatch.setattr(cli, "GoogleEmbedder", lambda _settings: provider)
 
     def run(*args: str) -> str:

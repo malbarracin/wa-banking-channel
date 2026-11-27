@@ -34,11 +34,8 @@ def real_corpus(
         environment="test",
     )
     # Publish with the real embedder so the index matches query embeddings.
+    # Caller owns the embedder: corpus must not close it; this fixture's consumer closes in finally.
     embedder = GoogleEmbedder(settings)
-    monkeypatch.setattr(
-        "wa_knowledge_rag.cli.GoogleEmbedder",
-        lambda _settings: embedder,
-    )
     publish_minimum_corpus(migrated, tmp_path, monkeypatch, capsys, embedder=embedder)
     return settings, embedder
 

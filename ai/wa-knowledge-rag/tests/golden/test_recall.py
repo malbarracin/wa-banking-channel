@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import statistics
 import time
+from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
@@ -18,12 +19,49 @@ from .corpus import publish_minimum_corpus
 pytestmark = pytest.mark.integration
 
 
+class _FailAfterCloseEmbedder(FakeEmbedder):
+    """Reproduces a closed Google client: any use after close() must fail."""
+
+    def __init__(self, dimensions: int = 768) -> None:
+        super().__init__(dimensions)
+        self.closed = False
+
+    def close(self) -> None:
+        self.closed = True
+
+    def embed_documents(self, texts: Sequence[str]) -> list[list[float]]:
+        if self.closed:
+            raise RuntimeError("Cannot send a request, as the client has been closed.")
+        return super().embed_documents(texts)
+
+    def embed_query(self, text: str) -> list[float]:
+        if self.closed:
+            raise RuntimeError("Cannot send a request, as the client has been closed.")
+        return super().embed_query(text)
+
+
 @pytest.fixture
 def corpus(
     migrated: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> tuple[Settings, FakeEmbedder]:
     _, embedder = publish_minimum_corpus(migrated, tmp_path, monkeypatch, capsys)
     return migrated, embedder
+
+
+def test_publish_minimum_corpus_keeps_caller_embedder_open(
+    migrated: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    embedder = _FailAfterCloseEmbedder(migrated.embedding_dimensions)
+    publish_minimum_corpus(migrated, tmp_path, monkeypatch, capsys, embedder=embedder)
+    assert embedder.closed is False
+    response = retrieve(
+        migrated,
+        embedder,
+        "¿Cuál es el horario para transferir?",
+        correlation_id="golden-embedder-alive",
+        top_k=5,
+    )
+    assert response["results"][0]["citation"]["pieceId"] == "cuentas-horario-transferencias"
 
 
 def test_fake_embedder_recall_and_confidence(corpus: tuple[Settings, FakeEmbedder]) -> None:

@@ -1,5 +1,6 @@
 package com.bcra.users.ws.config;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,39 +30,39 @@ public class OpenApiConfig {
                                 + "actualización de datos permitidos, cambio de estado operativo y auditoría."))
                 .servers(List.of(new Server().url("http://localhost:8080").description("Local")))
                 .components(new Components()
-                        .addExamples("ValidationError", example(Map.of(
+                        .addExamples("ValidationError", example(ordered(
                                 "code", "VALIDATION_ERROR",
                                 "message", "Validation failed",
-                                "details", List.of(Map.of(
+                                "details", List.of(ordered(
                                         "field", "contactEmail",
                                         "message", "must be a well-formed email address")),
                                 "timestamp", ERROR_EXAMPLE_TIMESTAMP)))
-                        .addExamples("BadRequest", example(Map.of(
+                        .addExamples("BadRequest", example(ordered(
                                 "code", "BAD_REQUEST",
                                 "message", "Invalid request",
                                 "details", List.of(),
                                 "timestamp", ERROR_EXAMPLE_TIMESTAMP)))
-                        .addExamples("NotFound", example(Map.of(
+                        .addExamples("NotFound", example(ordered(
                                 "code", "NOT_FOUND",
                                 "message", "No existe el usuario solicitado",
                                 "details", List.of(),
                                 "timestamp", ERROR_EXAMPLE_TIMESTAMP)))
-                        .addExamples("Duplicate", example(Map.of(
+                        .addExamples("Duplicate", example(ordered(
                                 "code", "CONFLICT",
                                 "message", "DUPLICADO",
-                                "details", List.of(Map.of(
+                                "details", List.of(ordered(
                                         "field", "uniquenessValue",
                                         "message", "DUPLICADO")),
                                 "timestamp", ERROR_EXAMPLE_TIMESTAMP)))
-                        .addExamples("InvalidTransition", example(Map.of(
+                        .addExamples("InvalidTransition", example(ordered(
                                 "code", "CONFLICT",
                                 "message", "Transición de estado no permitida",
                                 "details", List.of(
-                                        Map.of("field", "previousStatus", "message", "INACTIVE"),
-                                        Map.of("field", "newStatus", "message", "ACTIVE"),
-                                        Map.of("field", "reason", "message", "TRANSICION_NO_PERMITIDA")),
+                                        ordered("field", "previousStatus", "message", "INACTIVE"),
+                                        ordered("field", "newStatus", "message", "ACTIVE"),
+                                        ordered("field", "reason", "message", "TRANSICION_NO_PERMITIDA")),
                                 "timestamp", ERROR_EXAMPLE_TIMESTAMP)))
-                        .addExamples("InternalError", example(Map.of(
+                        .addExamples("InternalError", example(ordered(
                                 "code", "INTERNAL_ERROR",
                                 "message", "Internal error",
                                 "details", List.of(),
@@ -70,5 +71,14 @@ public class OpenApiConfig {
 
     private static Example example(Object value) {
         return new Example().value(value);
+    }
+
+    /** Mapa ordenado para que el OpenAPI exportado no reordene claves entre builds. */
+    private static Map<String, Object> ordered(Object... keysAndValues) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        for (int i = 0; i < keysAndValues.length; i += 2) {
+            map.put((String) keysAndValues[i], keysAndValues[i + 1]);
+        }
+        return map;
     }
 }

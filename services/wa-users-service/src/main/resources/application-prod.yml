@@ -10,3 +10,7 @@ management:
     health:
       probes:
         enabled: true
+
+springdoc:
+  swagger-ui:
+    enabled: false

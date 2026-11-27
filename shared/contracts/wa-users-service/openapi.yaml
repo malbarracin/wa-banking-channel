@@ -549,6 +549,8 @@ components:
       - status
     AuditEntryResponse:
       type: object
+      description: "Entrada de auditoría (fecha, acción y resultado; sin valores de\
+        \ PII)"
       properties:
         id:
           type: string
@@ -608,35 +610,34 @@ components:
     ValidationError:
       value:
         code: VALIDATION_ERROR
-        timestamp: 2026-11-27T12:00:00Z
         message: Validation failed
         details:
         - field: contactEmail
           message: must be a well-formed email address
+        timestamp: 2026-11-27T12:00:00Z
     BadRequest:
       value:
         code: BAD_REQUEST
-        timestamp: 2026-11-27T12:00:00Z
         message: Invalid request
         details: []
+        timestamp: 2026-11-27T12:00:00Z
     NotFound:
       value:
         code: NOT_FOUND
-        timestamp: 2026-11-27T12:00:00Z
         message: No existe el usuario solicitado
         details: []
+        timestamp: 2026-11-27T12:00:00Z
     Duplicate:
       value:
         code: CONFLICT
-        timestamp: 2026-11-27T12:00:00Z
         message: DUPLICADO
         details:
         - field: uniquenessValue
           message: DUPLICADO
+        timestamp: 2026-11-27T12:00:00Z
     InvalidTransition:
       value:
         code: CONFLICT
-        timestamp: 2026-11-27T12:00:00Z
         message: Transición de estado no permitida
         details:
         - field: previousStatus
@@ -645,9 +646,10 @@ components:
           message: ACTIVE
         - field: reason
           message: TRANSICION_NO_PERMITIDA
+        timestamp: 2026-11-27T12:00:00Z
     InternalError:
       value:
         code: INTERNAL_ERROR
-        timestamp: 2026-11-27T12:00:00Z
         message: Internal error
         details: []
+        timestamp: 2026-11-27T12:00:00Z

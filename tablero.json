@@ -133,9 +133,46 @@
       "note": null,
       "budgetUsd": null,
       "budgetTokens": null,
-      "spent": null,
+      "spent": {
+        "usd": 1.2469,
+        "tokens": 854249,
+        "runs": {
+          "20261127-2b87": {
+            "usd": 1.2469,
+            "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+            "tools": {
+              "kilocode": 0,
+              "claude-code": 1.2469
+            },
+            "tokens": 854249,
+            "toolTokens": {
+              "claude-code": 854249
+            },
+            "loops": 0,
+            "redoTokens": 854249,
+            "roles": {
+              "analista": {
+                "kilocode": {
+                  "tokens": 0,
+                  "steps": 1,
+                  "redo": 0
+                },
+                "claude-code": {
+                  "tokens": 854249,
+                  "steps": 1,
+                  "redo": 1
+                }
+              }
+            }
+          }
+        }
+      },
       "stalled": null,
-      "waiting": null,
+      "waiting": {
+        "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+        "text": "espera una respuesta",
+        "at": "2026-11-27T21:01:38.994Z"
+      },
       "times": {
         "startedAt": "2026-11-27T20:57:46.138Z",
         "releasedAt": null,
@@ -148,7 +185,7 @@
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T20:57:46.138Z"
+      "updatedAt": "2026-11-27T21:01:38.994Z"
     },
     {
       "id": "P-4",
@@ -634,6 +671,15 @@
       "title": "Un cliente del banco se puede dar de alta, consultar y administrar",
       "floor": "Marcelo",
       "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-27T21:01:38.994Z",
+      "kind": "waiting",
+      "id": "P-3",
+      "title": "El banco tiene su conocimiento aprobado disponible para responder con citas",
+      "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com",
+      "text": "espera una respuesta"
     }
   ],
   "deadline": null,

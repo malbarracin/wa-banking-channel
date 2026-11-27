@@ -1,8 +1,8 @@
 ---
 title: Trazabilidad de requisitos a la fuente
-status: borrador
+status: aprobada
 source: Notion — Canal WhatsApp Banco — Roadmap Backend
-updated: 2026-11-27T21:01:24.284Z
+updated: 2026-11-27T21:04:07.498Z
 ---
 
 # Trazabilidad de requisitos a la fuente

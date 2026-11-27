@@ -1,8 +1,8 @@
 ---
 title: H8 — Base de conocimiento RAG (wa-knowledge-rag)
-status: borrador
+status: aprobada
 source: https://app.notion.com/p/38375bb08ca781e2accfdd9eff1722a4
-updated: 2026-11-27T21:01:12.330Z
+updated: 2026-11-27T21:04:07.500Z
 ---
 
 # H8 — Base de conocimiento RAG (`wa-knowledge-rag`)

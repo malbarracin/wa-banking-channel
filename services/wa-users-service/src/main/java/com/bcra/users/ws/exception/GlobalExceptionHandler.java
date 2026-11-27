@@ -3,6 +3,7 @@ package com.bcra.users.ws.exception;
 import java.time.Instant;
 import java.util.List;
 import com.bcra.users.ws.user.exception.DuplicateUserException;
+import com.bcra.users.ws.user.exception.InvalidStatusTransitionException;
 import com.bcra.users.ws.user.exception.InvalidUpdateFieldException;
 import com.bcra.users.ws.user.exception.UserValidationException;
 import jakarta.validation.ConstraintViolationException;
@@ -22,6 +23,7 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST, "Campo no actualizable",
                 List.of(new FieldError(exception.getField(), "Campo no permitido")));
     }
+
     @ExceptionHandler(UserValidationException.class)
     public ResponseEntity<ErrorResponse> userValidation(UserValidationException exception) {
         return response(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, "Validation failed", exception.getDetails());
@@ -32,6 +34,15 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.CONFLICT, ErrorCode.CONFLICT, exception.getMessage(),
                 List.of(new FieldError(exception.getField(), "DUPLICADO")));
     }
+
+    @ExceptionHandler(InvalidStatusTransitionException.class)
+    public ResponseEntity<ErrorResponse> invalidTransition(InvalidStatusTransitionException exception) {
+        return response(HttpStatus.CONFLICT, ErrorCode.CONFLICT, exception.getMessage(), List.of(
+                new FieldError("previousStatus", exception.getPreviousStatus().name()),
+                new FieldError("newStatus", exception.getNewStatus().name()),
+                new FieldError("reason", "TRANSICION_NO_PERMITIDA")));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> validation(MethodArgumentNotValidException exception) {
         List<FieldError> details = exception.getBindingResult().getFieldErrors().stream()

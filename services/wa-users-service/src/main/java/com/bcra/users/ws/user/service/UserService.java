@@ -10,12 +10,14 @@ import com.bcra.users.ws.audit.entity.AuditResult;
 import com.bcra.users.ws.audit.service.AuditService;
 import com.bcra.users.ws.config.BankUsersProperties;
 import com.bcra.users.ws.exception.FieldError;
+import com.bcra.users.ws.user.dto.ChangeUserStatusRequest;
 import com.bcra.users.ws.user.dto.CreateUserRequest;
 import com.bcra.users.ws.user.dto.UpdateUserRequest;
 import com.bcra.users.ws.user.dto.UserResponse;
 import com.bcra.users.ws.user.entity.User;
 import com.bcra.users.ws.user.entity.UserStatus;
 import com.bcra.users.ws.user.exception.DuplicateUserException;
+import com.bcra.users.ws.user.exception.InvalidStatusTransitionException;
 import com.bcra.users.ws.user.exception.UserNotFoundException;
 import com.bcra.users.ws.user.exception.UserValidationException;
 import com.bcra.users.ws.user.mapper.UserMapper;
@@ -25,7 +27,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Alta y consulta de clientes según las políticas configuradas. */
+/** Alta, consulta y cambio de estado de clientes según las políticas configuradas. */
 @Service
 public class UserService {
     private final UserRepository repository;
@@ -93,10 +95,34 @@ public class UserService {
         return filter(mapper.toResponse(repository.findById(id).orElseThrow(UserNotFoundException::new)), false);
     }
 
+    /**
+     * Cambia el estado operativo según {@code bank.users.allowed-transitions} y audita el cambio.
+     *
+     * @param id      identificador interno del cliente
+     * @param request estado destino y actor
+     * @return cliente con el nuevo estado y campos públicos
+     */
+    @Transactional
+    public UserResponse changeStatus(UUID id, ChangeUserStatusRequest request) {
+        User user = repository.findByIdForUpdate(id).orElseThrow(UserNotFoundException::new);
+        UserStatus previous = user.getStatus();
+        UserStatus target = request.status();
+        List<String> allowed = policy.allowedTransitions().getOrDefault(previous.name(), List.of());
+        if (previous == target || !allowed.contains(target.name())) {
+            throw new InvalidStatusTransitionException(previous, target);
+        }
+        Instant now = Instant.now();
+        user.setStatus(target);
+        user.setUpdatedAt(now);
+        repository.saveAndFlush(user);
+        audit.registerStatusChange(user.getId(), request.actor(), AuditResult.OK, now, previous, target);
+        return filter(mapper.toResponse(user), false);
+    }
+
     /** Actualiza y audita los campos autorizados en una sola transacción. */
     @Transactional
     public UserResponse update(UUID id, UpdateUserRequest request, Set<String> fields, String actor) {
-        User user = repository.findById(id).orElseThrow(UserNotFoundException::new);
+        User user = repository.findByIdForUpdate(id).orElseThrow(UserNotFoundException::new);
         List<FieldError> errors = new ArrayList<>();
         validator.validate(request).forEach(violation -> errors.add(
                 new FieldError(violation.getPropertyPath().toString(), violation.getMessage())));

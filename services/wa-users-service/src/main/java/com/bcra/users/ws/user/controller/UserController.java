@@ -1,9 +1,11 @@
 package com.bcra.users.ws.user.controller;
 
-import java.util.UUID;
-import java.util.Set;
 import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 import com.bcra.users.ws.config.BankUsersProperties;
+import com.bcra.users.ws.exception.ErrorResponse;
+import com.bcra.users.ws.user.dto.ChangeUserStatusRequest;
 import com.bcra.users.ws.user.dto.UpdateUserRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,20 +14,24 @@ import com.bcra.users.ws.user.dto.UserResponse;
 import com.bcra.users.ws.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** API de alta y consulta de clientes. */
+/** API de alta, consulta y cambio de estado de clientes. */
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserController {
@@ -60,9 +66,53 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "Cliente inexistente"),
             @ApiResponse(responseCode = "500", description = "Error interno")})
     @GetMapping("/{id}")
-    public UserResponse find(@Parameter(description = "Identificador interno", example = "123e4567-e89b-12d3-a456-426614174000")
-            @PathVariable UUID id) {
+    public UserResponse find(@Parameter(description = "Identificador interno",
+            example = "123e4567-e89b-12d3-a456-426614174000") @PathVariable UUID id) {
         return service.find(id);
+    }
+
+    /**
+     * Cambia el estado operativo del cliente según la política de transiciones.
+     *
+     * @param id      identificador interno
+     * @param request estado destino y actor
+     * @return cliente con el nuevo estado
+     */
+    @Operation(summary = "Cambiar estado operativo",
+            description = "Aplica una transición permitida (ACTIVE/SUSPENDED/INACTIVE) y audita el cambio.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    content = @Content(schema = @Schema(implementation = ChangeUserStatusRequest.class), examples = {
+                            @ExampleObject(name = "Suspender",
+                                    value = "{\"status\":\"SUSPENDED\",\"actor\":\"operador-123\"}"),
+                            @ExampleObject(name = "Reactivar",
+                                    value = "{\"status\":\"ACTIVE\",\"actor\":\"operador-123\"}"),
+                            @ExampleObject(name = "Baja lógica",
+                                    value = "{\"status\":\"INACTIVE\",\"actor\":\"operador-123\"}")})))
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Estado actualizado",
+                    content = @Content(schema = @Schema(implementation = UserResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Estado inválido o datos incompletos",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class), examples = @ExampleObject(
+                            value = "{\"code\":\"BAD_REQUEST\",\"message\":\"Invalid request\",\"details\":[],"
+                                    + "\"timestamp\":\"2026-11-27T12:00:00Z\"}"))),
+            @ApiResponse(responseCode = "404", description = "Cliente inexistente",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class), examples = @ExampleObject(
+                            value = "{\"code\":\"NOT_FOUND\",\"message\":\"No existe el usuario solicitado\","
+                                    + "\"details\":[],\"timestamp\":\"2026-11-27T12:00:00Z\"}"))),
+            @ApiResponse(responseCode = "409", description = "Transición no permitida",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class), examples = @ExampleObject(
+                            value = "{\"code\":\"CONFLICT\",\"message\":\"Transición de estado no permitida\","
+                                    + "\"details\":[{\"field\":\"previousStatus\",\"message\":\"INACTIVE\"},"
+                                    + "{\"field\":\"newStatus\",\"message\":\"ACTIVE\"},"
+                                    + "{\"field\":\"reason\",\"message\":\"TRANSICION_NO_PERMITIDA\"}],"
+                                    + "\"timestamp\":\"2026-11-27T12:00:00Z\"}"))),
+            @ApiResponse(responseCode = "500", description = "Error interno")})
+    @PatchMapping("/{id}/status")
+    public UserResponse changeStatus(
+            @Parameter(description = "Identificador interno", example = "123e4567-e89b-12d3-a456-426614174000")
+            @PathVariable UUID id,
+            @Valid @RequestBody ChangeUserStatusRequest request) {
+        return service.changeStatus(id, request);
     }
 
     /** Actualiza los campos configurados y registra el actor de la modificación. */

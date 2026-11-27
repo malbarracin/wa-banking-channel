@@ -1,6 +1,16 @@
 {
  "items": [
   {
+   "id": "h7xhklam",
+   "texto": "Base de conocimiento (ai/wa-knowledge-rag): el texto de las preguntas frecuentes mínimas lo redacta el equipo como borrador, solo con lo que dicen las especificaciones H3–H6/H9 y sin cifras (van como parámetros). Se publica únicamente con la aprobación registrada del área dueña y de compliance; en desarrollo y pruebas la registra el equipo, marcada como aprobación de prueba, y no sirve para un entorno real.",
+   "tipo": "decision",
+   "rol": "analista",
+   "run": null,
+   "at": "2026-11-27T21:03:40.126Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
    "id": "sgvc0zrs",
    "texto": "La orden del hito H0.1 cita specs/scrum/backlog.md como dato de entrada, pero ese archivo no existe en el repositorio (specs/ arrancó vacío): las seis definiciones de negocio abiertas están en la memoria del proyecto y no aplican a la plataforma de eventos, que no tiene lógica de negocio. No frenar el trabajo buscando ese archivo.",
    "tipo": "trampa",
@@ -29,6 +39,16 @@
    "at": "2026-11-27T21:02:26.918Z",
    "veces": 1,
    "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "uijwbh4z",
+   "texto": "specs/scrum/backlog.md (la tabla de definiciones pendientes que citan las órdenes) no está en el repositorio de la rama de trabajo: las definiciones pendientes se toman de la memoria del proyecto.",
+   "tipo": "trampa",
+   "rol": "analista",
+   "run": null,
+   "at": "2026-11-27T21:01:27.214Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
   },
   {
    "id": "dqw5wqk7",

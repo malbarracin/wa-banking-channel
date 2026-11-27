@@ -70,7 +70,6 @@ def assert_error(response, status, code, correlation_id):
             CORRELATION["X-Correlation-Id"],
         ),
         (AUTH, REQUEST, 400, "VALIDATION_ERROR", ""),
-        (CORRELATION | AUTH, REQUEST | {"topK": "5"}, 400, "VALIDATION_ERROR", CORRELATION["X-Correlation-Id"]),
         (CORRELATION | AUTH, {"query": ""}, 400, "VALIDATION_ERROR", CORRELATION["X-Correlation-Id"]),
         (CORRELATION | AUTH, REQUEST | {"filters": None}, 400, "VALIDATION_ERROR", CORRELATION["X-Correlation-Id"]),
         (
@@ -88,6 +87,15 @@ def test_rejected_before_retrieval(client, headers, body, status, code, correlat
     assert_error(response, status, code, correlation)
     if status == 401:
         assert response.headers["WWW-Authenticate"] == "Bearer"
+    embedder.embed_query.assert_not_called()
+
+
+@pytest.mark.parametrize("top_k", ["5", True, 5.5, 0.0, 11.0])
+def test_rejects_invalid_top_k(client, top_k):
+    http, embedder = client
+    response = http.post("/v1/retrieve", headers=AUTH | CORRELATION, json=REQUEST | {"topK": top_k})
+
+    assert_error(response, 400, "VALIDATION_ERROR", CORRELATION["X-Correlation-Id"])
     embedder.embed_query.assert_not_called()
 
 

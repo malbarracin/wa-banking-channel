@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal, Self
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from wa_knowledge_rag.content import Audience, Family, PieceType
 
@@ -24,6 +24,14 @@ class RetrieveRequest(ContractModel):
     filters: Filters = Field(default_factory=Filters)
     audience: Audience = Audience.PUBLIC
     topK: Annotated[int, Field(ge=1, le=10, strict=True)] = 5
+
+    @field_validator("topK", mode="before")
+    @classmethod
+    def normalize_top_k(cls, value: object) -> object:
+        # JSON Schema treats numbers with no fractional part as integers.
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        return value
 
 
 class Citation(ContractModel):

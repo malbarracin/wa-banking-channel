@@ -1,6 +1,7 @@
 package com.bcra.users.ws.user;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -20,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(properties = {"bank.users.required-fields=contactEmail", "bank.users.uniqueness-field=contactEmail",
+        "bank.users.updatable-fields=contactPhone",
         "bank.users.public-fields=status",
         "spring.datasource.url=jdbc:h2:mem:alternatepolicy;MODE=PostgreSQL;DB_CLOSE_DELAY=-1"})
 @AutoConfigureMockMvc
@@ -27,6 +29,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 class AlternatePolicyTest {
     @Autowired private MockMvc mvc;
     @Autowired private JdbcTemplate jdbc;
+
+    @Test
+    @DisplayName("La política alternativa limita los campos actualizables")
+    void usesConfiguredUpdatableFields() throws Exception {
+        UUID id = UUID.randomUUID();
+        jdbc.update("INSERT INTO users (id, external_id, uniqueness_field, status, created_at, updated_at) "
+                + "VALUES (?, ?, ?, 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
+                id, UUID.randomUUID().toString(), UUID.randomUUID().toString());
+        mvc.perform(patch("/api/v1/users/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"displayName\":\"Ana\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.details[0].field").value("displayName"));
+        mvc.perform(patch("/api/v1/users/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"contactPhone\":\"+5491198765432\"}"))
+                .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("SELECT contact_phone FROM users WHERE id = ?", String.class, id))
+                .isEqualTo("+5491198765432");
+    }
 
     @Test
     void usesConfiguredRequiredAndUniqueField() throws Exception {

@@ -120,13 +120,18 @@
       "dependsOn": [],
       "assignedTo": null,
       "deliverables": "La base de conocimiento funcionando en ai/wa-knowledge-rag y su contrato de consulta en shared/contracts/wa-knowledge-rag/retrieval.md (lo consume el agente)",
-      "status": "todo",
+      "status": "doing",
       "createdAt": "2026-11-27T20:52:35.267Z",
       "createdBy": {
         "account": "opensoma.app@gmail.com",
         "floor": "DESKTOP-JVEJTUF"
       },
-      "claim": null,
+      "claim": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+        "run": "20261127-2b87",
+        "at": "2026-11-27T20:57:46.138Z"
+      },
       "doneAt": null,
       "doneBy": null,
       "note": null,
@@ -135,11 +140,19 @@
       "spent": null,
       "stalled": null,
       "waiting": null,
-      "times": null,
+      "times": {
+        "startedAt": "2026-11-27T20:57:46.138Z",
+        "releasedAt": null,
+        "workedMs": 0,
+        "stalledMs": 0,
+        "waitingMs": 0,
+        "stalls": 0,
+        "reopened": 0
+      },
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T20:52:35.267Z"
+      "updatedAt": "2026-11-27T20:57:46.138Z"
     },
     {
       "id": "P-4",
@@ -609,6 +622,14 @@
       "floor": "Marcelo",
       "account": "opensoma.app@gmail.com",
       "text": "espera una aprobación"
+    },
+    {
+      "at": "2026-11-27T20:57:46.138Z",
+      "kind": "claimed",
+      "id": "P-3",
+      "title": "El banco tiene su conocimiento aprobado disponible para responder con citas",
+      "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com"
     }
   ],
   "deadline": null,

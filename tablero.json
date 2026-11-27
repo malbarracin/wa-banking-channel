@@ -67,9 +67,38 @@
       "note": null,
       "budgetUsd": null,
       "budgetTokens": null,
-      "spent": null,
+      "spent": {
+        "usd": 0,
+        "tokens": 0,
+        "runs": {
+          "20261127-5175": {
+            "usd": 0,
+            "floor": "Marcelo",
+            "tools": {
+              "kiro": 0
+            },
+            "tokens": 0,
+            "toolTokens": {},
+            "loops": 0,
+            "redoTokens": 0,
+            "roles": {
+              "analista": {
+                "kiro": {
+                  "tokens": 0,
+                  "steps": 1,
+                  "redo": 0
+                }
+              }
+            }
+          }
+        }
+      },
       "stalled": null,
-      "waiting": null,
+      "waiting": {
+        "floor": "Marcelo",
+        "text": "espera una aprobación",
+        "at": "2026-11-27T20:57:25.367Z"
+      },
       "times": {
         "startedAt": "2026-11-27T20:54:13.444Z",
         "releasedAt": null,
@@ -82,7 +111,7 @@
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T20:54:13.444Z"
+      "updatedAt": "2026-11-27T20:57:25.367Z"
     },
     {
       "id": "P-3",
@@ -571,6 +600,15 @@
       "title": "El canal transporta sus mensajes de forma asíncrona, ordenada y sin perderlos",
       "floor": "DESKTOP-JVEJTUF",
       "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-27T20:57:25.367Z",
+      "kind": "waiting",
+      "id": "P-2",
+      "title": "Un cliente del banco se puede dar de alta, consultar y administrar",
+      "floor": "Marcelo",
+      "account": "opensoma.app@gmail.com",
+      "text": "espera una aprobación"
     }
   ],
   "deadline": null,

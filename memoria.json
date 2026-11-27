@@ -1,6 +1,16 @@
 {
  "items": [
   {
+   "id": "q4rhgnv6",
+   "texto": "wa-knowledge-rag: Postgres del compose va en .env.compose (POSTGRES_*), no en .env de la app — Settings (KB_*/GOOGLE_API_KEY) rechaza extras. Arranque: docker compose --env-file .env.compose up --build. Sync = servicio wa-knowledge-rag-sync con kb sync --loop.",
+   "tipo": "trampa",
+   "rol": "devops",
+   "run": null,
+   "at": "2026-11-27T22:45:39.490Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
    "id": "icwh8291",
    "texto": "wa-users-service OpenApiConfig usa LinkedHashMap (método ordered) para components.examples; evita diff espurio en openapi.yaml entre verifies. Documentación en services/wa-users-service/delivery/ y contrato en shared/contracts/wa-users-service/.",
    "tipo": "dato",
@@ -19,6 +29,16 @@
    "at": "2026-11-27T22:35:49.249Z",
    "veces": 1,
    "de": "Marcelo"
+  },
+  {
+   "id": "dgulrpdw",
+   "texto": "wa-knowledge-rag: el contrato v1 en shared/contracts/wa-knowledge-rag/retrieval.md está alineado con la API (umbrales 0.70/0.45/0.05/0.05; /health documenta índices HNSW/GIN y cuerpo degradado). El test de contrato es `uv run pytest -q tests/unit/test_contract_retrieval.py`.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T22:32:24.624Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
   },
   {
    "id": "ninsgbiv",
@@ -41,6 +61,26 @@
    "de": "Marcelo"
   },
   {
+   "id": "fvfaazzd",
+   "texto": "wa-knowledge-rag golden: publish_minimum_corpus wraps the embedder in _ClosableEmbedder with owns_inner=False when the caller passes embedder=…, so the CLI ExitStack close after publish does not close GoogleEmbedder; the evals fixture/test must close it once in finally.",
+   "tipo": "trampa",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T22:20:20.989Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "voeyt7d2",
+   "texto": "wa-knowledge-rag set dorado: FakeEmbedder en tests/golden/test_recall.py da recall@5≥0.8 y p95≈46 ms; el gate con gemini-embedding-001 es `GOOGLE_API_KEY=… uv run pytest -q -m evals tests/golden/test_recall_evals.py -s` (umbrales por defecto 0.70/0.45/0.05/0.05 sin cambio).",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T22:13:38.639Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
    "id": "4rl9cmoz",
    "texto": "wa-users-service: OpenApiExportTest escribe shared/contracts/wa-users-service/openapi.yaml (y delivery/openapi/) desde /v3/api-docs.yaml en cada verify; correr desde services/wa-users-service con .\\mvnw.cmd -q -B clean verify y el log fuera de target/.",
    "tipo": "comando",
@@ -49,6 +89,16 @@
    "at": "2026-11-27T22:13:12.954Z",
    "veces": 1,
    "de": "Marcelo"
+  },
+  {
+   "id": "el2ni44j",
+   "texto": "wa-knowledge-rag: el proceso operativo está en docs/proceso-de-contenido.md; el e2e parsea los bloques ```kb-proceso``` y ```kb-minimo``` y los ejecuta con el entry point kb (FakeEmbedder necesita close() porque el CLI registra GoogleEmbedder.close).",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T22:12:05.940Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
   },
   {
    "id": "y2wekulm",
@@ -61,6 +111,56 @@
    "de": "Marcelo"
   },
   {
+   "id": "wbom32f4",
+   "texto": "En wa-knowledge-rag/cli.py, coverage (check_coverage) y publicación (GoogleEmbedder) conviven: ambos imports son necesarios; un merge que elija solo uno deja el CLI a medias.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T22:02:48.625Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "9xyfl963",
+   "texto": "En ai/wa-knowledge-rag, uv run kb coverage comprueba los borradores sin conexión y uv run kb coverage --published comprueba las FAQ públicas vigentes de la publicación activa con KB_DATABASE_URL.",
+   "tipo": "comando",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T21:57:54.106Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "in6ullk9",
+   "texto": "wa-knowledge-rag: en KB_ENVIRONMENT=real la búsqueda híbrida exige kb_release_item.approval_kind = 'real' (fail-closed si el ítem quedó con NULL tras migrar procedencia).",
+   "tipo": "dato",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-27T21:57:11.528Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "drk1wm2k",
+   "texto": "wa-knowledge-rag API: la escritura de kb_query_log va en _record_query fuera del except de KNOWLEDGE_UNAVAILABLE; si falla la auditoría se responde 200 con warning kb_query_log_failed (sin detalle técnico), nunca 503.",
+   "tipo": "dato",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-27T21:53:32.388Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "pbhso7zd",
+   "texto": "kb_release_item guarda las versiones exactas de los parámetros de cada renderizado junto con approval_kind y approved_at; verify-pii revisa también las publicaciones históricas y solo exceptúa los teléfonos aprobados referenciados por ese renderizado.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T21:51:55.464Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
    "id": "tqzyksi5",
    "texto": "wa-users-service: el cambio de estado se prueba con UserStatusChangeIntegrationTest y AlternateStatusPolicyTest (mapa bank.users.allowed-transitions.INACTIVE=ACTIVE). Correr desde services/wa-users-service: .\\mvnw.cmd -q -B clean verify; el log no puede ir a target/ porque clean lo borra.",
    "tipo": "dato",
@@ -71,6 +171,86 @@
    "de": "Marcelo"
   },
   {
+   "id": "ugbjdxvj",
+   "texto": "JSON Schema considera enteros los números sin parte fraccionaria, como 5.0; para topK, el modelo HTTP normaliza esos flotantes antes de aplicar el entero estricto de Pydantic y sus límites.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T21:45:18.407Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "zyggltv3",
+   "texto": "wa-knowledge-rag: load_policy debe correr dentro de approve (misma transacción) para que un YAML inválido deje reject en kb_audit; si se valida en la CLI antes, el rechazo no se audita.",
+   "tipo": "trampa",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-27T21:41:24.392Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "writuv40",
+   "texto": "Para publicar desde una operación concurrente con ingest/submit/approve, workflow.approvals.lock_subject serializa por tipo e identificador; latest_version devuelve la versión más reciente y kb_approval conserva por separado las aprobaciones reales y de prueba de cada rol.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T21:35:21.746Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "21k6mrj3",
+   "texto": "La API de recuperación puede llamar a retrieval.service.retrieve tras validar la audiencia: devuelve el cuerpo v1, y KnowledgeUnavailable.code identifica el error para HTTP 503.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T21:32:26.144Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "9vx5ovms",
+   "texto": "El flujo de contenido puede usar load_piece(path), validate_piece(piece, candidatos, max_chars_whatsapp=...) y render_parameters(text, valores_aprobados); la validación devuelve una tupla de avisos y el YAML de parámetros carga candidatos con value e is_test.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T21:27:18.308Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "ino6nzwa",
+   "texto": "En google-genai 2.34.0, HttpOptions.timeout recibe milisegundos y HttpOptions.httpx_client permite verificar con httpx.MockTransport la petición REST real del SDK sin red.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T21:25:02.481Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "996uozyo",
+   "texto": "Para validar contenido renderizado, detect_pii(text, approved_values=...) recibe solo los valores exactos de parámetros aprobados usados por esa pieza y devuelve categoría y offsets, mientras mask_pii(text) aplica el enmascarado sin excepciones.",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T21:20:07.335Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "n9ltmxs5",
+   "texto": "Con la versión de pgvector fijada en wa-knowledge-rag, psycopg devuelve Vector para embeddings y la conversión pública a lista es Vector.to_list().",
+   "tipo": "dato",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T21:18:30.328Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
    "id": "xa0sbuoz",
    "texto": "En Windows con core.filemode=false hay que marcar el wrapper con git update-index --chmod=+x services/wa-users-service/mvnw para que quede 100755; si no, en Unix ./mvnw falla por permiso denegado.",
    "tipo": "trampa",
@@ -79,6 +259,36 @@
    "at": "2026-11-27T21:17:52.205Z",
    "veces": 1,
    "de": "Marcelo"
+  },
+  {
+   "id": "wtg7a71j",
+   "texto": "Si uvx falla porque ~/.local/share/uv/tools es de solo lectura, ejecutar con UV_TOOL_DIR apuntando a una carpeta temporal escribible creada con mktemp -d.",
+   "tipo": "trampa",
+   "rol": "dev-ia",
+   "run": null,
+   "at": "2026-11-27T21:12:20.100Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "bi17ey0k",
+   "texto": "Los ADR van en docs/adr/ con prefijo del componente (p. ej. docs/adr/wa-knowledge-rag-0001-*.md) para que no choquen los números entre componentes.",
+   "tipo": "decision",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-27T21:06:47.754Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "k2vhaahf",
+   "texto": "wa-knowledge-rag: paquete wa_knowledge_rag, FastAPI en 8102 con POST /v1/retrieve (Bearer de servicio + X-Correlation-Id) y GET /health; confianza level alta|baja|sin_respuesta y suggestion responder|aclarar|derivar; embeddings gemini-embedding-001 a 768 dims (text-embedding-004 ya no se sirve); releases kv-N en Postgres; CLI `kb` (ingest/submit/approve/publish/retire/rollback/sync/verify-pii). Detalle en specs/wa-knowledge-rag/arquitectura.md.",
+   "tipo": "decision",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-27T21:06:46.761Z",
+   "veces": 1,
+   "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
   },
   {
    "id": "h7xhklam",

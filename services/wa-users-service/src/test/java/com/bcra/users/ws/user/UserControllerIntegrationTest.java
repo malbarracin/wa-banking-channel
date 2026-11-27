@@ -2,6 +2,7 @@ package com.bcra.users.ws.user;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -30,6 +31,41 @@ class UserControllerIntegrationTest {
     @Autowired private UserRepository users;
     @Autowired private AuditRepository audits;
     @Autowired private ObjectMapper json;
+
+    @Test
+    @DisplayName("Actualiza y audita el campo autorizado y rechaza solicitudes inválidas sin cambios")
+    void updatesAndAuditsOnlyAllowedFields() throws Exception {
+        String body = "{\"uniquenessValue\":\"" + UUID.randomUUID() + "\",\"displayName\":\"Ana\"}";
+        String created = mvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        UUID id = UUID.fromString(json.readTree(created).get("id").asText());
+        var previous = users.findById(id).orElseThrow().getUpdatedAt();
+        mvc.perform(patch("/api/v1/users/{id}", id).header("X-Actor", "operator")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"displayName\":\"Juan\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.displayName").value("Juan"));
+        var user = users.findById(id).orElseThrow();
+        assertThat(user.getDisplayName()).isEqualTo("Juan");
+        assertThat(user.getUpdatedAt()).isAfterOrEqualTo(previous);
+        assertThat(audits.findByUserIdOrderByOccurredAtAsc(id)).anySatisfy(entry -> {
+            assertThat(entry.getAction()).isEqualTo(AuditAction.MODIFICACION);
+            assertThat(entry.getResult()).isEqualTo(AuditResult.OK);
+            assertThat(entry.getChangedFields()).isEqualTo("displayName");
+            assertThat(entry.getActor()).isEqualTo("operator");
+        });
+        mvc.perform(patch("/api/v1/users/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"displayName\":\"Otro\",\"uniquenessValue\":\"x\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.details[0].field").value("uniquenessValue"));
+        mvc.perform(patch("/api/v1/users/{id}", id).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"contactEmail\":\"invalid\",\"contactPhone\":\"bad\"}"))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details[0].field").exists());
+        assertThat(users.findById(id).orElseThrow().getDisplayName()).isEqualTo("Juan");
+        assertThat(audits.findByUserIdOrderByOccurredAtAsc(id)).hasSize(2);
+        mvc.perform(patch("/api/v1/users/{id}", UUID.randomUUID()).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"displayName\":\"Juan\"}"))
+                .andExpect(status().isNotFound()).andExpect(jsonPath("$.code").value("NOT_FOUND"));
+    }
 
     @Test
     @DisplayName("Crea y audita al cliente, protege sus datos y rechaza el duplicado")

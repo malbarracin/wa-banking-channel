@@ -10,6 +10,7 @@ import com.bcra.users.ws.audit.service.AuditService;
 import com.bcra.users.ws.config.BankUsersProperties;
 import com.bcra.users.ws.exception.FieldError;
 import com.bcra.users.ws.user.dto.CreateUserRequest;
+import com.bcra.users.ws.user.dto.UpdateUserRequest;
 import com.bcra.users.ws.user.dto.UserResponse;
 import com.bcra.users.ws.user.entity.User;
 import com.bcra.users.ws.user.entity.UserStatus;
@@ -89,6 +90,25 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse find(UUID id) {
         return filter(mapper.toResponse(repository.findById(id).orElseThrow(UserNotFoundException::new)), false);
+    }
+
+    /** Actualiza y audita los campos autorizados en una sola transacción. */
+    @Transactional
+    public UserResponse update(UUID id, UpdateUserRequest request, Set<String> fields, String actor) {
+        User user = repository.findById(id).orElseThrow(UserNotFoundException::new);
+        List<FieldError> errors = new ArrayList<>();
+        validator.validate(request).forEach(violation -> errors.add(
+                new FieldError(violation.getPropertyPath().toString(), violation.getMessage())));
+        if (!errors.isEmpty()) {
+            throw new UserValidationException(errors);
+        }
+        mapper.updateEntity(request, user);
+        Instant now = Instant.now();
+        user.setUpdatedAt(now);
+        repository.saveAndFlush(user);
+        audit.registerModification(id, actor == null || actor.isBlank() ? "system" : actor,
+                AuditResult.OK, now, fields);
+        return filter(mapper.toResponse(user), false);
     }
 
     private String value(CreateUserRequest request, String field) {

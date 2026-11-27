@@ -19,6 +19,7 @@ from wa_knowledge_rag.retrieval.confidence import assess_confidence
         ([0.45], "baja", "derivar", 0.45),
         ([0.70, 0.69], "alta", "responder", 0.70),
         ([0.45, 0.50], "baja", "aclarar", 0.50),
+        ([0.50, 0.55], "baja", "aclarar", 0.55),
         ([0.4500, 0.5001], "baja", "derivar", 0.5001),
         ([0.4499, 0.45], "baja", "derivar", 0.45),
     ],

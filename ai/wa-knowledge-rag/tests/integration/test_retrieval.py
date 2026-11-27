@@ -94,6 +94,7 @@ def test_hybrid_retrieval(migrated):
 
     try:
         public = retrieve(migrated, embedder, "Cobertura", correlation_id="synthetic")
+        assert public["correlationId"] == "synthetic"
         assert public["knowledgeVersion"] == f"kv-{active}"
         assert [item["citation"]["pieceId"] for item in public["results"]] == ["seguro", "cuenta"]
         assert public["results"][0]["score"] == pytest.approx(0.65)
@@ -110,6 +111,8 @@ def test_hybrid_retrieval(migrated):
             "approvedAt": _APPROVED_AT.isoformat(),
             "approvalKind": "prueba",
         }
+        citation_fields = public["results"][0]["citation"].keys()
+        assert all(item["citation"].keys() == citation_fields for item in public["results"])
         internal = retrieve(
             migrated,
             embedder,
@@ -120,6 +123,7 @@ def test_hybrid_retrieval(migrated):
         )
         results = {item["citation"]["pieceId"]: item for item in internal["results"]}
         assert results.keys() == {"seguro", "interno"}
+        assert all(item["citation"].keys() == citation_fields for item in results.values())
         assert results["seguro"]["publishable"]
         assert not results["interno"]["publishable"]
         assert results["interno"]["score"] == 1.0

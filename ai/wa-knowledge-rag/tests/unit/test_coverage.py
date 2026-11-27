@@ -84,6 +84,24 @@ def test_cli_covers_files_and_fails_when_a_faq_is_removed(draft_cli: Path, capsy
 
 
 @pytest.mark.parametrize(
+    ("original", "replacement"),
+    [("audience: publico", "audience: interno"), ("type: faq", "type: guia"), ("family: tarjetas", "family: canal")],
+)
+def test_cli_excludes_ineligible_drafts(
+    draft_cli: Path, capsys: pytest.CaptureFixture[str], original: str, replacement: str
+) -> None:
+    path = draft_cli / "tarjetas/aviso-de-viaje.md"
+    source = path.read_text(encoding="utf-8")
+    assert original in source
+    path.write_text(source.replace(original, replacement, 1), encoding="utf-8")
+
+    with pytest.raises(SystemExit) as error:
+        main()
+    assert error.value.code == 1
+    assert "tarjetas/aviso-de-viaje en los archivos fuente" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
     ("manifest", "message"),
     [
         ("[]", "manifiesto"),

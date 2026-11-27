@@ -1,4 +1,5 @@
 import json
+import logging
 import math
 import os
 import subprocess
@@ -51,8 +52,30 @@ def test_google_sends_configured_model_dimension_and_task_types(settings):
         assert [entry["content"]["parts"][0]["text"] for entry in entries] == texts
 
 
+def test_google_preserves_document_order_across_batches(settings):
+    batch_sizes = []
+
+    def handle(request):
+        entries = json.loads(request.content)["requests"]
+        batch_sizes.append(len(entries))
+        vectors = []
+        for entry in entries:
+            index = int(entry["content"]["parts"][0]["text"].removeprefix("Documento "))
+            vectors.append({"values": [index, 1, 2]})
+        return httpx.Response(200, json={"embeddings": vectors})
+
+    documents = [f"Documento {index}" for index in range(33)]
+    with httpx.Client(transport=httpx.MockTransport(handle)) as client:
+        embedder = GoogleEmbedder(settings, http_client=client)
+        assert embedder.embed_documents(documents) == [[index, 1, 2] for index in range(33)]
+        embedder.close()
+
+    assert batch_sizes == [32, 1]
+
+
 @pytest.mark.parametrize("recover", [True, False])
 def test_google_retries_timeout_once(settings, recover, caplog):
+    caplog.set_level(logging.DEBUG)
     attempts = 0
 
     def handle(request):
@@ -78,7 +101,8 @@ def test_google_retries_timeout_once(settings, recover, caplog):
 
 
 @pytest.mark.parametrize("status,attempts_expected", [(400, 1), (503, 2)])
-def test_google_sanitizes_http_errors(settings, status, attempts_expected):
+def test_google_sanitizes_http_errors(settings, status, attempts_expected, caplog):
+    caplog.set_level(logging.DEBUG)
     attempts = 0
 
     def handle(request):
@@ -93,6 +117,9 @@ def test_google_sanitizes_http_errors(settings, status, attempts_expected):
         assert "detalle privado" not in str(failure.value)
         embedder.close()
     assert attempts == attempts_expected
+    assert "detalle privado" not in caplog.text
+    assert "test-key" not in caplog.text
+    assert "Consulta de prueba" not in caplog.text
 
 
 def test_google_rejects_wrong_dimensions(settings):

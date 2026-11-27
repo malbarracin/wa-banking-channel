@@ -78,6 +78,16 @@ def detect_pii(text: str, approved_values: Collection[str] = ()) -> tuple[PiiMat
     )
 
 
+def is_phone(value: str) -> bool:
+    """Check whether an entire value is a single phone number."""
+    findings = detect_pii(value)
+    return (
+        len(findings) == 1
+        and findings[0].kind == "telefono"
+        and (findings[0].start, findings[0].end) == (0, len(value))
+    )
+
+
 def mask_pii(text: str) -> str:
     """Keep only the last four characters of each detected value."""
     parts: list[str] = []

@@ -228,7 +228,7 @@
         "reopened": 0
       },
       "work": null,
-      "integratedAt": "2026-11-27T22:57:47.603Z",
+      "integratedAt": "2026-11-27T23:16:18.423Z",
       "sprint": 1,
       "updatedAt": "2026-11-27T22:57:51.252Z"
     },
@@ -391,7 +391,7 @@
         "reopened": 0
       },
       "work": null,
-      "integratedAt": null,
+      "integratedAt": "2026-11-27T23:16:18.423Z",
       "sprint": null,
       "updatedAt": "2026-11-27T23:02:20.688Z"
     },
@@ -1027,6 +1027,15 @@
       "title": "Un número de WhatsApp queda vinculado a un cliente con su identidad verificada",
       "floor": "Marcelo",
       "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-27T23:16:18.423Z",
+      "kind": "integrated",
+      "id": null,
+      "title": null,
+      "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com",
+      "text": "P-2, P-3"
     }
   ],
   "deadline": null,

@@ -165,22 +165,22 @@
       "budgetUsd": null,
       "budgetTokens": null,
       "spent": {
-        "usd": 1.2469,
-        "tokens": 854249,
+        "usd": 1.613,
+        "tokens": 1142788,
         "runs": {
           "20261127-2b87": {
-            "usd": 1.2469,
+            "usd": 1.613,
             "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
             "tools": {
               "kilocode": 0,
-              "claude-code": 1.2469
+              "claude-code": 1.613
             },
-            "tokens": 854249,
+            "tokens": 1142788,
             "toolTokens": {
-              "claude-code": 854249
+              "claude-code": 1142788
             },
             "loops": 0,
-            "redoTokens": 854249,
+            "redoTokens": 1142788,
             "roles": {
               "analista": {
                 "kilocode": {
@@ -189,9 +189,9 @@
                   "redo": 0
                 },
                 "claude-code": {
-                  "tokens": 854249,
-                  "steps": 1,
-                  "redo": 1
+                  "tokens": 1142788,
+                  "steps": 2,
+                  "redo": 2
                 }
               }
             }
@@ -199,7 +199,11 @@
         }
       },
       "stalled": null,
-      "waiting": null,
+      "waiting": {
+        "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+        "text": "espera una aprobación",
+        "at": "2026-11-27T21:03:48.896Z"
+      },
       "times": {
         "startedAt": "2026-11-27T20:57:46.138Z",
         "releasedAt": null,
@@ -212,7 +216,7 @@
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T21:03:11.195Z"
+      "updatedAt": "2026-11-27T21:03:48.896Z"
     },
     {
       "id": "P-4",
@@ -724,6 +728,15 @@
       "title": "El banco tiene su conocimiento aprobado disponible para responder con citas",
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
       "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-27T21:03:48.896Z",
+      "kind": "waiting",
+      "id": "P-3",
+      "title": "El banco tiene su conocimiento aprobado disponible para responder con citas",
+      "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com",
+      "text": "espera una aprobación"
     }
   ],
   "deadline": null,

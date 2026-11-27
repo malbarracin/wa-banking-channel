@@ -99,7 +99,11 @@
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
                 },
-                "example" : null
+                "examples" : {
+                  "Duplicate" : {
+                    "$ref" : "#/components/examples/Duplicate"
+                  }
+                }
               }
             }
           },
@@ -110,7 +114,11 @@
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
                 },
-                "example" : null
+                "examples" : {
+                  "InternalError" : {
+                    "$ref" : "#/components/examples/InternalError"
+                  }
+                }
               }
             }
           }
@@ -161,7 +169,11 @@
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
                 },
-                "example" : null
+                "examples" : {
+                  "BadRequest" : {
+                    "$ref" : "#/components/examples/BadRequest"
+                  }
+                }
               }
             }
           },
@@ -172,7 +184,11 @@
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
                 },
-                "example" : null
+                "examples" : {
+                  "NotFound" : {
+                    "$ref" : "#/components/examples/NotFound"
+                  }
+                }
               }
             }
           },
@@ -183,7 +199,11 @@
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
                 },
-                "example" : null
+                "examples" : {
+                  "InternalError" : {
+                    "$ref" : "#/components/examples/InternalError"
+                  }
+                }
               }
             }
           }
@@ -293,7 +313,11 @@
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
                 },
-                "example" : null
+                "examples" : {
+                  "NotFound" : {
+                    "$ref" : "#/components/examples/NotFound"
+                  }
+                }
               }
             }
           },
@@ -304,7 +328,11 @@
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
                 },
-                "example" : null
+                "examples" : {
+                  "InternalError" : {
+                    "$ref" : "#/components/examples/InternalError"
+                  }
+                }
               }
             }
           }
@@ -387,6 +415,14 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
+                },
+                "examples" : {
+                  "BadRequest" : {
+                    "$ref" : "#/components/examples/BadRequest"
+                  },
+                  "ValidationError" : {
+                    "$ref" : "#/components/examples/ValidationError"
+                  }
                 }
               }
             }
@@ -398,7 +434,11 @@
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
                 },
-                "example" : null
+                "examples" : {
+                  "NotFound" : {
+                    "$ref" : "#/components/examples/NotFound"
+                  }
+                }
               }
             }
           },
@@ -409,7 +449,11 @@
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
                 },
-                "example" : null
+                "examples" : {
+                  "InvalidTransition" : {
+                    "$ref" : "#/components/examples/InvalidTransition"
+                  }
+                }
               }
             }
           },
@@ -420,7 +464,11 @@
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
                 },
-                "example" : null
+                "examples" : {
+                  "InternalError" : {
+                    "$ref" : "#/components/examples/InternalError"
+                  }
+                }
               }
             }
           }
@@ -476,7 +524,11 @@
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
                 },
-                "example" : null
+                "examples" : {
+                  "BadRequest" : {
+                    "$ref" : "#/components/examples/BadRequest"
+                  }
+                }
               }
             }
           },
@@ -487,7 +539,11 @@
                 "schema" : {
                   "$ref" : "#/components/schemas/ErrorResponse"
                 },
-                "example" : null
+                "examples" : {
+                  "InternalError" : {
+                    "$ref" : "#/components/examples/InternalError"
+                  }
+                }
               }
             }
           }
@@ -497,37 +553,6 @@
   },
   "components" : {
     "schemas" : {
-      "ErrorResponse" : {
-        "type" : "object",
-        "description" : "Error con código estable, mensaje, detalles y marca de tiempo UTC",
-        "properties" : {
-          "code" : {
-            "type" : "string",
-            "description" : "Código del error",
-            "enum" : [ "VALIDATION_ERROR", "BAD_REQUEST", "NOT_FOUND", "CONFLICT", "INTERNAL_ERROR", "VALIDATION_ERROR", "BAD_REQUEST", "NOT_FOUND", "CONFLICT", "INTERNAL_ERROR" ],
-            "example" : "VALIDATION_ERROR"
-          },
-          "message" : {
-            "type" : "string",
-            "description" : "Mensaje legible sin datos internos",
-            "example" : "Validation failed"
-          },
-          "details" : {
-            "type" : "array",
-            "description" : "Detalle por campo; lista vacía si no aplica",
-            "items" : {
-              "$ref" : "#/components/schemas/FieldError"
-            }
-          },
-          "timestamp" : {
-            "type" : "string",
-            "format" : "date-time",
-            "description" : "Instante UTC del error",
-            "example" : "2026-11-27T12:00:00Z"
-          }
-        },
-        "required" : [ "code", "details", "message", "timestamp" ]
-      },
       "CreateUserRequest" : {
         "type" : "object",
         "description" : "Alta de cliente; obligatorios según bank.users.required-fields",
@@ -601,7 +626,7 @@
           "status" : {
             "type" : "string",
             "description" : "Estado operativo",
-            "enum" : [ "ACTIVE", "SUSPENDED", "INACTIVE", "ACTIVE", "SUSPENDED", "INACTIVE" ],
+            "enum" : [ "ACTIVE", "SUSPENDED", "INACTIVE" ],
             "example" : "ACTIVE"
           },
           "createdAt" : {
@@ -611,6 +636,37 @@
             "example" : "2026-11-27T12:00:00Z"
           }
         }
+      },
+      "ErrorResponse" : {
+        "type" : "object",
+        "description" : "Error con código estable, mensaje, detalles y marca de tiempo UTC",
+        "properties" : {
+          "code" : {
+            "type" : "string",
+            "description" : "Código del error",
+            "enum" : [ "VALIDATION_ERROR", "BAD_REQUEST", "NOT_FOUND", "CONFLICT", "INTERNAL_ERROR" ],
+            "example" : "VALIDATION_ERROR"
+          },
+          "message" : {
+            "type" : "string",
+            "description" : "Mensaje legible sin datos internos",
+            "example" : "Validation failed"
+          },
+          "details" : {
+            "type" : "array",
+            "description" : "Detalle por campo; lista vacía si no aplica",
+            "items" : {
+              "$ref" : "#/components/schemas/FieldError"
+            }
+          },
+          "timestamp" : {
+            "type" : "string",
+            "format" : "date-time",
+            "description" : "Instante UTC del error",
+            "example" : "2026-11-27T12:00:00Z"
+          }
+        },
+        "required" : [ "code", "details", "message", "timestamp" ]
       },
       "FieldError" : {
         "type" : "object",
@@ -663,7 +719,7 @@
           "status" : {
             "type" : "string",
             "description" : "Estado destino",
-            "enum" : [ "ACTIVE", "SUSPENDED", "INACTIVE", "ACTIVE", "SUSPENDED", "INACTIVE" ],
+            "enum" : [ "ACTIVE", "SUSPENDED", "INACTIVE" ],
             "example" : "SUSPENDED"
           },
           "actor" : {
@@ -693,25 +749,25 @@
           "action" : {
             "type" : "string",
             "description" : "Acción registrada",
-            "enum" : [ "ALTA", "MODIFICACION", "CAMBIO_ESTADO", "ALTA", "MODIFICACION", "CAMBIO_ESTADO" ],
+            "enum" : [ "ALTA", "MODIFICACION", "CAMBIO_ESTADO" ],
             "example" : "ALTA"
           },
           "result" : {
             "type" : "string",
             "description" : "Resultado de la operación",
-            "enum" : [ "OK", "ERROR", "OK", "ERROR" ],
+            "enum" : [ "OK", "ERROR" ],
             "example" : "OK"
           },
           "previousStatus" : {
             "type" : "string",
             "description" : "Estado anterior",
-            "enum" : [ "ACTIVE", "SUSPENDED", "INACTIVE", "ACTIVE", "SUSPENDED", "INACTIVE" ],
+            "enum" : [ "ACTIVE", "SUSPENDED", "INACTIVE" ],
             "example" : "ACTIVE"
           },
           "newStatus" : {
             "type" : "string",
             "description" : "Estado nuevo",
-            "enum" : [ "ACTIVE", "SUSPENDED", "INACTIVE", "ACTIVE", "SUSPENDED", "INACTIVE" ],
+            "enum" : [ "ACTIVE", "SUSPENDED", "INACTIVE" ],
             "example" : "SUSPENDED"
           },
           "changedFields" : {
@@ -735,22 +791,67 @@
     },
     "examples" : {
       "ValidationError" : {
-        "value" : "{\"code\":\"VALIDATION_ERROR\",\"message\":\"Validation failed\",\"details\":[{\"field\":\"contactEmail\",\"message\":\"must be a well-formed email address\"}],\"timestamp\":\"2026-11-27T12:00:00Z\"}"
+        "value" : {
+          "code" : "VALIDATION_ERROR",
+          "timestamp" : "2026-11-27T12:00:00Z",
+          "message" : "Validation failed",
+          "details" : [ {
+            "field" : "contactEmail",
+            "message" : "must be a well-formed email address"
+          } ]
+        }
       },
       "BadRequest" : {
-        "value" : "{\"code\":\"BAD_REQUEST\",\"message\":\"Invalid request\",\"details\":[],\"timestamp\":\"2026-11-27T12:00:00Z\"}"
+        "value" : {
+          "code" : "BAD_REQUEST",
+          "timestamp" : "2026-11-27T12:00:00Z",
+          "message" : "Invalid request",
+          "details" : [ ]
+        }
       },
       "NotFound" : {
-        "value" : "{\"code\":\"NOT_FOUND\",\"message\":\"No existe el usuario solicitado\",\"details\":[],\"timestamp\":\"2026-11-27T12:00:00Z\"}"
+        "value" : {
+          "code" : "NOT_FOUND",
+          "timestamp" : "2026-11-27T12:00:00Z",
+          "message" : "No existe el usuario solicitado",
+          "details" : [ ]
+        }
       },
       "Duplicate" : {
-        "value" : "{\"code\":\"CONFLICT\",\"message\":\"DUPLICADO\",\"details\":[{\"field\":\"uniquenessValue\",\"message\":\"DUPLICADO\"}],\"timestamp\":\"2026-11-27T12:00:00Z\"}"
+        "value" : {
+          "code" : "CONFLICT",
+          "timestamp" : "2026-11-27T12:00:00Z",
+          "message" : "DUPLICADO",
+          "details" : [ {
+            "field" : "uniquenessValue",
+            "message" : "DUPLICADO"
+          } ]
+        }
       },
       "InvalidTransition" : {
-        "value" : "{\"code\":\"CONFLICT\",\"message\":\"Transición de estado no permitida\",\"details\":[{\"field\":\"previousStatus\",\"message\":\"INACTIVE\"},{\"field\":\"newStatus\",\"message\":\"ACTIVE\"},{\"field\":\"reason\",\"message\":\"TRANSICION_NO_PERMITIDA\"}],\"timestamp\":\"2026-11-27T12:00:00Z\"}"
+        "value" : {
+          "code" : "CONFLICT",
+          "timestamp" : "2026-11-27T12:00:00Z",
+          "message" : "Transición de estado no permitida",
+          "details" : [ {
+            "field" : "previousStatus",
+            "message" : "INACTIVE"
+          }, {
+            "field" : "newStatus",
+            "message" : "ACTIVE"
+          }, {
+            "field" : "reason",
+            "message" : "TRANSICION_NO_PERMITIDA"
+          } ]
+        }
       },
       "InternalError" : {
-        "value" : "{\"code\":\"INTERNAL_ERROR\",\"message\":\"Internal error\",\"details\":[],\"timestamp\":\"2026-11-27T12:00:00Z\"}"
+        "value" : {
+          "code" : "INTERNAL_ERROR",
+          "timestamp" : "2026-11-27T12:00:00Z",
+          "message" : "Internal error",
+          "details" : [ ]
+        }
       }
     }
   }

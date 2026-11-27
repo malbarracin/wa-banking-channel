@@ -7,8 +7,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * Solo {@link #ACTIVE} es elegible para un vínculo de canal nuevo.
  */
 @Schema(description = "Estado operativo: ACTIVE elegible para vínculo de canal; "
-        + "SUSPENDED e INACTIVE no admiten vínculo nuevo",
-        allowableValues = {"ACTIVE", "SUSPENDED", "INACTIVE"})
+        + "SUSPENDED e INACTIVE no admiten vínculo nuevo")
 public enum UserStatus {
     /** Cliente operativo; único estado elegible para vínculo de canal nuevo. */
     ACTIVE,

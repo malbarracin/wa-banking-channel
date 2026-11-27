@@ -89,10 +89,12 @@ public class UserController {
                                             ref = "#/components/examples/BadRequest")})),
             @ApiResponse(responseCode = "409", description = "Valor de unicidad ya registrado",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/Duplicate"))),
+                            examples = @ExampleObject(name = "Duplicate",
+                                    ref = "#/components/examples/Duplicate"))),
             @ApiResponse(responseCode = "500", description = "Error interno",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))})
+                            examples = @ExampleObject(name = "InternalError",
+                                    ref = "#/components/examples/InternalError")))})
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse create(
@@ -116,13 +118,16 @@ public class UserController {
                             examples = @ExampleObject(value = USER_RESPONSE_EXAMPLE))),
             @ApiResponse(responseCode = "400", description = "Identificador inválido",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/BadRequest"))),
+                            examples = @ExampleObject(name = "BadRequest",
+                                    ref = "#/components/examples/BadRequest"))),
             @ApiResponse(responseCode = "404", description = "Cliente inexistente",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/NotFound"))),
+                            examples = @ExampleObject(name = "NotFound",
+                                    ref = "#/components/examples/NotFound"))),
             @ApiResponse(responseCode = "500", description = "Error interno",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))})
+                            examples = @ExampleObject(name = "InternalError",
+                                    ref = "#/components/examples/InternalError")))})
     @GetMapping("/{id}")
     public UserResponse find(
             @Parameter(description = "Identificador interno", example = USER_ID_EXAMPLE)
@@ -172,10 +177,12 @@ public class UserController {
                                             ref = "#/components/examples/ValidationError")})),
             @ApiResponse(responseCode = "404", description = "Cliente inexistente",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/NotFound"))),
+                            examples = @ExampleObject(name = "NotFound",
+                                    ref = "#/components/examples/NotFound"))),
             @ApiResponse(responseCode = "500", description = "Error interno",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))})
+                            examples = @ExampleObject(name = "InternalError",
+                                    ref = "#/components/examples/InternalError")))})
     @PatchMapping("/{id}")
     public UserResponse update(
             @Parameter(description = "Identificador interno", example = USER_ID_EXAMPLE)
@@ -234,17 +241,22 @@ public class UserController {
             @ApiResponse(responseCode = "400", description = "Estado inválido o datos incompletos",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
                             examples = {
-                                    @ExampleObject(ref = "#/components/examples/BadRequest"),
-                                    @ExampleObject(ref = "#/components/examples/ValidationError")})),
+                                    @ExampleObject(name = "BadRequest",
+                                            ref = "#/components/examples/BadRequest"),
+                                    @ExampleObject(name = "ValidationError",
+                                            ref = "#/components/examples/ValidationError")})),
             @ApiResponse(responseCode = "404", description = "Cliente inexistente",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/NotFound"))),
+                            examples = @ExampleObject(name = "NotFound",
+                                    ref = "#/components/examples/NotFound"))),
             @ApiResponse(responseCode = "409", description = "Transición no permitida",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InvalidTransition"))),
+                            examples = @ExampleObject(name = "InvalidTransition",
+                                    ref = "#/components/examples/InvalidTransition"))),
             @ApiResponse(responseCode = "500", description = "Error interno",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))})
+                            examples = @ExampleObject(name = "InternalError",
+                                    ref = "#/components/examples/InternalError")))})
     @PatchMapping("/{id}/status")
     public UserResponse changeStatus(
             @Parameter(description = "Identificador interno", example = USER_ID_EXAMPLE)

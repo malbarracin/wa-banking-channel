@@ -75,14 +75,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                Duplicate:
+                  $ref: "#/components/examples/Duplicate"
         "500":
           description: Error interno
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
   /api/v1/users/{id}:
     get:
       tags:
@@ -121,21 +125,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
         "404":
           description: Cliente inexistente
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
         "500":
           description: Error interno
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
     patch:
       tags:
       - Clientes
@@ -214,14 +224,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
         "500":
           description: Error interno
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
   /api/v1/users/{id}/status:
     patch:
       tags:
@@ -283,27 +297,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+                ValidationError:
+                  $ref: "#/components/examples/ValidationError"
         "404":
           description: Cliente inexistente
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
         "409":
           description: Transición no permitida
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InvalidTransition:
+                  $ref: "#/components/examples/InvalidTransition"
         "500":
           description: Error interno
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
   /api/v1/users/{id}/audit:
     get:
       tags:
@@ -346,55 +371,20 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
         "500":
           description: Error interno
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
 components:
   schemas:
-    ErrorResponse:
-      type: object
-      description: "Error con código estable, mensaje, detalles y marca de tiempo\
-        \ UTC"
-      properties:
-        code:
-          type: string
-          description: Código del error
-          enum:
-          - VALIDATION_ERROR
-          - BAD_REQUEST
-          - NOT_FOUND
-          - CONFLICT
-          - INTERNAL_ERROR
-          - VALIDATION_ERROR
-          - BAD_REQUEST
-          - NOT_FOUND
-          - CONFLICT
-          - INTERNAL_ERROR
-          example: VALIDATION_ERROR
-        message:
-          type: string
-          description: Mensaje legible sin datos internos
-          example: Validation failed
-        details:
-          type: array
-          description: Detalle por campo; lista vacía si no aplica
-          items:
-            $ref: "#/components/schemas/FieldError"
-        timestamp:
-          type: string
-          format: date-time
-          description: Instante UTC del error
-          example: 2026-11-27T12:00:00Z
-      required:
-      - code
-      - details
-      - message
-      - timestamp
     CreateUserRequest:
       type: object
       description: Alta de cliente; obligatorios según bank.users.required-fields
@@ -460,15 +450,46 @@ components:
           - ACTIVE
           - SUSPENDED
           - INACTIVE
-          - ACTIVE
-          - SUSPENDED
-          - INACTIVE
           example: ACTIVE
         createdAt:
           type: string
           format: date-time
           description: Alta en UTC (ISO-8601)
           example: 2026-11-27T12:00:00Z
+    ErrorResponse:
+      type: object
+      description: "Error con código estable, mensaje, detalles y marca de tiempo\
+        \ UTC"
+      properties:
+        code:
+          type: string
+          description: Código del error
+          enum:
+          - VALIDATION_ERROR
+          - BAD_REQUEST
+          - NOT_FOUND
+          - CONFLICT
+          - INTERNAL_ERROR
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Mensaje legible sin datos internos
+          example: Validation failed
+        details:
+          type: array
+          description: Detalle por campo; lista vacía si no aplica
+          items:
+            $ref: "#/components/schemas/FieldError"
+        timestamp:
+          type: string
+          format: date-time
+          description: Instante UTC del error
+          example: 2026-11-27T12:00:00Z
+      required:
+      - code
+      - details
+      - message
+      - timestamp
     FieldError:
       type: object
       description: Error asociado a un campo
@@ -517,9 +538,6 @@ components:
           - ACTIVE
           - SUSPENDED
           - INACTIVE
-          - ACTIVE
-          - SUSPENDED
-          - INACTIVE
           example: SUSPENDED
         actor:
           type: string
@@ -549,16 +567,11 @@ components:
           - ALTA
           - MODIFICACION
           - CAMBIO_ESTADO
-          - ALTA
-          - MODIFICACION
-          - CAMBIO_ESTADO
           example: ALTA
         result:
           type: string
           description: Resultado de la operación
           enum:
-          - OK
-          - ERROR
           - OK
           - ERROR
           example: OK
@@ -569,17 +582,11 @@ components:
           - ACTIVE
           - SUSPENDED
           - INACTIVE
-          - ACTIVE
-          - SUSPENDED
-          - INACTIVE
           example: ACTIVE
         newStatus:
           type: string
           description: Estado nuevo
           enum:
-          - ACTIVE
-          - SUSPENDED
-          - INACTIVE
           - ACTIVE
           - SUSPENDED
           - INACTIVE
@@ -599,24 +606,48 @@ components:
           example: 2026-01-01T12:00:00Z
   examples:
     ValidationError:
-      value: "{\"code\":\"VALIDATION_ERROR\",\"message\":\"Validation failed\",\"\
-        details\":[{\"field\":\"contactEmail\",\"message\":\"must be a well-formed\
-        \ email address\"}],\"timestamp\":\"2026-11-27T12:00:00Z\"}"
+      value:
+        code: VALIDATION_ERROR
+        timestamp: 2026-11-27T12:00:00Z
+        message: Validation failed
+        details:
+        - field: contactEmail
+          message: must be a well-formed email address
     BadRequest:
-      value: "{\"code\":\"BAD_REQUEST\",\"message\":\"Invalid request\",\"details\"\
-        :[],\"timestamp\":\"2026-11-27T12:00:00Z\"}"
+      value:
+        code: BAD_REQUEST
+        timestamp: 2026-11-27T12:00:00Z
+        message: Invalid request
+        details: []
     NotFound:
-      value: "{\"code\":\"NOT_FOUND\",\"message\":\"No existe el usuario solicitado\"\
-        ,\"details\":[],\"timestamp\":\"2026-11-27T12:00:00Z\"}"
+      value:
+        code: NOT_FOUND
+        timestamp: 2026-11-27T12:00:00Z
+        message: No existe el usuario solicitado
+        details: []
     Duplicate:
-      value: "{\"code\":\"CONFLICT\",\"message\":\"DUPLICADO\",\"details\":[{\"field\"\
-        :\"uniquenessValue\",\"message\":\"DUPLICADO\"}],\"timestamp\":\"2026-11-27T12:00:00Z\"\
-        }"
+      value:
+        code: CONFLICT
+        timestamp: 2026-11-27T12:00:00Z
+        message: DUPLICADO
+        details:
+        - field: uniquenessValue
+          message: DUPLICADO
     InvalidTransition:
-      value: "{\"code\":\"CONFLICT\",\"message\":\"Transición de estado no permitida\"\
-        ,\"details\":[{\"field\":\"previousStatus\",\"message\":\"INACTIVE\"},{\"\
-        field\":\"newStatus\",\"message\":\"ACTIVE\"},{\"field\":\"reason\",\"message\"\
-        :\"TRANSICION_NO_PERMITIDA\"}],\"timestamp\":\"2026-11-27T12:00:00Z\"}"
+      value:
+        code: CONFLICT
+        timestamp: 2026-11-27T12:00:00Z
+        message: Transición de estado no permitida
+        details:
+        - field: previousStatus
+          message: INACTIVE
+        - field: newStatus
+          message: ACTIVE
+        - field: reason
+          message: TRANSICION_NO_PERMITIDA
     InternalError:
-      value: "{\"code\":\"INTERNAL_ERROR\",\"message\":\"Internal error\",\"details\"\
-        :[],\"timestamp\":\"2026-11-27T12:00:00Z\"}"
+      value:
+        code: INTERNAL_ERROR
+        timestamp: 2026-11-27T12:00:00Z
+        message: Internal error
+        details: []

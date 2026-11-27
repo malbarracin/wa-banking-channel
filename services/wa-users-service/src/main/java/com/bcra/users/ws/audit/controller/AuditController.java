@@ -56,10 +56,12 @@ public class AuditController {
                                     "occurredAt":"2026-11-27T12:00:00Z"}]"""))),
             @ApiResponse(responseCode = "400", description = "Identificador inválido",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/BadRequest"))),
+                            examples = @ExampleObject(name = "BadRequest",
+                                    ref = "#/components/examples/BadRequest"))),
             @ApiResponse(responseCode = "500", description = "Error interno",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))})
+                            examples = @ExampleObject(name = "InternalError",
+                                    ref = "#/components/examples/InternalError")))})
     public List<AuditEntryResponse> history(
             @Parameter(description = "Identificador del cliente",
                     example = "123e4567-e89b-12d3-a456-426614174000")

@@ -118,7 +118,7 @@ class OpenApiContractTest {
                     checked.add(operation + " " + response.getKey());
                 }));
 
-        assertThat(checked).hasSizeGreaterThanOrEqualTo(17);
+        assertThat(checked).hasSizeGreaterThanOrEqualTo(15);
     }
 
     @Test

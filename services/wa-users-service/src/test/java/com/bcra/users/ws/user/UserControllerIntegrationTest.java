@@ -73,6 +73,21 @@ class UserControllerIntegrationTest {
     }
 
     @Test
+    @DisplayName("Informa errores de formato y campos obligatorios juntos")
+    void reportsInvalidAndMissingFieldsTogether() throws Exception {
+        long count = users.count();
+        long auditCount = audits.count();
+        mvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"contactEmail\":\"invalid\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.details[?(@.field == 'contactEmail')]").exists())
+                .andExpect(jsonPath("$.details[?(@.field == 'displayName')]").exists())
+                .andExpect(jsonPath("$.details[?(@.field == 'uniquenessValue')]").exists());
+        assertThat(users.count()).isEqualTo(count);
+        assertThat(audits.count()).isEqualTo(auditCount);
+    }
+
+    @Test
     @DisplayName("Devuelve el estado de clientes suspendidos y dados de baja")
     void returnsNonActiveCustomerStatus() throws Exception {
         String body = "{\"uniquenessValue\":\"" + UUID.randomUUID() + "\",\"displayName\":\"Ana\"}";

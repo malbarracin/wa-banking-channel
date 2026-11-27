@@ -8,7 +8,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -37,7 +36,7 @@ public class UserController {
             @ApiResponse(responseCode = "500", description = "Error interno")})
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public UserResponse create(@Valid @RequestBody CreateUserRequest request,
+    public UserResponse create(@RequestBody CreateUserRequest request,
             @Parameter(description = "Actor del alta; system si se omite", example = "operator")
             @RequestHeader(value = "X-Actor", required = false) String actor) {
         return service.create(request, actor);

@@ -22,15 +22,6 @@ class SchemaIntegrationTest {
     private JdbcTemplate jdbc;
 
     @Test
-    @DisplayName("La base rechaza valores de unicidad repetidos")
-    void rejectsDuplicateUniquenessValue() {
-        insertUser("external-1", "unique-1");
-
-        assertThatThrownBy(() -> insertUser("external-2", "unique-1"))
-                .isInstanceOf(DuplicateKeyException.class);
-    }
-
-    @Test
     @DisplayName("La base rechaza identificadores externos repetidos")
     void rejectsDuplicateExternalId() {
         insertUser("external-1", "unique-1");

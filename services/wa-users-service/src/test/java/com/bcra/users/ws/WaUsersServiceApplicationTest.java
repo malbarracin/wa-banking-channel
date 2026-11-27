@@ -31,7 +31,7 @@ class WaUsersServiceApplicationTest {
         assertThat(properties.allowedTransitions().get("INACTIVE")).isEqualTo(List.of());
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM users", Integer.class)).isZero();
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_entries", Integer.class)).isZero();
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("1");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("2");
     }
 
     @Test

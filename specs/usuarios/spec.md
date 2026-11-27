@@ -1,8 +1,8 @@
 ---
 title: Usuarios — especificación
-status: borrador
+status: aprobada
 source: https://app.notion.com/p/36875bb08ca78197a853e85505bf49a5
-updated: 2026-11-27T20:56:55.334Z
+updated: 2026-11-27T20:59:05.924Z
 ---
 
 # Usuarios — especificación

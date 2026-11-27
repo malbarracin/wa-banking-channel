@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.bcra.channel.ws.audit.dto.AuditEntryResponse;
@@ -35,6 +36,11 @@ public class AuditService {
     private final AuditRepository auditRepository;
     private final AuditMapper auditMapper;
     private final Clock clock;
+
+    /** Identificador de auditoría cuando aún no hay registro de vínculo. */
+    public static final UUID NO_BINDING_ID = new UUID(0L, 0L);
+
+    public static final String ACTOR_CLIENTE = "CLIENTE";
 
     /**
      * Persiste una entrada de auditoría.
@@ -69,6 +75,33 @@ public class AuditService {
         entry.setResult(result);
         entry.setActor(actor);
         entry.setDetail(detail);
+        entry.setOccurredAt(Instant.now(clock));
+
+        AuditEntry saved = auditRepository.save(entry);
+        log.info("Auditoría registrada: action={}, result={}, actor={}, id={}",
+                saved.getAction(), saved.getResult(), saved.getActor(), saved.getId());
+        return saved;
+    }
+
+    /**
+     * Audita el rechazo de términos sin crear vínculo.
+     * Transacción propia: el registro queda aunque el caso de uso aborte con 400.
+     *
+     * @param whatsappNumber número WhatsApp (E.164)
+     * @return entrada persistida
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public AuditEntry recordTermsRejected(String whatsappNumber) {
+        Objects.requireNonNull(whatsappNumber, "whatsappNumber");
+
+        AuditEntry entry = new AuditEntry();
+        entry.setId(UUID.randomUUID());
+        entry.setBindingId(NO_BINDING_ID);
+        entry.setWhatsappNumber(whatsappNumber);
+        entry.setAction(AuditAction.TERMS_REJECTED);
+        entry.setResult(RESULT_ERROR);
+        entry.setActor(ACTOR_CLIENTE);
+        entry.setDetail("Términos rechazados");
         entry.setOccurredAt(Instant.now(clock));
 
         AuditEntry saved = auditRepository.save(entry);

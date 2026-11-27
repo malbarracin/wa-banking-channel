@@ -28,6 +28,7 @@ public class OpenApiConfig {
                 Map.entry(
                         "NotFound",
                         errorExample(ErrorCode.NOT_FOUND, "No hay historial de auditoría para el número indicado")),
+                Map.entry("Conflict", errorExample(ErrorCode.CONFLICT, "El número ya tiene un vínculo activo")),
                 Map.entry("InternalError", errorExample(ErrorCode.INTERNAL_ERROR, "Error interno")));
 
         return new OpenAPI()

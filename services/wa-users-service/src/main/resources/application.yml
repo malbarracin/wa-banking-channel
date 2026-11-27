@@ -1,0 +1,32 @@
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-stacktrace: never
+spring:
+  application:
+    name: wa-users-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/wa_users}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+bank:
+  users:
+    required-fields: uniquenessValue,displayName
+    uniqueness-field: uniquenessValue
+    updatable-fields: displayName,contactEmail,contactPhone
+    public-fields: id,externalId,displayName,contactEmail,contactPhone,status,createdAt
+    allowed-transitions:
+      ACTIVE: [SUSPENDED, INACTIVE]
+      SUSPENDED: [ACTIVE, INACTIVE]
+      INACTIVE: []

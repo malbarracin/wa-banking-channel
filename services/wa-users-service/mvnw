@@ -1,0 +1,14 @@
+#!/bin/sh
+set -eu
+BASE_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+MVN_VERSION=3.9.9
+MVN_DIR="${MAVEN_USER_HOME:-$HOME/.m2}/wrapper/dists/apache-maven-$MVN_VERSION"
+if [ ! -x "$MVN_DIR/bin/mvn" ]; then
+  mkdir -p "$MVN_DIR"
+  ARCHIVE="$MVN_DIR/maven.zip"
+  curl -fsSL "https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/$MVN_VERSION/apache-maven-$MVN_VERSION-bin.zip" -o "$ARCHIVE"
+  unzip -qo "$ARCHIVE" -d "$MVN_DIR"
+  mv "$MVN_DIR/apache-maven-$MVN_VERSION/"* "$MVN_DIR/"
+  rm "$ARCHIVE"
+fi
+exec "$MVN_DIR/bin/mvn" -f "$BASE_DIR/pom.xml" "$@"

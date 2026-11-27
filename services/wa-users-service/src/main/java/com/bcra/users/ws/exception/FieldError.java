@@ -1,5 +1,14 @@
 package com.bcra.users.ws.exception;
 
-/** Describes a field validation error. */
-public record FieldError(String field, String message) {
+import io.swagger.v3.oas.annotations.media.Schema;
+
+/** Detalle de un campo inválido o en conflicto. */
+@Schema(description = "Error asociado a un campo")
+public record FieldError(
+        @Schema(description = "Nombre del campo", example = "contactEmail",
+                requiredMode = Schema.RequiredMode.REQUIRED)
+        String field,
+        @Schema(description = "Motivo del rechazo", example = "must be a well-formed email address",
+                requiredMode = Schema.RequiredMode.REQUIRED)
+        String message) {
 }

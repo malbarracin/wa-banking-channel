@@ -9,13 +9,18 @@
       "dependsOn": [],
       "assignedTo": null,
       "deliverables": "La plataforma de eventos funcionando en platform/wa-event-platform y el catálogo de eventos del canal, versionado, en shared/contracts/events/catalogo.md y sus esquemas en shared/contracts/events/ (lo consumen el gateway y el orquestador)",
-      "status": "todo",
+      "status": "doing",
       "createdAt": "2026-11-27T20:52:35.267Z",
       "createdBy": {
         "account": "opensoma.app@gmail.com",
         "floor": "DESKTOP-JVEJTUF"
       },
-      "claim": null,
+      "claim": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "DESKTOP-JVEJTUF",
+        "run": "20261127-57e1",
+        "at": "2026-11-27T20:56:51.824Z"
+      },
       "doneAt": null,
       "doneBy": null,
       "note": null,
@@ -24,11 +29,19 @@
       "spent": null,
       "stalled": null,
       "waiting": null,
-      "times": null,
+      "times": {
+        "startedAt": "2026-11-27T20:56:51.824Z",
+        "releasedAt": null,
+        "workedMs": 0,
+        "stalledMs": 0,
+        "waitingMs": 0,
+        "stalls": 0,
+        "reopened": 0
+      },
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T20:52:35.267Z"
+      "updatedAt": "2026-11-27T20:56:51.825Z"
     },
     {
       "id": "P-2",
@@ -549,6 +562,14 @@
       "id": "P-2",
       "title": "Un cliente del banco se puede dar de alta, consultar y administrar",
       "floor": "Marcelo",
+      "account": "opensoma.app@gmail.com"
+    },
+    {
+      "at": "2026-11-27T20:56:51.825Z",
+      "kind": "claimed",
+      "id": "P-1",
+      "title": "El canal transporta sus mensajes de forma asíncrona, ordenada y sin perderlos",
+      "floor": "DESKTOP-JVEJTUF",
       "account": "opensoma.app@gmail.com"
     }
   ],

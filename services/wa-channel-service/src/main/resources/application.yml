@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: wa-channel-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/wa_channel}
+    username: ${DATABASE_USERNAME:wa_channel}
+    password: ${DATABASE_PASSWORD:wa_channel}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    fail-on-missing-locations: false
+  messages:
+    basename: messages
+    encoding: UTF-8
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  api-docs.path: /v3/api-docs
+  swagger-ui.path: /swagger-ui.html
+  swagger-ui.operationsSorter: method
+  default-produces-media-type: application/json
+
+# Valores de desarrollo solamente; las cifras de negocio las define el banco en cada entorno.
+bank:
+  channel:
+    verification:
+      policy: document-code
+      max-attempts: 3
+      window-minutes: 60
+    name: Banco
+    support-phone: "0800-XXX-XXXX"
+    onboarding-url: "https://example.com/alta"
+    internal-roles:
+      support: support
+      bank-policy: bank-policy
+    users-service:
+      base-url: http://localhost:8081
+      timeout-ms: 3000

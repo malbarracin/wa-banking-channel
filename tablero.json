@@ -229,8 +229,8 @@
       },
       "work": null,
       "integratedAt": "2026-11-27T22:57:47.603Z",
-      "sprint": null,
-      "updatedAt": "2026-11-27T22:45:33.683Z"
+      "sprint": 1,
+      "updatedAt": "2026-11-27T22:57:51.252Z"
     },
     {
       "id": "P-3",
@@ -858,12 +858,328 @@
       "floor": "Marcelo",
       "account": "opensoma.app@gmail.com",
       "text": "P-2"
+    },
+    {
+      "at": "2026-11-27T22:57:51.254Z",
+      "kind": "sprint_closed",
+      "id": null,
+      "title": null,
+      "floor": "Marcelo",
+      "account": "opensoma.app@gmail.com",
+      "text": "1"
     }
   ],
   "deadline": null,
   "requests": [],
   "reqSeq": 0,
-  "sprints": [],
+  "sprints": [
+    {
+      "n": 1,
+      "goal": "Quedan en pie las tres bases que no esperan a nadie, cada una con su contrato publicado: el transporte asíncrono de los mensajes del canal, el registro de clientes del banco y el conocimiento aprobado del banco.",
+      "closedAt": "2026-11-27T22:57:51.253Z",
+      "closedBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "Marcelo"
+      },
+      "items": [
+        "P-2"
+      ],
+      "carried": [
+        "P-1",
+        "P-3"
+      ],
+      "opened": [
+        "P-6"
+      ],
+      "run": "20261127-701e",
+      "retro": {
+        "at": "2026-11-27T22:57:51.253Z",
+        "facts": {
+          "sprint": 1,
+          "items": [
+            {
+              "id": "P-2",
+              "title": "Un cliente del banco se puede dar de alta, consultar y administrar",
+              "floor": "Marcelo",
+              "workedMs": 6680239,
+              "stalledMs": 0,
+              "waitingMs": 101433,
+              "stalls": 0,
+              "reopened": 0,
+              "rework": 8,
+              "sessions": 1,
+              "tokens": 40362541,
+              "redoTokens": 22816386,
+              "over": false
+            }
+          ],
+          "carried": [
+            {
+              "id": "P-1",
+              "title": "El canal transporta sus mensajes de forma asíncrona, ordenada y sin perderlos",
+              "status": "doing",
+              "floor": "DESKTOP-JVEJTUF"
+            },
+            {
+              "id": "P-3",
+              "title": "El banco tiene su conocimiento aprobado disponible para responder con citas",
+              "status": "doing",
+              "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+            }
+          ],
+          "totals": {
+            "items": 1,
+            "carried": 2,
+            "workedMs": 6680239,
+            "stalledMs": 0,
+            "waitingMs": 101433,
+            "stalls": 0,
+            "rework": 8,
+            "reopened": 0,
+            "sessions": 1,
+            "tokens": 40362541,
+            "redoTokens": 22816386
+          },
+          "tools": [
+            {
+              "role": "dev-backend",
+              "tool": "codex",
+              "steps": 14,
+              "redo": 9,
+              "tokens": 13094532,
+              "redoShare": 0.6428571428571429
+            },
+            {
+              "role": "tester",
+              "tool": "codex",
+              "steps": 12,
+              "redo": 7,
+              "tokens": 7274352,
+              "redoShare": 0.5833333333333334
+            },
+            {
+              "role": "dev-backend",
+              "tool": "cursor",
+              "steps": 5,
+              "redo": 4,
+              "tokens": 5971596,
+              "redoShare": 0.8
+            },
+            {
+              "role": "reviewer",
+              "tool": "codex",
+              "steps": 9,
+              "redo": 4,
+              "tokens": 2136812,
+              "redoShare": 0.4444444444444444
+            },
+            {
+              "role": "tester",
+              "tool": "claude-code",
+              "steps": 4,
+              "redo": 3,
+              "tokens": 2444687,
+              "redoShare": 0.75
+            },
+            {
+              "role": "reviewer",
+              "tool": "claude-code",
+              "steps": 3,
+              "redo": 2,
+              "tokens": 2192216,
+              "redoShare": 0.6666666666666666
+            },
+            {
+              "role": "tech-lead",
+              "tool": "claude-code",
+              "steps": 4,
+              "redo": 1,
+              "tokens": 1693221,
+              "redoShare": 0.25
+            },
+            {
+              "role": "devops",
+              "tool": "claude-code",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 2380508,
+              "redoShare": 0
+            },
+            {
+              "role": "documentador",
+              "tool": "cursor",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 1422704,
+              "redoShare": 0
+            },
+            {
+              "role": "pr-reviewer",
+              "tool": "copilot",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 1357585,
+              "redoShare": 0
+            },
+            {
+              "role": "pr-publisher",
+              "tool": "copilot",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 394328,
+              "redoShare": 0
+            },
+            {
+              "role": "analista",
+              "tool": "kiro",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 0,
+              "redoShare": 0
+            },
+            {
+              "role": "arquitecto",
+              "tool": "kiro",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 0,
+              "redoShare": 0
+            },
+            {
+              "role": "tech-lead",
+              "tool": "kilocode",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 0,
+              "redoShare": 0
+            }
+          ],
+          "quota": [],
+          "requests": {
+            "asked": 0,
+            "open": 0,
+            "slow": 0
+          },
+          "integration": {
+            "conflict": null,
+            "missingContracts": [],
+            "contractIssues": [],
+            "unpublished": []
+          }
+        },
+        "actions": [
+          {
+            "id": "tool_rework:dev-backend/codex",
+            "kind": "tool_rework",
+            "source": "auto",
+            "params": {
+              "role": "dev-backend",
+              "tool": "codex",
+              "redo": 9,
+              "steps": 14,
+              "share": 64
+            },
+            "text": "El rol dev-backend con codex repitió 9 de 14 pasos (64%): probar otra herramienta para ese rol, o sumarle una skill de lo que le devuelven.",
+            "status": "open"
+          },
+          {
+            "id": "tool_rework:tester/codex",
+            "kind": "tool_rework",
+            "source": "auto",
+            "params": {
+              "role": "tester",
+              "tool": "codex",
+              "redo": 7,
+              "steps": 12,
+              "share": 58
+            },
+            "text": "El rol tester con codex repitió 7 de 12 pasos (58%): probar otra herramienta para ese rol, o sumarle una skill de lo que le devuelven.",
+            "status": "open"
+          },
+          {
+            "id": "tool_rework:dev-backend/cursor",
+            "kind": "tool_rework",
+            "source": "auto",
+            "params": {
+              "role": "dev-backend",
+              "tool": "cursor",
+              "redo": 4,
+              "steps": 5,
+              "share": 80
+            },
+            "text": "El rol dev-backend con cursor repitió 4 de 5 pasos (80%): probar otra herramienta para ese rol, o sumarle una skill de lo que le devuelven.",
+            "status": "open"
+          },
+          {
+            "id": "tool_rework:reviewer/codex",
+            "kind": "tool_rework",
+            "source": "auto",
+            "params": {
+              "role": "reviewer",
+              "tool": "codex",
+              "redo": 4,
+              "steps": 9,
+              "share": 44
+            },
+            "text": "El rol reviewer con codex repitió 4 de 9 pasos (44%): probar otra herramienta para ese rol, o sumarle una skill de lo que le devuelven.",
+            "status": "open"
+          },
+          {
+            "id": "tool_rework:tester/claude-code",
+            "kind": "tool_rework",
+            "source": "auto",
+            "params": {
+              "role": "tester",
+              "tool": "claude-code",
+              "redo": 3,
+              "steps": 4,
+              "share": 75
+            },
+            "text": "El rol tester con claude-code repitió 3 de 4 pasos (75%): probar otra herramienta para ese rol, o sumarle una skill de lo que le devuelven.",
+            "status": "open"
+          },
+          {
+            "id": "tool_rework:reviewer/claude-code",
+            "kind": "tool_rework",
+            "source": "auto",
+            "params": {
+              "role": "reviewer",
+              "tool": "claude-code",
+              "redo": 2,
+              "steps": 3,
+              "share": 67
+            },
+            "text": "El rol reviewer con claude-code repitió 2 de 3 pasos (67%): probar otra herramienta para ese rol, o sumarle una skill de lo que le devuelven.",
+            "status": "open"
+          },
+          {
+            "id": "item_rework:P-2",
+            "kind": "item_rework",
+            "source": "auto",
+            "params": {
+              "id": "P-2",
+              "title": "Un cliente del banco se puede dar de alta, consultar y administrar",
+              "rework": 8,
+              "reopened": 0
+            },
+            "text": "P-2 «Un cliente del banco se puede dar de alta, consultar y administrar» volvió 8 veces: era grande o no estaba claro. Partir los ítems parecidos y escribir sus criterios de aceptación antes de arrancar.",
+            "status": "open"
+          },
+          {
+            "id": "carried:1",
+            "kind": "carried",
+            "source": "auto",
+            "params": {
+              "n": 2,
+              "ids": "P-1, P-3"
+            },
+            "text": "2 ítems no se terminaron y pasan al sprint que sigue (P-1, P-3): el sprint era grande para las oficinas que hay.",
+            "status": "open"
+          }
+        ]
+      }
+    }
+  ],
   "goals": {
     "1": "Quedan en pie las tres bases que no esperan a nadie, cada una con su contrato publicado: el transporte asíncrono de los mensajes del canal, el registro de clientes del banco y el conocimiento aprobado del banco.",
     "2": "Un mensaje de WhatsApp entra, se transporta y se coordina de punta a punta contra un agente simulado, y un número de WhatsApp queda vinculado a un cliente con su identidad verificada.",

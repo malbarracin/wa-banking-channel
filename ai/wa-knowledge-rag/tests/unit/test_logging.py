@@ -40,6 +40,7 @@ def test_personal_data_is_masked_in_json(capsys: pytest.CaptureFixture[str]) -> 
             logger.exception(
                 "Consulta 12345678",
                 dni=12345678,
+                phone="01100001234",
                 details={"fixture@example.invalid": ["DNI 12.345.678", ("alias: ejemplo-qa",), 12]},
             )
         output = capsys.readouterr().out
@@ -49,5 +50,6 @@ def test_personal_data_is_masked_in_json(capsys: pytest.CaptureFixture[str]) -> 
         assert event["details"] == {"***alid": ["DNI ***.678", ["alias: ***o-qa"], 12]}
         assert "ValueError: DNI ***5678" in event["exception"]
         assert "12345678" not in output
+        assert event["phone"] == "***1234"
     finally:
         structlog.configure(**previous_config)

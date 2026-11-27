@@ -12,6 +12,7 @@ from wa_knowledge_rag.security.pii import contains_instruction, detect_pii, mask
         ("20123456786", "cuit"),
         ("+54 9 11 0000-1234", "telefono"),
         ("(011) 0000-1234", "telefono"),
+        ("01100001234", "telefono"),
         ("1100001234", "telefono"),
         ("fixture@example.invalid", "correo"),
         ("4111 1111 1111 1111", "pan"),

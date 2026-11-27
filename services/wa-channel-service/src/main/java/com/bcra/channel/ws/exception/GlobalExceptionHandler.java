@@ -8,11 +8,15 @@ import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,7 +47,8 @@ public class GlobalExceptionHandler {
             IllegalArgumentException.class,
             HttpMessageNotReadableException.class,
             MethodArgumentTypeMismatchException.class,
-            MissingServletRequestParameterException.class
+            MissingServletRequestParameterException.class,
+            MissingRequestHeaderException.class
     })
     public ResponseEntity<ErrorResponse> handleBadRequest(Exception exception) {
         return build(HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST, "Solicitud inválida", List.of());
@@ -54,9 +59,22 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, exception.getMessage(), List.of());
     }
 
-    @ExceptionHandler(NotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleNotFound(NotFoundException exception) {
-        return build(HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, exception.getMessage(), List.of());
+    @ExceptionHandler({NotFoundException.class, NoResourceFoundException.class})
+    public ResponseEntity<ErrorResponse> handleNotFound(Exception exception) {
+        String message = exception instanceof NotFoundException
+                ? exception.getMessage()
+                : "Recurso no encontrado";
+        return build(HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, message, List.of());
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleMethodNotAllowed(HttpRequestMethodNotSupportedException exception) {
+        return build(HttpStatus.METHOD_NOT_ALLOWED, ErrorCode.BAD_REQUEST, "Método no permitido", List.of());
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException exception) {
+        return build(HttpStatus.UNSUPPORTED_MEDIA_TYPE, ErrorCode.BAD_REQUEST, "Tipo de contenido no soportado", List.of());
     }
 
     @ExceptionHandler(ConflictException.class)

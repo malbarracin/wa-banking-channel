@@ -13,14 +13,17 @@ import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 class GlobalExceptionHandlerTest {
 
@@ -67,6 +70,17 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("BAD_REQUEST: 400 por header obligatorio faltante")
+    void returnsBadRequestWhenRequiredHeaderMissing() throws Exception {
+        mockMvc.perform(get("/probe/required-header"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.stackTrace").doesNotExist());
+    }
+
+    @Test
     @DisplayName("FORBIDDEN: 403")
     void returnsForbidden() throws Exception {
         mockMvc.perform(get("/probe/forbidden"))
@@ -83,6 +97,39 @@ class GlobalExceptionHandlerTest {
         mockMvc.perform(get("/probe/not-found"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.stackTrace").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("NOT_FOUND: 404 por ruta inexistente (NoResourceFoundException)")
+    void returnsNotFoundWhenResourceMissing() throws Exception {
+        mockMvc.perform(get("/probe/no-resource"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("NOT_FOUND"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.stackTrace").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("BAD_REQUEST: 405 por método HTTP no soportado")
+    void returnsMethodNotAllowed() throws Exception {
+        mockMvc.perform(post("/probe/forbidden"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.details").isArray())
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(jsonPath("$.stackTrace").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("BAD_REQUEST: 415 por tipo de contenido no soportado")
+    void returnsUnsupportedMediaType() throws Exception {
+        mockMvc.perform(post("/probe/validate").contentType(MediaType.TEXT_PLAIN).content("name=x"))
+                .andExpect(status().isUnsupportedMediaType())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
                 .andExpect(jsonPath("$.details").isArray())
                 .andExpect(jsonPath("$.timestamp").exists())
                 .andExpect(jsonPath("$.stackTrace").doesNotExist());
@@ -155,6 +202,11 @@ class GlobalExceptionHandlerTest {
             throw new ProbeNotFoundException();
         }
 
+        @GetMapping("/probe/no-resource")
+        void noResource() throws NoResourceFoundException {
+            throw new NoResourceFoundException(HttpMethod.GET, "/api/v1/ruta-inexistente");
+        }
+
         @GetMapping("/probe/conflict")
         void conflict() {
             throw new ProbeConflictException();
@@ -168,6 +220,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/probe/required-param")
         void requiredParam(@RequestParam String value) {
             // solo exige el parámetro
+        }
+
+        @GetMapping("/probe/required-header")
+        void requiredHeader(@RequestHeader("X-Internal-Role") String role) {
+            // solo exige el header de rol interno
         }
 
         @GetMapping("/probe/boom")

@@ -392,8 +392,8 @@
       },
       "work": null,
       "integratedAt": "2026-11-27T23:16:18.423Z",
-      "sprint": null,
-      "updatedAt": "2026-11-27T23:02:20.688Z"
+      "sprint": 2,
+      "updatedAt": "2026-11-27T23:16:20.928Z"
     },
     {
       "id": "P-4",
@@ -1036,6 +1036,15 @@
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
       "account": "opensoma.app@gmail.com",
       "text": "P-2, P-3"
+    },
+    {
+      "at": "2026-11-27T23:16:20.929Z",
+      "kind": "sprint_closed",
+      "id": null,
+      "title": null,
+      "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+      "account": "opensoma.app@gmail.com",
+      "text": "2"
     }
   ],
   "deadline": null,
@@ -1343,6 +1352,268 @@
               "ids": "P-1, P-3"
             },
             "text": "2 ítems no se terminaron y pasan al sprint que sigue (P-1, P-3): el sprint era grande para las oficinas que hay.",
+            "status": "open"
+          }
+        ]
+      }
+    },
+    {
+      "n": 2,
+      "goal": "Un mensaje de WhatsApp entra, se transporta y se coordina de punta a punta contra un agente simulado, y un número de WhatsApp queda vinculado a un cliente con su identidad verificada.",
+      "closedAt": "2026-11-27T23:16:20.928Z",
+      "closedBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+      },
+      "items": [
+        "P-3"
+      ],
+      "carried": [
+        "P-1",
+        "P-6"
+      ],
+      "opened": [],
+      "run": "20261127-31aa",
+      "retro": {
+        "at": "2026-11-27T23:16:20.928Z",
+        "facts": {
+          "sprint": 2,
+          "items": [
+            {
+              "id": "P-3",
+              "title": "El banco tiene su conocimiento aprobado disponible para responder con citas",
+              "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
+              "workedMs": 7474550,
+              "stalledMs": 0,
+              "waitingMs": 111499,
+              "stalls": 0,
+              "reopened": 0,
+              "rework": 9,
+              "sessions": 1,
+              "tokens": 56893067,
+              "redoTokens": 12027878,
+              "over": false
+            }
+          ],
+          "carried": [
+            {
+              "id": "P-1",
+              "title": "El canal transporta sus mensajes de forma asíncrona, ordenada y sin perderlos",
+              "status": "doing",
+              "floor": "DESKTOP-JVEJTUF"
+            },
+            {
+              "id": "P-6",
+              "title": "Un número de WhatsApp queda vinculado a un cliente con su identidad verificada",
+              "status": "doing",
+              "floor": "Marcelo"
+            }
+          ],
+          "totals": {
+            "items": 1,
+            "carried": 2,
+            "workedMs": 7474550,
+            "stalledMs": 0,
+            "waitingMs": 111499,
+            "stalls": 0,
+            "rework": 9,
+            "reopened": 0,
+            "sessions": 1,
+            "tokens": 56893067,
+            "redoTokens": 12027878
+          },
+          "tools": [
+            {
+              "role": "dev-ia",
+              "tool": "codex",
+              "steps": 19,
+              "redo": 8,
+              "tokens": 18873910,
+              "redoShare": 0.42105263157894735
+            },
+            {
+              "role": "tester",
+              "tool": "codex",
+              "steps": 17,
+              "redo": 6,
+              "tokens": 10644815,
+              "redoShare": 0.35294117647058826
+            },
+            {
+              "role": "reviewer",
+              "tool": "cursor",
+              "steps": 18,
+              "redo": 4,
+              "tokens": 8074978,
+              "redoShare": 0.2222222222222222
+            },
+            {
+              "role": "dev-ia",
+              "tool": "cursor",
+              "steps": 5,
+              "redo": 2,
+              "tokens": 7572856,
+              "redoShare": 0.4
+            },
+            {
+              "role": "tester",
+              "tool": "claude-code",
+              "steps": 5,
+              "redo": 2,
+              "tokens": 2407289,
+              "redoShare": 0.4
+            },
+            {
+              "role": "analista",
+              "tool": "claude-code",
+              "steps": 2,
+              "redo": 2,
+              "tokens": 1142788,
+              "redoShare": 1
+            },
+            {
+              "role": "dev-ia",
+              "tool": "claude-code",
+              "steps": 1,
+              "redo": 1,
+              "tokens": 635891,
+              "redoShare": 1
+            },
+            {
+              "role": "documentador",
+              "tool": "opencode",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 3318693,
+              "redoShare": 0
+            },
+            {
+              "role": "devops",
+              "tool": "cursor",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 1541008,
+              "redoShare": 0
+            },
+            {
+              "role": "tech-lead",
+              "tool": "claude-code",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 1154286,
+              "redoShare": 0
+            },
+            {
+              "role": "pr-reviewer",
+              "tool": "copilot",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 726877,
+              "redoShare": 0
+            },
+            {
+              "role": "arquitecto",
+              "tool": "claude-code",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 471744,
+              "redoShare": 0
+            },
+            {
+              "role": "pr-publisher",
+              "tool": "copilot",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 327932,
+              "redoShare": 0
+            },
+            {
+              "role": "analista",
+              "tool": "kilocode",
+              "steps": 1,
+              "redo": 0,
+              "tokens": 0,
+              "redoShare": 0
+            }
+          ],
+          "quota": [],
+          "requests": {
+            "asked": 0,
+            "open": 0,
+            "slow": 0
+          },
+          "integration": {
+            "conflict": null,
+            "missingContracts": [],
+            "contractIssues": [],
+            "unpublished": []
+          }
+        },
+        "actions": [
+          {
+            "id": "tool_rework:dev-ia/codex",
+            "kind": "tool_rework",
+            "source": "auto",
+            "params": {
+              "role": "dev-ia",
+              "tool": "codex",
+              "redo": 8,
+              "steps": 19,
+              "share": 42
+            },
+            "text": "El rol dev-ia con codex repitió 8 de 19 pasos (42%): probar otra herramienta para ese rol, o sumarle una skill de lo que le devuelven.",
+            "status": "open"
+          },
+          {
+            "id": "tool_rework:dev-ia/cursor",
+            "kind": "tool_rework",
+            "source": "auto",
+            "params": {
+              "role": "dev-ia",
+              "tool": "cursor",
+              "redo": 2,
+              "steps": 5,
+              "share": 40
+            },
+            "text": "El rol dev-ia con cursor repitió 2 de 5 pasos (40%): probar otra herramienta para ese rol, o sumarle una skill de lo que le devuelven.",
+            "status": "open"
+          },
+          {
+            "id": "tool_rework:tester/claude-code",
+            "kind": "tool_rework",
+            "source": "auto",
+            "params": {
+              "role": "tester",
+              "tool": "claude-code",
+              "redo": 2,
+              "steps": 5,
+              "share": 40
+            },
+            "text": "El rol tester con claude-code repitió 2 de 5 pasos (40%): probar otra herramienta para ese rol, o sumarle una skill de lo que le devuelven.",
+            "status": "open"
+          },
+          {
+            "id": "item_rework:P-3",
+            "kind": "item_rework",
+            "source": "auto",
+            "params": {
+              "id": "P-3",
+              "title": "El banco tiene su conocimiento aprobado disponible para responder con citas",
+              "rework": 9,
+              "reopened": 0
+            },
+            "text": "P-3 «El banco tiene su conocimiento aprobado disponible para responder con citas» volvió 9 veces: era grande o no estaba claro. Partir los ítems parecidos y escribir sus criterios de aceptación antes de arrancar.",
+            "status": "open"
+          },
+          {
+            "id": "carried:2",
+            "kind": "carried",
+            "source": "auto",
+            "params": {
+              "n": 2,
+              "ids": "P-1, P-6"
+            },
+            "text": "2 ítems no se terminaron y pasan al sprint que sigue (P-1, P-6): el sprint era grande para las oficinas que hay.",
             "status": "open"
           }
         ]

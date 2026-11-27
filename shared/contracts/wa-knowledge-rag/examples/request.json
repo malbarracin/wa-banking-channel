@@ -1,0 +1,13 @@
+{
+  "query": "¿Dónde puedo consultar información sobre tarjetas?",
+  "filters": {
+    "family": [
+      "tarjetas"
+    ],
+    "type": [
+      "faq"
+    ]
+  },
+  "audience": "publico",
+  "topK": 5
+}

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Petición de consulta de conocimiento v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "query"
+  ],
+  "properties": {
+    "query": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "family": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "cuentas",
+              "tarjetas",
+              "seguros",
+              "canal"
+            ]
+          }
+        },
+        "type": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "faq",
+              "guia",
+              "politica",
+              "mensaje"
+            ]
+          }
+        }
+      }
+    },
+    "audience": {
+      "enum": [
+        "publico",
+        "interno"
+      ],
+      "default": "publico"
+    },
+    "topK": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "default": 5
+    }
+  }
+}

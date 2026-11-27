@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Error de consulta de conocimiento v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "code",
+    "message",
+    "correlationId"
+  ],
+  "properties": {
+    "code": {
+      "enum": [
+        "VALIDATION_ERROR",
+        "UNAUTHENTICATED",
+        "AUDIENCE_FORBIDDEN",
+        "KNOWLEDGE_UNAVAILABLE",
+        "INTERNAL_ERROR"
+      ]
+    },
+    "message": {
+      "type": "string"
+    },
+    "correlationId": {
+      "type": "string"
+    }
+  }
+}

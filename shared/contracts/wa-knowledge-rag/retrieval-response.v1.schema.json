@@ -1,0 +1,261 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Respuesta de consulta de conocimiento v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "correlationId",
+    "knowledgeVersion",
+    "confidence",
+    "results"
+  ],
+  "properties": {
+    "correlationId": {
+      "type": "string"
+    },
+    "knowledgeVersion": {
+      "type": "string",
+      "pattern": "^kv-[0-9]+$"
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "score",
+        "suggestion"
+      ],
+      "properties": {
+        "level": {
+          "enum": [
+            "alta",
+            "baja",
+            "sin_respuesta"
+          ]
+        },
+        "score": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1
+        },
+        "suggestion": {
+          "enum": [
+            "responder",
+            "aclarar",
+            "derivar"
+          ]
+        }
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "text",
+          "score",
+          "publishable",
+          "citation"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "score": {
+            "type": "number",
+            "minimum": -1,
+            "maximum": 1
+          },
+          "publishable": {
+            "type": "boolean"
+          },
+          "citation": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "pieceId",
+              "title",
+              "type",
+              "family",
+              "audience",
+              "version",
+              "section",
+              "ownerArea",
+              "approvedAt",
+              "approvalKind"
+            ],
+            "properties": {
+              "pieceId": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "faq",
+                  "guia",
+                  "politica",
+                  "mensaje"
+                ]
+              },
+              "family": {
+                "enum": [
+                  "cuentas",
+                  "tarjetas",
+                  "seguros",
+                  "canal"
+                ]
+              },
+              "audience": {
+                "enum": [
+                  "publico",
+                  "interno"
+                ]
+              },
+              "version": {
+                "type": "integer"
+              },
+              "section": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "ownerArea": {
+                "type": "string"
+              },
+              "approvedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "approvalKind": {
+                "enum": [
+                  "real",
+                  "prueba"
+                ]
+              }
+            }
+          }
+        },
+        "if": {
+          "properties": {
+            "citation": {
+              "properties": {
+                "audience": {
+                  "const": "interno"
+                }
+              }
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "publishable": {
+              "const": false
+            }
+          }
+        },
+        "else": {
+          "properties": {
+            "publishable": {
+              "const": true
+            }
+          }
+        }
+      },
+      "maxItems": 10
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "confidence": {
+            "properties": {
+              "level": {
+                "const": "alta"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "confidence": {
+            "properties": {
+              "suggestion": {
+                "enum": [
+                  "responder"
+                ]
+              }
+            }
+          },
+          "results": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "confidence": {
+            "properties": {
+              "level": {
+                "const": "baja"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "confidence": {
+            "properties": {
+              "suggestion": {
+                "enum": [
+                  "aclarar",
+                  "derivar"
+                ]
+              }
+            }
+          },
+          "results": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "confidence": {
+            "properties": {
+              "level": {
+                "const": "sin_respuesta"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "confidence": {
+            "properties": {
+              "suggestion": {
+                "enum": [
+                  "derivar"
+                ]
+              }
+            }
+          },
+          "results": {
+            "maxItems": 0
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,6 +1,36 @@
 {
  "items": [
   {
+   "id": "sgvc0zrs",
+   "texto": "La orden del hito H0.1 cita specs/scrum/backlog.md como dato de entrada, pero ese archivo no existe en el repositorio (specs/ arrancó vacío): las seis definiciones de negocio abiertas están en la memoria del proyecto y no aplican a la plataforma de eventos, que no tiene lógica de negocio. No frenar el trabajo buscando ese archivo.",
+   "tipo": "trampa",
+   "rol": "analista",
+   "run": null,
+   "at": "2026-11-27T21:02:33.383Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "xo0ufbo7",
+   "texto": "Los topics del piloto del canal son exactamente wa.message.received.v1 (gateway -> orquestador), wa.message.ready-to-send.v1 (orquestador -> gateway), wa.message.status.v1 (gateway -> orquestador/observabilidad) y wa.message.dlq.v1 (soporte); la clave de partición de todos es conversationId y los eventos de mensaje llevan messageId (deduplicación) y correlationId (traza). Los nombres de los topics de reintento no están en la fuente: los fija el catálogo siguiendo la convención.",
+   "tipo": "decision",
+   "rol": "analista",
+   "run": null,
+   "at": "2026-11-27T21:02:29.586Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "4awvtns2",
+   "texto": "Las convenciones técnicas del programa están en la página raíz del roadmap de Notion (no en la del hito): grupo Maven com.bcra; paquetes base com.bcra.gateway (H0), com.bcra.events (H0.1), com.bcra.orchestrator (H0.2) y com.bcra.<dominio>.ws (H1-H6); contratos en shared/contracts/<componente>/ y eventos en shared/contracts/events/; topics con la forma wa.<entidad>.<hecho>.v<n>; puertos de la PC gateway 8090, orquestador 8091, MCP 8101, conocimiento 8102, agente 8103; pull requests contra main.",
+   "tipo": "dato",
+   "rol": "analista",
+   "run": null,
+   "at": "2026-11-27T21:02:26.918Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "dqw5wqk7",
    "texto": "Hay seis definiciones del banco que la especificación deja abiertas a propósito (datos mínimos del alta, política de verificación de identidad, vigencia de la credencial, límites y horarios de transferencia con su umbral de doble confirmación, ventana y tope de movimientos/consumos, proceso de aprobación del conocimiento): no se inventan valores, cada componente las implementa como parámetro configurable. Están listadas en specs/scrum/backlog.md.",
    "tipo": "decision",

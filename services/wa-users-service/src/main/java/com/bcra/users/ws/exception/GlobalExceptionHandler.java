@@ -2,10 +2,12 @@ package com.bcra.users.ws.exception;
 
 import java.time.Instant;
 import java.util.List;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -19,8 +21,16 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, "Validation failed", details);
     }
 
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> constraintViolation(ConstraintViolationException exception) {
+        List<FieldError> details = exception.getConstraintViolations().stream()
+                .map(violation -> new FieldError(violation.getPropertyPath().toString(), violation.getMessage()))
+                .toList();
+        return response(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, "Validation failed", details);
+    }
+
     @ExceptionHandler({IllegalArgumentException.class, HttpMessageNotReadableException.class,
-            MethodArgumentTypeMismatchException.class})
+            MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})
     public ResponseEntity<ErrorResponse> badRequest(Exception exception) {
         return response(HttpStatus.BAD_REQUEST, ErrorCode.BAD_REQUEST, "Invalid request", List.of());
     }

@@ -17,7 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest(properties = {
-        "bank.users.allowed-transitions.ACTIVE=SUSPENDED,INACTIVE",
+        "bank.users.allowed-transitions.ACTIVE=ACTIVE,SUSPENDED,INACTIVE",
         "bank.users.allowed-transitions.SUSPENDED=ACTIVE,INACTIVE",
         "bank.users.allowed-transitions.INACTIVE=ACTIVE",
         "spring.datasource.url=jdbc:h2:mem:alternatestatus;MODE=PostgreSQL;DB_CLOSE_DELAY=-1"})
@@ -26,6 +26,20 @@ import org.springframework.test.web.servlet.MockMvc;
 class AlternateStatusPolicyTest {
     @Autowired private MockMvc mvc;
     @Autowired private ObjectMapper json;
+
+    @Test
+    @DisplayName("La política no permite cambiar al mismo estado aunque figure en el mapa")
+    void rejectsSameStatusEvenWhenConfigured() throws Exception {
+        String body = "{\"uniquenessValue\":\"" + UUID.randomUUID() + "\",\"displayName\":\"Ana\"}";
+        String response = mvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String id = json.readTree(response).get("id").asText();
+
+        mvc.perform(patch("/api/v1/users/{id}/status", id).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"ACTIVE\",\"actor\":\"operador\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"));
+    }
 
     @Test
     @DisplayName("Con mapa alternativo se puede reactivar desde INACTIVE")

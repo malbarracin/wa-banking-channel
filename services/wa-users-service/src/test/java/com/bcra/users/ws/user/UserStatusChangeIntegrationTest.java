@@ -63,7 +63,25 @@ class UserStatusChangeIntegrationTest {
 
         mvc.perform(get("/api/v1/users/{id}/audit", id)).andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.action == 'CAMBIO_ESTADO')]").isArray())
-                .andExpect(jsonPath("$[?(@.action == 'CAMBIO_ESTADO' && @.result == 'OK')]").exists());
+                .andExpect(jsonPath("$[?(@.action == 'CAMBIO_ESTADO' && @.result == 'OK'"
+                        + " && @.previousStatus == 'ACTIVE' && @.newStatus == 'SUSPENDED'"
+                        + " && @.actor == 'operador-1')].occurredAt").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("Una transición al mismo estado se rechaza sin modificar ni auditar")
+    void rejectsTransitionToSameStatus() throws Exception {
+        UUID id = createActiveCustomer();
+        long auditCount = audits.count();
+
+        patchStatus(id, "ACTIVE", "operador")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.details[?(@.field == 'previousStatus')].message").value("ACTIVE"))
+                .andExpect(jsonPath("$.details[?(@.field == 'newStatus')].message").value("ACTIVE"));
+
+        assertThat(users.findById(id).orElseThrow().getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(audits.count()).isEqualTo(auditCount);
     }
 
     @Test

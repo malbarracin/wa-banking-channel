@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "seq": 0,
+  "tasks": [],
+  "offices": {},
+  "log": [],
+  "deadline": null,
+  "requests": [],
+  "reqSeq": 0,
+  "sprints": [],
+  "goals": {},
+  "loose": {
+    "usd": 0,
+    "tokens": 0,
+    "runs": {},
+    "rest": {
+      "usd": 0,
+      "tokens": 0,
+      "floors": {},
+      "tools": {}
+    }
+  },
+  "helps": [],
+  "helpSeq": 0,
+  "helpers": {
+    "Marcelo": {
+      "idle": true,
+      "team": null,
+      "at": "2026-11-27T19:54:14.791Z"
+    }
+  }
+}

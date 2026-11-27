@@ -2,6 +2,8 @@ package com.bcra.users.ws.exception;
 
 import java.time.Instant;
 import java.util.List;
+import com.bcra.users.ws.user.exception.DuplicateUserException;
+import com.bcra.users.ws.user.exception.UserValidationException;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +16,16 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(UserValidationException.class)
+    public ResponseEntity<ErrorResponse> userValidation(UserValidationException exception) {
+        return response(HttpStatus.BAD_REQUEST, ErrorCode.VALIDATION_ERROR, "Validation failed", exception.getDetails());
+    }
+
+    @ExceptionHandler(DuplicateUserException.class)
+    public ResponseEntity<ErrorResponse> duplicate(DuplicateUserException exception) {
+        return response(HttpStatus.CONFLICT, ErrorCode.CONFLICT, exception.getMessage(),
+                List.of(new FieldError(exception.getField(), "DUPLICADO")));
+    }
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> validation(MethodArgumentNotValidException exception) {
         List<FieldError> details = exception.getBindingResult().getFieldErrors().stream()

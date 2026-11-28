@@ -1,0 +1,17 @@
+replicaCount: 1
+image:
+  repository: wa-channel-service
+  tag: local
+  pullPolicy: IfNotPresent
+service:
+  port: 8080
+usersServiceBaseUrl: http://wa-users-service:8080
+database:
+  existingSecret: wa-channel-database
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 1Gi

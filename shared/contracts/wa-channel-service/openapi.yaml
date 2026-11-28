@@ -1,0 +1,1047 @@
+openapi: 3.1.0
+info:
+  title: wa-channel-service
+  description: Vínculo de número WhatsApp con cliente del banco
+  version: 0.1.0-SNAPSHOT
+servers:
+- url: http://localhost
+  description: Generated server url
+tags:
+- name: Auditoría
+  description: Historial resumido del vínculo para soporte
+- name: Perfil del canal
+  description: Consulta de perfil y actualización de preferencias
+- name: Vínculo
+  description: "Estado del vínculo, términos, verificación de identidad, bloqueo y\
+    \ desvinculación"
+paths:
+  /api/v1/bindings/{whatsappNumber}/verify:
+    post:
+      tags:
+      - Vínculo
+      summary: Verificar identidad y activar vínculo
+      description: "Exige vínculo en PENDIENTE_VERIFICACION. Consulta H1 por clientId,\
+        \ aplica la política de verificación, anti-fraude y emite el resultado verificable.\
+        \ verificationData no se persiste ni se audita."
+      operationId: verify
+      parameters:
+      - name: whatsappNumber
+        in: path
+        description: Número WhatsApp en formato E.164
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyIdentityRequest"
+            examples:
+              Verificacion:
+                description: Verificacion
+                value:
+                  clientId: 123e4567-e89b-12d3-a456-426614174000
+                  verificationData: "+5491112345678"
+        required: true
+      responses:
+        "200":
+          description: Verificación procesada (éxito o fallo con intentos restantes)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerifyIdentityResponse"
+              examples:
+                Exito:
+                  description: Exito
+                  value:
+                    bindingId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                    status: ACTIVO
+                    attemptsRemaining: 0
+                    verifiableResult:
+                      identityVerified: true
+                      bindingId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                      clientId: 123e4567-e89b-12d3-a456-426614174000
+                      verifiedAt: 2026-11-27T15:30:00Z
+                    message: "¡Listo, Ana Pérez! Tu WhatsApp quedó vinculado de forma\
+                      \ segura."
+                FalloConIntentos:
+                  description: FalloConIntentos
+                  value:
+                    bindingId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                    status: PENDIENTE_VERIFICACION
+                    attemptsRemaining: 2
+                    message: No pudimos validar tus datos. Te quedan 2 intentos.
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "404":
+          description: Cliente no encontrado en el registro del banco
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "409":
+          description: "Sin términos, cliente suspendido/inactivo o número ya vinculado"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Conflict:
+                  $ref: "#/components/examples/Conflict"
+        "423":
+          description: Intentos de verificación agotados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                VerificationLocked:
+                  $ref: "#/components/examples/VerificationLocked"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/bindings/{whatsappNumber}/unbind:
+    post:
+      tags:
+      - Vínculo
+      summary: Desvincular número
+      description: ACTIVO o BLOQUEADO → DESVINCULADO. Cliente requiere confirmed=true.
+        BANCO requiere header X-Internal-Role con el rol bank-policy configurado.
+        La respuesta indica credentialRevocationRequired para revocar en el mismo
+        intercambio.
+      operationId: unbind
+      parameters:
+      - name: whatsappNumber
+        in: path
+        description: Número WhatsApp en formato E.164
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      - name: X-Internal-Role
+        in: header
+        description: Rol interno; obligatorio si actor=BANCO (valor bank-policy)
+        required: false
+        schema:
+          type: string
+        example: bank-policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UnbindRequest"
+        required: true
+      responses:
+        "200":
+          description: Número desvinculado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnbindResponse"
+              example:
+                bindingId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                status: DESVINCULADO
+                message: "Tu número fue desvinculado del canal. Si querés volver a\
+                  \ operar por WhatsApp, escribinos y repetimos la verificación."
+                credentialRevocationRequired: true
+        "400":
+          description: "Actor ausente, sin confirmación del cliente o número invá\
+            lido"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "403":
+          description: BANCO sin X-Internal-Role válido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Forbidden:
+                  $ref: "#/components/examples/Forbidden"
+        "404":
+          description: Vínculo inexistente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "409":
+          description: Ya desvinculado u otra transición inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Conflict:
+                  $ref: "#/components/examples/Conflict"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/bindings/{whatsappNumber}/terms:
+    post:
+      tags:
+      - Vínculo
+      summary: Aceptar o rechazar términos
+      description: accepted=true crea o reactiva el vínculo en PENDIENTE_VERIFICACION.
+        accepted=false responde 400 con el mensaje de no-aceptación.
+      operationId: acceptTerms
+      parameters:
+      - name: whatsappNumber
+        in: path
+        description: Número WhatsApp en formato E.164
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AcceptTermsRequest"
+        required: true
+      responses:
+        "200":
+          description: Términos aceptados
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptTermsResponse"
+              example:
+                bindingId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                status: PENDIENTE_VERIFICACION
+                message: Términos aceptados. Podés continuar con la verificación de
+                  identidad.
+        "400":
+          description: Términos rechazados o número inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "409":
+          description: Vínculo ya activo u otra transición inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Conflict:
+                  $ref: "#/components/examples/Conflict"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/bindings/{whatsappNumber}/block:
+    post:
+      tags:
+      - Vínculo
+      summary: Bloquear vínculo
+      description: ACTIVO → BLOQUEADO. Cliente requiere confirmed=true. BANCO requiere
+        header X-Internal-Role con el rol bank-policy configurado. La respuesta indica
+        credentialRevocationRequired para revocar en el mismo intercambio.
+      operationId: block
+      parameters:
+      - name: whatsappNumber
+        in: path
+        description: Número WhatsApp en formato E.164
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      - name: X-Internal-Role
+        in: header
+        description: Rol interno; obligatorio si actor=BANCO (valor bank-policy)
+        required: false
+        schema:
+          type: string
+        example: bank-policy
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlockBindingRequest"
+        required: true
+      responses:
+        "200":
+          description: Vínculo bloqueado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlockBindingResponse"
+              example:
+                bindingId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                status: BLOQUEADO
+                message: "Tu WhatsApp quedó bloqueado para operaciones. Para reactivarlo,\
+                  \ seguí los pasos de verificación cuando quieras."
+                credentialRevocationRequired: true
+        "400":
+          description: "Actor ausente, sin confirmación del cliente o número invá\
+            lido"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "403":
+          description: BANCO sin X-Internal-Role válido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Forbidden:
+                  $ref: "#/components/examples/Forbidden"
+        "404":
+          description: Vínculo inexistente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "409":
+          description: "Ya bloqueado, desvinculado u otra transición inválida"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Conflict:
+                  $ref: "#/components/examples/Conflict"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/bindings/{whatsappNumber}/preferences:
+    patch:
+      tags:
+      - Perfil del canal
+      summary: Actualizar preferencias del canal
+      description: Guarda idioma y notificaciones sobre un vínculo ACTIVO y devuelve
+        el perfil.
+      operationId: updatePreferences
+      parameters:
+      - name: whatsappNumber
+        in: path
+        description: Número WhatsApp en formato E.164
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePreferencesRequest"
+            example:
+              languagePreference: en
+              notificationsEnabled: false
+        required: true
+      responses:
+        "200":
+          description: Preferencias actualizadas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelProfileResponse"
+              example:
+                whatsappNumber: "+5491112345678"
+                clientId: c1d2e3f4-a5b6-7890-cdef-1234567890ab
+                displayName: Ana Pérez
+                bindingStatus: ACTIVO
+                languagePreference: en
+                notificationsEnabled: false
+                createdAt: 2026-11-27T12:00:00Z
+                updatedAt: 2026-11-27T13:00:00Z
+        "400":
+          description: Campos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                ValidationError:
+                  $ref: "#/components/examples/ValidationError"
+        "404":
+          description: Sin vínculo activo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/bindings/{whatsappNumber}:
+    get:
+      tags:
+      - Vínculo
+      summary: Consultar estado del vínculo
+      description: Devuelve el estado del número. Sin registro responde 200 con status
+        SIN_VINCULO.
+      operationId: getStatus
+      parameters:
+      - name: whatsappNumber
+        in: path
+        description: Número WhatsApp en formato E.164
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      responses:
+        "200":
+          description: Estado del vínculo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BindingStatusResponse"
+              examples:
+                Activo:
+                  description: Activo
+                  value:
+                    whatsappNumber: "+5491112345678"
+                    status: ACTIVO
+                    clientId: c1d2e3f4-a5b6-7890-cdef-1234567890ab
+                    bindingId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                SinVinculo:
+                  description: SinVinculo
+                  value:
+                    whatsappNumber: "+5491112345678"
+                    status: SIN_VINCULO
+                    clientId: null
+                    bindingId: null
+        "400":
+          description: Número con formato inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/bindings/{whatsappNumber}/profile:
+    get:
+      tags:
+      - Perfil del canal
+      summary: Consultar perfil del canal
+      description: Devuelve datos públicos y preferencias de un vínculo ACTIVO. Sin
+        vínculo activo responde 404. No incluye datos legales sensibles.
+      operationId: getProfile
+      parameters:
+      - name: whatsappNumber
+        in: path
+        description: Número WhatsApp en formato E.164
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      responses:
+        "200":
+          description: Perfil del canal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChannelProfileResponse"
+              example:
+                whatsappNumber: "+5491112345678"
+                clientId: c1d2e3f4-a5b6-7890-cdef-1234567890ab
+                displayName: Ana Pérez
+                bindingStatus: ACTIVO
+                languagePreference: es
+                notificationsEnabled: true
+                createdAt: 2026-11-27T12:00:00Z
+                updatedAt: 2026-11-27T12:00:00Z
+        "400":
+          description: Número con formato inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "404":
+          description: Sin vínculo activo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "500":
+          description: Error interno (p. ej. H1 no responde)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/bindings/{whatsappNumber}/history:
+    get:
+      tags:
+      - Auditoría
+      summary: Historial de auditoría para soporte
+      description: Requiere header X-Internal-Role con el valor de bank.channel.internal-roles.support.
+        Las entradas no incluyen secretos ni datos de verificación.
+      operationId: history
+      parameters:
+      - name: whatsappNumber
+        in: path
+        description: Número WhatsApp en formato E.164
+        required: true
+        schema:
+          type: string
+        example: "+5491112345678"
+      - name: X-Internal-Role
+        in: header
+        description: Rol interno; debe coincidir con bank.channel.internal-roles.support
+        required: true
+        example: support
+      responses:
+        "200":
+          description: Historial ordenado por fecha descendente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEntryResponse"
+              example:
+              - id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                bindingId: b2c3d4e5-f6a7-8901-bcde-f12345678901
+                whatsappNumber: "+5491112345678"
+                action: TERMS_ACCEPTED
+                result: OK
+                actor: CLIENTE
+                detail: Términos aceptados
+                occurredAt: 2026-11-27T15:30:00Z
+        "400":
+          description: Header X-Internal-Role ausente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "403":
+          description: Rol interno inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Forbidden:
+                  $ref: "#/components/examples/Forbidden"
+        "404":
+          description: Número sin entradas de auditoría
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+components:
+  schemas:
+    VerifyIdentityRequest:
+      type: object
+      description: Verificación de identidad del titular del vínculo
+      properties:
+        clientId:
+          type: string
+          format: uuid
+          description: Id interno del cliente en wa-users-service
+          example: 123e4567-e89b-12d3-a456-426614174000
+        verificationData:
+          type: string
+          description: Dato de verificación (no se almacena ni registra)
+          example: "+5491112345678"
+          minLength: 1
+      required:
+      - clientId
+      - verificationData
+    VerifiableResultResponse:
+      type: object
+      description: Resultado verificable de identidad y vínculo
+      properties:
+        identityVerified:
+          type: boolean
+          description: true si la identidad fue verificada
+          example: true
+        bindingId:
+          type: string
+          format: uuid
+          description: Id del vínculo
+          example: b2c3d4e5-f6a7-8901-bcde-f12345678901
+        clientId:
+          type: string
+          format: uuid
+          description: Id del cliente
+          example: 123e4567-e89b-12d3-a456-426614174000
+        verifiedAt:
+          type: string
+          format: date-time
+          description: Momento de la verificación
+          example: 2026-11-27T15:30:00Z
+    VerifyIdentityResponse:
+      type: object
+      description: Resultado de un intento de verificación de identidad
+      properties:
+        bindingId:
+          type: string
+          format: uuid
+          description: Id del vínculo
+          example: b2c3d4e5-f6a7-8901-bcde-f12345678901
+        status:
+          type: string
+          description: Estado del vínculo tras el intento
+          enum:
+          - SIN_VINCULO
+          - PENDIENTE_VERIFICACION
+          - ACTIVO
+          - BLOQUEADO
+          - DESVINCULADO
+          example: ACTIVO
+        attemptsRemaining:
+          type: integer
+          format: int32
+          description: Intentos de verificación restantes en la ventana
+          example: 2
+        verifiableResult:
+          $ref: "#/components/schemas/VerifiableResultResponse"
+          description: Resultado verificable; solo si status = ACTIVO
+        message:
+          type: string
+          description: Mensaje al cliente sin secretos ni ids internos
+    ErrorResponse:
+      type: object
+      properties:
+        code:
+          type: string
+          enum:
+          - VALIDATION_ERROR
+          - BAD_REQUEST
+          - FORBIDDEN
+          - NOT_FOUND
+          - CONFLICT
+          - VERIFICATION_LOCKED
+          - INTERNAL_ERROR
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            $ref: "#/components/schemas/FieldError"
+        timestamp:
+          type: string
+          format: date-time
+    FieldError:
+      type: object
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    UnbindRequest:
+      type: object
+      description: Pedido de desvinculación del número WhatsApp
+      properties:
+        actor:
+          type: string
+          description: "Actor: CLIENTE o BANCO"
+          enum:
+          - CLIENTE
+          - BANCO
+          example: CLIENTE
+        reason:
+          type: string
+          description: Motivo de la desvinculación (sin datos de verificación)
+          example: Solicitud del cliente
+          maxLength: 512
+          minLength: 0
+        confirmed:
+          type: boolean
+          description: Confirmación explícita; obligatoria en true cuando actor=CLIENTE
+          example: true
+      required:
+      - actor
+      - reason
+    UnbindResponse:
+      type: object
+      description: Respuesta tras desvincular el número
+      properties:
+        bindingId:
+          type: string
+          format: uuid
+          description: Identificador del vínculo
+          example: b2c3d4e5-f6a7-8901-bcde-f12345678901
+        status:
+          type: string
+          description: Estado resultante
+          enum:
+          - SIN_VINCULO
+          - PENDIENTE_VERIFICACION
+          - ACTIVO
+          - BLOQUEADO
+          - DESVINCULADO
+          example: DESVINCULADO
+        message:
+          type: string
+          description: Mensaje al cliente (sección 8.10)
+          example: "Tu número fue desvinculado del canal. Si querés volver a operar\
+            \ por WhatsApp, escribinos y repetimos la verificación."
+        credentialRevocationRequired:
+          type: boolean
+          description: "true: el orquestador debe revocar la credencial en H2"
+          example: true
+    AcceptTermsRequest:
+      type: object
+      description: Aceptación de términos y condiciones del canal
+      properties:
+        accepted:
+          type: boolean
+          description: true acepta; false rechaza
+          example: true
+      required:
+      - accepted
+    AcceptTermsResponse:
+      type: object
+      description: Respuesta tras aceptar términos y condiciones
+      properties:
+        bindingId:
+          type: string
+          format: uuid
+          description: Identificador del vínculo
+          example: b2c3d4e5-f6a7-8901-bcde-f12345678901
+        status:
+          type: string
+          description: Estado resultante
+          enum:
+          - SIN_VINCULO
+          - PENDIENTE_VERIFICACION
+          - ACTIVO
+          - BLOQUEADO
+          - DESVINCULADO
+          example: PENDIENTE_VERIFICACION
+        message:
+          type: string
+          description: Mensaje al cliente
+          example: Términos aceptados. Podés continuar con la verificación de identidad.
+    BlockBindingRequest:
+      type: object
+      description: Pedido de bloqueo del vínculo WhatsApp
+      properties:
+        actor:
+          type: string
+          description: "Actor: CLIENTE o BANCO"
+          enum:
+          - CLIENTE
+          - BANCO
+          example: CLIENTE
+        reason:
+          type: string
+          description: Motivo del bloqueo (sin datos de verificación)
+          example: Solicitud del cliente
+          maxLength: 512
+          minLength: 0
+        confirmed:
+          type: boolean
+          description: Confirmación explícita; obligatoria en true cuando actor=CLIENTE
+          example: true
+      required:
+      - actor
+      - reason
+    BlockBindingResponse:
+      type: object
+      description: Respuesta tras bloquear el vínculo
+      properties:
+        bindingId:
+          type: string
+          format: uuid
+          description: Identificador del vínculo
+          example: b2c3d4e5-f6a7-8901-bcde-f12345678901
+        status:
+          type: string
+          description: Estado resultante
+          enum:
+          - SIN_VINCULO
+          - PENDIENTE_VERIFICACION
+          - ACTIVO
+          - BLOQUEADO
+          - DESVINCULADO
+          example: BLOQUEADO
+        message:
+          type: string
+          description: Mensaje al cliente (sección 8.10)
+          example: "Tu WhatsApp quedó bloqueado para operaciones. Para reactivarlo,\
+            \ seguí los pasos de verificación cuando quieras."
+        credentialRevocationRequired:
+          type: boolean
+          description: "true: el orquestador debe revocar la credencial en H2"
+          example: true
+    UpdatePreferencesRequest:
+      type: object
+      description: Preferencias del canal a actualizar
+      properties:
+        languagePreference:
+          type: string
+          description: "Código de idioma ISO 639-1, opcionalmente con región"
+          example: es
+          minLength: 1
+          pattern: "^[a-z]{2}(-[A-Za-z]{2})?$"
+        notificationsEnabled:
+          type: boolean
+          description: true habilita notificaciones del canal
+          example: true
+      required:
+      - languagePreference
+      - notificationsEnabled
+    ChannelProfileResponse:
+      type: object
+      description: Perfil del canal (sin datos legales sensibles)
+      properties:
+        whatsappNumber:
+          type: string
+          description: Número WhatsApp en E.164
+          example: "+5491112345678"
+        clientId:
+          type: string
+          format: uuid
+          description: Identificador interno del cliente
+          example: c1d2e3f4-a5b6-7890-cdef-1234567890ab
+        displayName:
+          type: string
+          description: Nombre para mostrar del cliente
+          example: Ana Pérez
+        bindingStatus:
+          type: string
+          description: Estado del vínculo
+          enum:
+          - SIN_VINCULO
+          - PENDIENTE_VERIFICACION
+          - ACTIVO
+          - BLOQUEADO
+          - DESVINCULADO
+          example: ACTIVO
+        languagePreference:
+          type: string
+          description: Preferencia de idioma (código ISO)
+          example: es
+        notificationsEnabled:
+          type: boolean
+          description: Notificaciones del canal habilitadas
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Alta del vínculo (ISO-8601 UTC)
+          example: 2026-11-27T12:00:00Z
+        updatedAt:
+          type: string
+          format: date-time
+          description: Última actualización (ISO-8601 UTC)
+          example: 2026-11-27T12:30:00Z
+    BindingStatusResponse:
+      type: object
+      description: Estado del vínculo de un número WhatsApp
+      properties:
+        whatsappNumber:
+          type: string
+          description: Número WhatsApp en E.164
+          example: "+5491112345678"
+        status:
+          type: string
+          description: Estado del vínculo
+          enum:
+          - SIN_VINCULO
+          - PENDIENTE_VERIFICACION
+          - ACTIVO
+          - BLOQUEADO
+          - DESVINCULADO
+          example: ACTIVO
+        clientId:
+          type: string
+          format: uuid
+          description: Identificador del cliente vinculado
+          example: c1d2e3f4-a5b6-7890-cdef-1234567890ab
+        bindingId:
+          type: string
+          format: uuid
+          description: Identificador del vínculo
+          example: b2c3d4e5-f6a7-8901-bcde-f12345678901
+    AuditEntryResponse:
+      type: object
+      description: Entrada resumida del historial de auditoría del vínculo
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador de la entrada
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        bindingId:
+          type: string
+          format: uuid
+          description: Identificador del vínculo
+          example: b2c3d4e5-f6a7-8901-bcde-f12345678901
+        whatsappNumber:
+          type: string
+          description: Número WhatsApp en E.164
+          example: "+5491112345678"
+        action:
+          type: string
+          description: Acción auditada
+          enum:
+          - STATUS_QUERIED
+          - TERMS_ACCEPTED
+          - TERMS_REJECTED
+          - CLIENT_LOOKUP
+          - IDENTITY_VERIFIED
+          - IDENTITY_FAILED
+          - VERIFICATION_LOCKED
+          - ANTIFRAUD_CHECK
+          - BINDING_ACTIVATED
+          - VERIFIABLE_RESULT_ISSUED
+          - BINDING_BLOCKED
+          - BINDING_UNBOUND
+          example: TERMS_ACCEPTED
+        result:
+          type: string
+          description: Resultado de la acción
+          enum:
+          - OK
+          - ERROR
+          - BLOQUEADO
+          example: OK
+        actor:
+          type: string
+          description: Quién disparó la acción
+          example: CLIENTE
+        detail:
+          type: string
+          description: Detalle sin secretos ni datos de verificación
+          example: Términos aceptados
+        occurredAt:
+          type: string
+          format: date-time
+          description: Momento del evento (UTC)
+          example: 2026-11-27T15:30:00Z
+  examples:
+    BadRequest:
+      value:
+        code: BAD_REQUEST
+        message: Solicitud inválida
+        details: []
+        timestamp: 2026-11-27T15:30:00Z
+    ValidationError:
+      value:
+        code: VALIDATION_ERROR
+        message: La solicitud tiene datos inválidos
+        details:
+        - field: languagePreference
+          message: no debe estar vacío
+        timestamp: 2026-11-27T15:30:00Z
+    Forbidden:
+      value:
+        code: FORBIDDEN
+        message: Rol interno no autorizado
+        details: []
+        timestamp: 2026-11-27T15:30:00Z
+    NotFound:
+      value:
+        code: NOT_FOUND
+        message: No hay historial de auditoría para el número indicado
+        details: []
+        timestamp: 2026-11-27T15:30:00Z
+    Conflict:
+      value:
+        code: CONFLICT
+        message: El número ya tiene un vínculo activo
+        details: []
+        timestamp: 2026-11-27T15:30:00Z
+    VerificationLocked:
+      value:
+        code: VERIFICATION_LOCKED
+        message: "Por seguridad, pausamos los intentos de verificación. Comunicate\
+          \ con soporte."
+        details: []
+        timestamp: 2026-11-27T15:30:00Z
+    InternalError:
+      value:
+        code: INTERNAL_ERROR
+        message: Error interno
+        details: []
+        timestamp: 2026-11-27T15:30:00Z

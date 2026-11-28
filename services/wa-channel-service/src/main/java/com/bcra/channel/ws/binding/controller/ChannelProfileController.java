@@ -70,19 +70,19 @@ public class ChannelProfileController {
                     description = "Número con formato inválido",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/BadRequest"))),
+                            examples = @ExampleObject(name = "BadRequest", ref = "#/components/examples/BadRequest"))),
             @ApiResponse(
                     responseCode = "404",
                     description = "Sin vínculo activo",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/NotFound"))),
+                            examples = @ExampleObject(name = "NotFound", ref = "#/components/examples/NotFound"))),
             @ApiResponse(
                     responseCode = "500",
                     description = "Error interno (p. ej. H1 no responde)",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))
+                            examples = @ExampleObject(name = "InternalError", ref = "#/components/examples/InternalError")))
     })
     public ChannelProfileResponse getProfile(
             @Parameter(
@@ -130,19 +130,19 @@ public class ChannelProfileController {
                     description = "Campos inválidos",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/ValidationError"))),
+                            examples = @ExampleObject(name = "ValidationError", ref = "#/components/examples/ValidationError"))),
             @ApiResponse(
                     responseCode = "404",
                     description = "Sin vínculo activo",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/NotFound"))),
+                            examples = @ExampleObject(name = "NotFound", ref = "#/components/examples/NotFound"))),
             @ApiResponse(
                     responseCode = "500",
                     description = "Error interno",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))
+                            examples = @ExampleObject(name = "InternalError", ref = "#/components/examples/InternalError")))
     })
     public ChannelProfileResponse updatePreferences(
             @Parameter(

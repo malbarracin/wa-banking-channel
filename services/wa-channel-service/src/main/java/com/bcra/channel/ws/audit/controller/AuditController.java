@@ -73,25 +73,25 @@ public class AuditController {
                     description = "Header X-Internal-Role ausente",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/BadRequest"))),
+                            examples = @ExampleObject(name = "BadRequest", ref = "#/components/examples/BadRequest"))),
             @ApiResponse(
                     responseCode = "403",
                     description = "Rol interno inválido",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/Forbidden"))),
+                            examples = @ExampleObject(name = "Forbidden", ref = "#/components/examples/Forbidden"))),
             @ApiResponse(
                     responseCode = "404",
                     description = "Número sin entradas de auditoría",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/NotFound"))),
+                            examples = @ExampleObject(name = "NotFound", ref = "#/components/examples/NotFound"))),
             @ApiResponse(
                     responseCode = "500",
                     description = "Error interno",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))
+                            examples = @ExampleObject(name = "InternalError", ref = "#/components/examples/InternalError")))
     })
     @Parameters({
             @Parameter(

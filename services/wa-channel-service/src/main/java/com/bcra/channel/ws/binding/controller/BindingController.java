@@ -91,13 +91,13 @@ public class BindingController {
                     description = "Número con formato inválido",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/BadRequest"))),
+                            examples = @ExampleObject(name = "BadRequest", ref = "#/components/examples/BadRequest"))),
             @ApiResponse(
                     responseCode = "500",
                     description = "Error interno",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))
+                            examples = @ExampleObject(name = "InternalError", ref = "#/components/examples/InternalError")))
     })
     public BindingStatusResponse getStatus(
             @Parameter(
@@ -141,19 +141,19 @@ public class BindingController {
                     description = "Términos rechazados o número inválido",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/BadRequest"))),
+                            examples = @ExampleObject(name = "BadRequest", ref = "#/components/examples/BadRequest"))),
             @ApiResponse(
                     responseCode = "409",
                     description = "Vínculo ya activo u otra transición inválida",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/Conflict"))),
+                            examples = @ExampleObject(name = "Conflict", ref = "#/components/examples/Conflict"))),
             @ApiResponse(
                     responseCode = "500",
                     description = "Error interno",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))
+                            examples = @ExampleObject(name = "InternalError", ref = "#/components/examples/InternalError")))
     })
     public AcceptTermsResponse acceptTerms(
             @Parameter(
@@ -232,31 +232,31 @@ public class BindingController {
                     description = "Datos inválidos",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/BadRequest"))),
+                            examples = @ExampleObject(name = "BadRequest", ref = "#/components/examples/BadRequest"))),
             @ApiResponse(
                     responseCode = "404",
                     description = "Cliente no encontrado en el registro del banco",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/NotFound"))),
+                            examples = @ExampleObject(name = "NotFound", ref = "#/components/examples/NotFound"))),
             @ApiResponse(
                     responseCode = "409",
                     description = "Sin términos, cliente suspendido/inactivo o número ya vinculado",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/Conflict"))),
+                            examples = @ExampleObject(name = "Conflict", ref = "#/components/examples/Conflict"))),
             @ApiResponse(
                     responseCode = "423",
                     description = "Intentos de verificación agotados",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/VerificationLocked"))),
+                            examples = @ExampleObject(name = "VerificationLocked", ref = "#/components/examples/VerificationLocked"))),
             @ApiResponse(
                     responseCode = "500",
                     description = "Error interno",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))
+                            examples = @ExampleObject(name = "InternalError", ref = "#/components/examples/InternalError")))
     })
     public VerifyIdentityResponse verify(
             @Parameter(
@@ -304,31 +304,31 @@ public class BindingController {
                     description = "Actor ausente, sin confirmación del cliente o número inválido",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/BadRequest"))),
+                            examples = @ExampleObject(name = "BadRequest", ref = "#/components/examples/BadRequest"))),
             @ApiResponse(
                     responseCode = "403",
                     description = "BANCO sin X-Internal-Role válido",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/Forbidden"))),
+                            examples = @ExampleObject(name = "Forbidden", ref = "#/components/examples/Forbidden"))),
             @ApiResponse(
                     responseCode = "404",
                     description = "Vínculo inexistente",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/NotFound"))),
+                            examples = @ExampleObject(name = "NotFound", ref = "#/components/examples/NotFound"))),
             @ApiResponse(
                     responseCode = "409",
                     description = "Ya bloqueado, desvinculado u otra transición inválida",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/Conflict"))),
+                            examples = @ExampleObject(name = "Conflict", ref = "#/components/examples/Conflict"))),
             @ApiResponse(
                     responseCode = "500",
                     description = "Error interno",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))
+                            examples = @ExampleObject(name = "InternalError", ref = "#/components/examples/InternalError")))
     })
     public BlockBindingResponse block(
             @Parameter(
@@ -383,31 +383,31 @@ public class BindingController {
                     description = "Actor ausente, sin confirmación del cliente o número inválido",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/BadRequest"))),
+                            examples = @ExampleObject(name = "BadRequest", ref = "#/components/examples/BadRequest"))),
             @ApiResponse(
                     responseCode = "403",
                     description = "BANCO sin X-Internal-Role válido",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/Forbidden"))),
+                            examples = @ExampleObject(name = "Forbidden", ref = "#/components/examples/Forbidden"))),
             @ApiResponse(
                     responseCode = "404",
                     description = "Vínculo inexistente",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/NotFound"))),
+                            examples = @ExampleObject(name = "NotFound", ref = "#/components/examples/NotFound"))),
             @ApiResponse(
                     responseCode = "409",
                     description = "Ya desvinculado u otra transición inválida",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/Conflict"))),
+                            examples = @ExampleObject(name = "Conflict", ref = "#/components/examples/Conflict"))),
             @ApiResponse(
                     responseCode = "500",
                     description = "Error interno",
                     content = @Content(
                             schema = @Schema(implementation = ErrorResponse.class),
-                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))
+                            examples = @ExampleObject(name = "InternalError", ref = "#/components/examples/InternalError")))
     })
     public UnbindResponse unbind(
             @Parameter(

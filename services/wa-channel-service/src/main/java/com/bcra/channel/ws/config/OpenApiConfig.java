@@ -24,6 +24,7 @@ public class OpenApiConfig {
     OpenAPI channelOpenApi() {
         Map<String, Example> examples = ordered(
                 Map.entry("BadRequest", errorExample(ErrorCode.BAD_REQUEST, "Solicitud inválida")),
+                Map.entry("ValidationError", validationErrorExample()),
                 Map.entry("Forbidden", errorExample(ErrorCode.FORBIDDEN, "Rol interno no autorizado")),
                 Map.entry(
                         "NotFound",
@@ -55,11 +56,23 @@ public class OpenApiConfig {
 
     private static Example errorExample(ErrorCode code, String message) {
         Example example = new Example();
-        example.setValue(Map.of(
-                "code", code.name(),
-                "message", message,
-                "details", List.of(),
-                "timestamp", "2026-11-27T15:30:00Z"));
+        example.setValue(ordered(
+                Map.entry("code", code.name()),
+                Map.entry("message", message),
+                Map.entry("details", List.of()),
+                Map.entry("timestamp", "2026-11-27T15:30:00Z")));
+        return example;
+    }
+
+    private static Example validationErrorExample() {
+        Example example = new Example();
+        example.setValue(ordered(
+                Map.entry("code", ErrorCode.VALIDATION_ERROR.name()),
+                Map.entry("message", "La solicitud tiene datos inválidos"),
+                Map.entry("details", List.of(ordered(
+                        Map.entry("field", "languagePreference"),
+                        Map.entry("message", "no debe estar vacío")))),
+                Map.entry("timestamp", "2026-11-27T15:30:00Z")));
         return example;
     }
 }

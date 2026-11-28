@@ -1,6 +1,16 @@
 {
  "items": [
   {
+   "id": "3u1tc1fh",
+   "texto": "wa-channel-service: documentación en services/wa-channel-service/delivery/ (api, architecture-overview, qa-manual, postman, bruno, openapi) y contrato en shared/contracts/wa-channel-service/; OpenApiExportTest regenera openapi en verify; en Windows el log de clean verify va fuera de target/.",
+   "tipo": "dato",
+   "rol": "documentador",
+   "run": null,
+   "at": "2026-11-28T20:14:21.196Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
    "id": "34is25se",
    "texto": "wa-channel-service BindingController concentra getStatus/terms/verify (BindingService) y block/unbind (BindingLifecycleService); BindingMapper tiene toVerifiableResult y toProfileResponse juntos.",
    "tipo": "dato",

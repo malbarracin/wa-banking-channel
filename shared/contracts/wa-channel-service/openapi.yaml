@@ -1,11 +1,13 @@
 openapi: 3.1.0
 info:
   title: wa-channel-service
-  description: Vínculo de número WhatsApp con cliente del banco
+  description: "Administra el vínculo entre un número de WhatsApp y un cliente del\
+    \ banco: términos, verificación de identidad, perfil, bloqueo, desvinculación\
+    \ e historial de auditoría. No emite credenciales ni opera productos."
   version: 0.1.0-SNAPSHOT
 servers:
-- url: http://localhost
-  description: Generated server url
+- url: http://localhost:8080
+  description: Local
 tags:
 - name: Auditoría
   description: Historial resumido del vínculo para soporte
@@ -147,6 +149,18 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/UnbindRequest"
+            examples:
+              Cliente:
+                description: Cliente
+                value:
+                  actor: CLIENTE
+                  reason: Solicitud del cliente
+                  confirmed: true
+              Banco:
+                description: Banco
+                value:
+                  actor: BANCO
+                  reason: Política de seguridad
         required: true
       responses:
         "200":
@@ -213,7 +227,8 @@ paths:
       - Vínculo
       summary: Aceptar o rechazar términos
       description: accepted=true crea o reactiva el vínculo en PENDIENTE_VERIFICACION.
-        accepted=false responde 400 con el mensaje de no-aceptación.
+        accepted=false responde 400 con el mensaje de no-aceptación. Sin aceptación
+        no se piden datos de identificación.
       operationId: acceptTerms
       parameters:
       - name: whatsappNumber
@@ -228,6 +243,15 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/AcceptTermsRequest"
+            examples:
+              Aceptar:
+                description: Aceptar
+                value:
+                  accepted: true
+              Rechazar:
+                description: Rechazar
+                value:
+                  accepted: false
         required: true
       responses:
         "200":
@@ -297,6 +321,18 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/BlockBindingRequest"
+            examples:
+              Cliente:
+                description: Cliente
+                value:
+                  actor: CLIENTE
+                  reason: Solicitud del cliente
+                  confirmed: true
+              Banco:
+                description: Banco
+                value:
+                  actor: BANCO
+                  reason: Política de seguridad
         required: true
       responses:
         "200":

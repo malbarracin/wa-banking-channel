@@ -13,6 +13,7 @@ import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.examples.Example;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.servers.Server;
 
 /**
  * Metadatos OpenAPI y ejemplos reutilizables del contrato de error.
@@ -41,7 +42,11 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("wa-channel-service")
                         .version("0.1.0-SNAPSHOT")
-                        .description("Vínculo de número WhatsApp con cliente del banco"))
+                        .description(
+                                "Administra el vínculo entre un número de WhatsApp y un cliente del banco: "
+                                        + "términos, verificación de identidad, perfil, bloqueo, desvinculación "
+                                        + "e historial de auditoría. No emite credenciales ni opera productos."))
+                .addServersItem(new Server().url("http://localhost:8080").description("Local"))
                 .components(new Components().examples(examples));
     }
 

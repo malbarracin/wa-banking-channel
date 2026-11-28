@@ -122,7 +122,28 @@ public class BindingController {
     @Operation(
             summary = "Aceptar o rechazar términos",
             description = "accepted=true crea o reactiva el vínculo en PENDIENTE_VERIFICACION. "
-                    + "accepted=false responde 400 con el mensaje de no-aceptación.")
+                    + "accepted=false responde 400 con el mensaje de no-aceptación. "
+                    + "Sin aceptación no se piden datos de identificación.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(implementation = AcceptTermsRequest.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "Aceptar",
+                                            value = """
+                                                    {
+                                                      "accepted": true
+                                                    }
+                                                    """),
+                                    @ExampleObject(
+                                            name = "Rechazar",
+                                            value = """
+                                                    {
+                                                      "accepted": false
+                                                    }
+                                                    """)
+                            })))
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -284,7 +305,30 @@ public class BindingController {
             summary = "Bloquear vínculo",
             description = "ACTIVO → BLOQUEADO. Cliente requiere confirmed=true. "
                     + "BANCO requiere header X-Internal-Role con el rol bank-policy configurado. "
-                    + "La respuesta indica credentialRevocationRequired para revocar en el mismo intercambio.")
+                    + "La respuesta indica credentialRevocationRequired para revocar en el mismo intercambio.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(implementation = BlockBindingRequest.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "Cliente",
+                                            value = """
+                                                    {
+                                                      "actor": "CLIENTE",
+                                                      "reason": "Solicitud del cliente",
+                                                      "confirmed": true
+                                                    }
+                                                    """),
+                                    @ExampleObject(
+                                            name = "Banco",
+                                            value = """
+                                                    {
+                                                      "actor": "BANCO",
+                                                      "reason": "Política de seguridad"
+                                                    }
+                                                    """)
+                            })))
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",
@@ -363,7 +407,30 @@ public class BindingController {
             summary = "Desvincular número",
             description = "ACTIVO o BLOQUEADO → DESVINCULADO. Cliente requiere confirmed=true. "
                     + "BANCO requiere header X-Internal-Role con el rol bank-policy configurado. "
-                    + "La respuesta indica credentialRevocationRequired para revocar en el mismo intercambio.")
+                    + "La respuesta indica credentialRevocationRequired para revocar en el mismo intercambio.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(implementation = UnbindRequest.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "Cliente",
+                                            value = """
+                                                    {
+                                                      "actor": "CLIENTE",
+                                                      "reason": "Solicitud del cliente",
+                                                      "confirmed": true
+                                                    }
+                                                    """),
+                                    @ExampleObject(
+                                            name = "Banco",
+                                            value = """
+                                                    {
+                                                      "actor": "BANCO",
+                                                      "reason": "Política de seguridad"
+                                                    }
+                                                    """)
+                            })))
     @ApiResponses({
             @ApiResponse(
                     responseCode = "200",

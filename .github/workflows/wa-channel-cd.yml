@@ -1,0 +1,9 @@
+name: wa-channel-service CD template
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    if: ${{ false }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Configure cluster credentials and Helm deployment before enabling this job.'

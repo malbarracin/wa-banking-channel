@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-channel
+data:
+  SPRING_PROFILES_ACTIVE: prod
+  SERVER_PORT: {{ .Values.service.port | quote }}
+  BANK_CHANNEL_USERS_SERVICE_BASE_URL: {{ .Values.usersServiceBaseUrl | quote }}

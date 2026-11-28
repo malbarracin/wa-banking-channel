@@ -1,0 +1,83 @@
+package com.bcra.channel.ws.config;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import com.bcra.channel.ws.exception.ErrorCode;
+
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.examples.Example;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.servers.Server;
+
+/**
+ * Metadatos OpenAPI y ejemplos reutilizables del contrato de error.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    @Bean
+    OpenAPI channelOpenApi() {
+        Map<String, Example> examples = ordered(
+                Map.entry("BadRequest", errorExample(ErrorCode.BAD_REQUEST, "Solicitud inválida")),
+                Map.entry("ValidationError", validationErrorExample()),
+                Map.entry("Forbidden", errorExample(ErrorCode.FORBIDDEN, "Rol interno no autorizado")),
+                Map.entry(
+                        "NotFound",
+                        errorExample(ErrorCode.NOT_FOUND, "No hay historial de auditoría para el número indicado")),
+                Map.entry("Conflict", errorExample(ErrorCode.CONFLICT, "El número ya tiene un vínculo activo")),
+                Map.entry(
+                        "VerificationLocked",
+                        errorExample(
+                                ErrorCode.VERIFICATION_LOCKED,
+                                "Por seguridad, pausamos los intentos de verificación. Comunicate con soporte.")),
+                Map.entry("InternalError", errorExample(ErrorCode.INTERNAL_ERROR, "Error interno")));
+
+        return new OpenAPI()
+                .info(new Info()
+                        .title("wa-channel-service")
+                        .version("0.1.0-SNAPSHOT")
+                        .description(
+                                "Administra el vínculo entre un número de WhatsApp y un cliente del banco: "
+                                        + "términos, verificación de identidad, perfil, bloqueo, desvinculación "
+                                        + "e historial de auditoría. No emite credenciales ni opera productos."))
+                .addServersItem(new Server().url("http://localhost:8080").description("Local"))
+                .components(new Components().examples(examples));
+    }
+
+    @SafeVarargs
+    private static <K, V> Map<K, V> ordered(Map.Entry<K, V>... entries) {
+        Map<K, V> map = new LinkedHashMap<>();
+        for (Map.Entry<K, V> entry : entries) {
+            map.put(entry.getKey(), entry.getValue());
+        }
+        return map;
+    }
+
+    private static Example errorExample(ErrorCode code, String message) {
+        Example example = new Example();
+        example.setValue(ordered(
+                Map.entry("code", code.name()),
+                Map.entry("message", message),
+                Map.entry("details", List.of()),
+                Map.entry("timestamp", "2026-11-27T15:30:00Z")));
+        return example;
+    }
+
+    private static Example validationErrorExample() {
+        Example example = new Example();
+        example.setValue(ordered(
+                Map.entry("code", ErrorCode.VALIDATION_ERROR.name()),
+                Map.entry("message", "La solicitud tiene datos inválidos"),
+                Map.entry("details", List.of(ordered(
+                        Map.entry("field", "languagePreference"),
+                        Map.entry("message", "no debe estar vacío")))),
+                Map.entry("timestamp", "2026-11-27T15:30:00Z")));
+        return example;
+    }
+}

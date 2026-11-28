@@ -153,6 +153,18 @@ public class BindingService {
         Binding binding = bindingRepository.findByWhatsappNumberForUpdate(whatsappNumber)
                 .orElseThrow(() -> new BindingConflictException(TERMS_REQUIRED_MESSAGE));
 
+        if (binding.getStatus() == BindingStatus.ACTIVO
+                && !Objects.equals(binding.getClientId(), request.clientId())) {
+            auditService.record(
+                    binding.getId(),
+                    whatsappNumber,
+                    AuditAction.ANTIFRAUD_CHECK,
+                    AuditService.RESULT_ERROR,
+                    ACTOR_SISTEMA,
+                    "Conflicto: número ACTIVO con otro cliente; escalamiento a soporte");
+            throw new BindingConflictException(channelMessages.numberAlreadyLinked());
+        }
+
         if (binding.getStatus() != BindingStatus.PENDIENTE_VERIFICACION) {
             throw new BindingConflictException(TERMS_REQUIRED_MESSAGE);
         }
@@ -352,7 +364,7 @@ public class BindingService {
 
     private Binding applyTermsAcceptance(Binding existing, Instant now) {
         if (existing.getStatus() == BindingStatus.ACTIVO) {
-            throw new BindingConflictException("El número ya tiene un vínculo activo");
+            throw new BindingConflictException(channelMessages.numberAlreadyLinked());
         }
         stateMachine.assertTransition(existing.getStatus(), BindingStatus.PENDIENTE_VERIFICACION);
 

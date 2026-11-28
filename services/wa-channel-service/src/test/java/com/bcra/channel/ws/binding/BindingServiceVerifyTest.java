@@ -33,8 +33,6 @@ import com.bcra.channel.ws.binding.repository.VerificationAttemptRepository;
 import com.bcra.channel.ws.binding.service.BindingService;
 import com.bcra.channel.ws.binding.service.BindingStateMachine;
 import com.bcra.channel.ws.binding.service.IdentityVerifierResolver;
-import com.bcra.channel.ws.client.UserLookupResult;
-import com.bcra.channel.ws.client.UserLookupStatus;
 import com.bcra.channel.ws.client.UsersServiceClient;
 import com.bcra.channel.ws.config.BankChannelProperties;
 import com.bcra.channel.ws.config.ChannelMessages;
@@ -86,16 +84,12 @@ class BindingServiceVerifyTest {
     @Test
     @DisplayName("Anti-fraude: número ACTIVO con otro clientId → CONFLICT mensaje 8.7 y ANTIFRAUD_CHECK ERROR")
     void antifraudRejectsActiveNumberForOtherClient() {
-        Binding pending = pendingBinding();
-        when(bindingRepository.findByWhatsappNumberForUpdate(NUMBER)).thenReturn(Optional.of(pending));
-        when(verificationAttemptRepository.countByBindingIdAndSuccessFalseAndAttemptedAtGreaterThanEqual(
-                        eq(BINDING_ID), any()))
-                .thenReturn(0L);
-        when(usersServiceClient.findById(CLIENT_ID)).thenReturn(activeLookup());
-        when(identityVerifierResolver.verify(any(), eq("ok"))).thenReturn(true);
-        when(bindingRepository.existsByWhatsappNumberAndStatusAndClientIdNot(
-                        NUMBER, BindingStatus.ACTIVO, CLIENT_ID))
-                .thenReturn(true);
+        UUID otherClientId = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
+        Binding active = pendingBinding();
+        active.setStatus(BindingStatus.ACTIVO);
+        active.setClientId(otherClientId);
+        active.setVerifiedAt(NOW);
+        when(bindingRepository.findByWhatsappNumberForUpdate(NUMBER)).thenReturn(Optional.of(active));
         when(channelMessages.numberAlreadyLinked()).thenReturn("mensaje-8.7");
 
         assertThatThrownBy(() -> bindingService.verify(NUMBER, new VerifyIdentityRequest(CLIENT_ID, "ok")))
@@ -109,8 +103,10 @@ class BindingServiceVerifyTest {
                 eq(AuditService.RESULT_ERROR),
                 eq(BindingService.ACTOR_SISTEMA),
                 any());
+        verify(usersServiceClient, never()).findById(any());
         verify(bindingRepository, never()).save(any());
-        assertThat(pending.getStatus()).isEqualTo(BindingStatus.PENDIENTE_VERIFICACION);
+        assertThat(active.getStatus()).isEqualTo(BindingStatus.ACTIVO);
+        assertThat(active.getClientId()).isEqualTo(otherClientId);
     }
 
     @Test
@@ -136,15 +132,5 @@ class BindingServiceVerifyTest {
         binding.setCreatedAt(NOW);
         binding.setUpdatedAt(NOW);
         return binding;
-    }
-
-    private static UserLookupResult activeLookup() {
-        return new UserLookupResult(
-                UserLookupStatus.FOUND_ACTIVE,
-                CLIENT_ID,
-                "USR-1",
-                "Ana Pérez",
-                "ana@example.com",
-                NUMBER);
     }
 }

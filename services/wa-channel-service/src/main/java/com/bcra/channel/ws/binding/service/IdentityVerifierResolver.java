@@ -13,24 +13,26 @@ import com.bcra.channel.ws.config.BankChannelProperties;
 
 /**
  * Elige la estrategia {@link IdentityVerifier} según {@code bank.channel.verification.policy}.
+ * Falla al arrancar si la política configurada no tiene implementación.
  */
 @Component
 public class IdentityVerifierResolver {
 
-    private final BankChannelProperties properties;
-    private final Map<String, IdentityVerifier> verifiersByPolicy;
-    private final IdentityVerifier defaultVerifier;
+    private final IdentityVerifier verifier;
 
     public IdentityVerifierResolver(BankChannelProperties properties, List<IdentityVerifier> verifiers) {
-        this.properties = Objects.requireNonNull(properties, "properties");
+        Objects.requireNonNull(properties, "properties");
         Objects.requireNonNull(verifiers, "verifiers");
-        this.verifiersByPolicy = verifiers.stream()
+        Map<String, IdentityVerifier> verifiersByPolicy = verifiers.stream()
                 .collect(Collectors.toUnmodifiableMap(IdentityVerifier::policy, Function.identity()));
-        this.defaultVerifier = verifiersByPolicy.get(DevContactIdentityVerifier.POLICY);
-        if (defaultVerifier == null) {
-            throw new IllegalStateException("Falta IdentityVerifier de desarrollo ("
-                    + DevContactIdentityVerifier.POLICY + ")");
+        String policy = properties.getVerification().getPolicy();
+        IdentityVerifier resolved = verifiersByPolicy.get(policy);
+        if (resolved == null) {
+            throw new IllegalStateException(
+                    "Política de verificación desconocida: '" + policy + "'. Registradas: "
+                            + verifiersByPolicy.keySet());
         }
+        this.verifier = resolved;
     }
 
     /**
@@ -41,8 +43,6 @@ public class IdentityVerifierResolver {
      * @return {@code true} si coincide
      */
     public boolean verify(UserLookupResult user, String verificationData) {
-        String policy = properties.getVerification().getPolicy();
-        IdentityVerifier verifier = verifiersByPolicy.getOrDefault(policy, defaultVerifier);
         return verifier.matches(user, verificationData);
     }
 }

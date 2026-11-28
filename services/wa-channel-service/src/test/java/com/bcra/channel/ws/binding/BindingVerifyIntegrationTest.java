@@ -34,6 +34,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import com.bcra.channel.ws.audit.entity.AuditAction;
 import com.bcra.channel.ws.audit.entity.AuditEntry;
 import com.bcra.channel.ws.audit.repository.AuditRepository;
+import com.bcra.channel.ws.audit.service.AuditService;
 import com.bcra.channel.ws.binding.entity.Binding;
 import com.bcra.channel.ws.binding.entity.BindingStatus;
 import com.bcra.channel.ws.binding.entity.VerificationAttempt;
@@ -124,6 +125,34 @@ class BindingVerifyIntegrationTest {
         assertThat(saved.getStatus()).isEqualTo(BindingStatus.ACTIVO);
         assertThat(saved.getClientId()).isEqualTo(CLIENT_ID);
         assertThat(saved.getVerifiedAt()).isEqualTo(T0);
+    }
+
+    @Test
+    @DisplayName("Número ACTIVO con otro cliente → 409 mensaje 8.7, ANTIFRAUD_CHECK ERROR y no consulta H1")
+    void activeNumberForOtherClientReturnsAntifraudConflict() throws Exception {
+        Binding active = acceptTerms(NUMBER);
+        stubActiveUser(CLIENT_ID, CLIENT_NAME, CONTACT_PHONE);
+        mockMvc.perform(post("/api/v1/bindings/{n}/verify", NUMBER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(verifyBody(CLIENT_ID, CONTACT_PHONE)))
+                .andExpect(status().isOk());
+        usersService.resetRequests();
+
+        mockMvc.perform(post("/api/v1/bindings/{n}/verify", NUMBER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(verifyBody(OTHER_CLIENT_ID, CONTACT_PHONE)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.message").value(channelMessages.numberAlreadyLinked()));
+
+        usersService.verify(0, getRequestedFor(urlPathMatching("/api/v1/users/.*")));
+        Binding unchanged = bindingRepository.findById(active.getId()).orElseThrow();
+        assertThat(unchanged.getStatus()).isEqualTo(BindingStatus.ACTIVO);
+        assertThat(unchanged.getClientId()).isEqualTo(CLIENT_ID);
+        assertThat(auditRepository.findAll())
+                .filteredOn(entry -> entry.getAction() == AuditAction.ANTIFRAUD_CHECK)
+                .filteredOn(entry -> AuditService.RESULT_ERROR.equals(entry.getResult()))
+                .isNotEmpty();
     }
 
     @Test

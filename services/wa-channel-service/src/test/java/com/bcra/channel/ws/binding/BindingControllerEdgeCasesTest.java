@@ -24,6 +24,7 @@ import com.bcra.channel.ws.audit.repository.AuditRepository;
 import com.bcra.channel.ws.binding.entity.Binding;
 import com.bcra.channel.ws.binding.entity.BindingStatus;
 import com.bcra.channel.ws.binding.repository.BindingRepository;
+import com.bcra.channel.ws.config.ChannelMessages;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -42,6 +43,9 @@ class BindingControllerEdgeCasesTest {
 
     @Autowired
     private AuditRepository auditRepository;
+
+    @Autowired
+    private ChannelMessages channelMessages;
 
     @BeforeEach
     void setUp() {
@@ -115,7 +119,7 @@ class BindingControllerEdgeCasesTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"accepted\":true}"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("El número ya tiene un vínculo activo"));
+                .andExpect(jsonPath("$.message").value(channelMessages.numberAlreadyLinked()));
 
         Binding unchanged = bindingRepository.findByWhatsappNumber(NUMBER).orElseThrow();
         assertThat(unchanged.getStatus()).isEqualTo(BindingStatus.ACTIVO);

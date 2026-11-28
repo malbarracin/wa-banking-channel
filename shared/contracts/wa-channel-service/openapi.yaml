@@ -78,35 +78,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
         "404":
           description: Cliente no encontrado en el registro del banco
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
         "409":
           description: "Sin términos, cliente suspendido/inactivo o número ya vinculado"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                Conflict:
+                  $ref: "#/components/examples/Conflict"
         "423":
           description: Intentos de verificación agotados
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                VerificationLocked:
+                  $ref: "#/components/examples/VerificationLocked"
         "500":
           description: Error interno
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
   /api/v1/bindings/{whatsappNumber}/unbind:
     post:
       tags:
@@ -158,35 +168,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
         "403":
           description: BANCO sin X-Internal-Role válido
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                Forbidden:
+                  $ref: "#/components/examples/Forbidden"
         "404":
           description: Vínculo inexistente
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
         "409":
           description: Ya desvinculado u otra transición inválida
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                Conflict:
+                  $ref: "#/components/examples/Conflict"
         "500":
           description: Error interno
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
   /api/v1/bindings/{whatsappNumber}/terms:
     post:
       tags:
@@ -227,21 +247,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
         "409":
           description: Vínculo ya activo u otra transición inválida
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                Conflict:
+                  $ref: "#/components/examples/Conflict"
         "500":
           description: Error interno
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
   /api/v1/bindings/{whatsappNumber}/block:
     post:
       tags:
@@ -292,35 +318,45 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
         "403":
           description: BANCO sin X-Internal-Role válido
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                Forbidden:
+                  $ref: "#/components/examples/Forbidden"
         "404":
           description: Vínculo inexistente
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
         "409":
           description: "Ya bloqueado, desvinculado u otra transición inválida"
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                Conflict:
+                  $ref: "#/components/examples/Conflict"
         "500":
           description: Error interno
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
   /api/v1/bindings/{whatsappNumber}/preferences:
     patch:
       tags:
@@ -368,21 +404,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                ValidationError:
+                  $ref: "#/components/examples/ValidationError"
         "404":
           description: Sin vínculo activo
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
         "500":
           description: Error interno
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
   /api/v1/bindings/{whatsappNumber}:
     get:
       tags:
@@ -427,14 +469,18 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
         "500":
           description: Error interno
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
   /api/v1/bindings/{whatsappNumber}/profile:
     get:
       tags:
@@ -473,21 +519,27 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
         "404":
           description: Sin vínculo activo
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
         "500":
           description: Error interno (p. ej. H1 no responde)
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
   /api/v1/bindings/{whatsappNumber}/history:
     get:
       tags:
@@ -533,28 +585,36 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
         "403":
           description: Rol interno inválido
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                Forbidden:
+                  $ref: "#/components/examples/Forbidden"
         "404":
           description: Número sin entradas de auditoría
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
         "500":
           description: Error interno
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-              example: null
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
 components:
   schemas:
     VerifyIdentityRequest:

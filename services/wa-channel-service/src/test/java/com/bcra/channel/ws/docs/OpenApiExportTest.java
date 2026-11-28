@@ -14,6 +14,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @SpringBootTest
@@ -29,7 +30,29 @@ class OpenApiExportTest {
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
         String yaml = mockMvc.perform(get("/v3/api-docs.yaml"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-        assertThat(new ObjectMapper().readTree(json).path("paths").size()).isGreaterThan(0);
+        JsonNode document = new ObjectMapper().readTree(json);
+        JsonNode paths = document.path("paths");
+        assertThat(paths.size()).isGreaterThan(0);
+        paths.fields().forEachRemaining(path -> path.getValue().fields().forEachRemaining(operation ->
+                operation.getValue().path("responses").fields().forEachRemaining(response -> {
+                    if (response.getKey().matches("[45]\\d\\d")) {
+                        JsonNode media = response.getValue().path("content").path("application/json");
+                        JsonNode examples = media.path("examples");
+                        assertThat(examples.isObject() && !examples.isEmpty())
+                                .as("error examples for %s %s %s", operation.getKey(), path.getKey(), response.getKey())
+                                .isTrue();
+                        examples.elements().forEachRemaining(example -> {
+                            String reference = example.path("$ref").asText();
+                            assertThat(reference).startsWith("#/components/examples/");
+                            JsonNode value = document.at(reference.substring(1)).path("value");
+                            assertThat(value.isObject()).as("resolved example %s", reference).isTrue();
+                            assertThat(value.path("code").asText()).isNotBlank();
+                            assertThat(value.path("message").asText()).isNotBlank();
+                            assertThat(value.path("details").isArray()).isTrue();
+                            assertThat(value.path("timestamp").asText()).isNotBlank();
+                        });
+                    }
+                })));
         Path delivery = Path.of("delivery", "openapi");
         Path shared = Path.of("..", "..", "shared", "contracts", "wa-channel-service");
         Files.createDirectories(delivery);

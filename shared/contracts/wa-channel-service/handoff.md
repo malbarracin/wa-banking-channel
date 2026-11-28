@@ -6,7 +6,7 @@ El servicio administra el vínculo entre un número de WhatsApp y un cliente, su
 
 Todas las rutas comienzan con `/api/v1/bindings/{whatsappNumber}`, donde el número usa formato E.164:
 
-- `GET /`: consultar estado del vínculo.
+- `GET /api/v1/bindings/{whatsappNumber}`: consultar estado del vínculo, sin barra final.
 - `POST /terms`: aceptar o rechazar términos.
 - `POST /verify`: verificar identidad y activar el vínculo.
 - `GET /profile` y `PATCH /preferences`: consultar el perfil y modificar preferencias.

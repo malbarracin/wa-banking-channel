@@ -6,11 +6,19 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +28,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -75,8 +84,15 @@ class BindingVerifyThenLifecycleIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @MockBean
+    private Clock clock;
+
     @BeforeEach
     void setUp() {
+        AtomicLong ticks = new AtomicLong();
+        Instant start = Instant.parse("2026-11-27T15:00:00Z");
+        when(clock.instant()).thenAnswer(invocation -> start.plusMillis(ticks.getAndIncrement()));
+        when(clock.getZone()).thenReturn(ZoneOffset.UTC);
         cleanDatabase();
         usersService.resetAll();
         stubActiveUser();
@@ -92,6 +108,46 @@ class BindingVerifyThenLifecycleIntegrationTest {
         auditRepository.deleteAll();
         verificationAttemptRepository.deleteAll();
         bindingRepository.deleteAll();
+    }
+
+    @Test
+    @DisplayName("El historial de soporte refleja el recorrido y los mensajes no revelan datos de verificación")
+    void supportHistoryShowsCompleteJourneyWithoutSecretsInMessages() throws Exception {
+        acceptTerms();
+        JsonNode verification = verify();
+        assertThat(verification.path("verifiableResult").path("identityVerified").asBoolean()).isTrue();
+        assertThat(verification.path("message").asText())
+                .doesNotContain(CONTACT_PHONE, CLIENT_ID.toString(), "token");
+        String response = mockMvc.perform(post("/api/v1/bindings/{n}/block", NUMBER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"actor\":\"CLIENTE\",\"reason\":\"Solicitud\",\"confirmed\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("BLOQUEADO"))
+                .andExpect(jsonPath("$.credentialRevocationRequired").value(true))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(objectMapper.readTree(response).path("message").asText())
+                .doesNotContain(CONTACT_PHONE, CLIENT_ID.toString(), "token");
+        String unbound = mockMvc.perform(post("/api/v1/bindings/{n}/unbind", NUMBER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"actor\":\"CLIENTE\",\"reason\":\"Solicitud\",\"confirmed\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DESVINCULADO"))
+                .andExpect(jsonPath("$.credentialRevocationRequired").value(true))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(objectMapper.readTree(unbound).path("message").asText())
+                .doesNotContain(CONTACT_PHONE, CLIENT_ID.toString(), "token");
+        String history = mockMvc.perform(get("/api/v1/bindings/{n}/history", NUMBER)
+                        .header("X-Internal-Role", "support"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        List<String> actions = new ArrayList<>();
+        List<Instant> timestamps = new ArrayList<>();
+        for (JsonNode entry : objectMapper.readTree(history)) {
+            actions.add(entry.path("action").asText());
+            timestamps.add(Instant.parse(entry.path("occurredAt").asText()));
+        }
+        assertThat(actions).containsExactly("BINDING_UNBOUND", "BINDING_BLOCKED", "VERIFIABLE_RESULT_ISSUED",
+                "BINDING_ACTIVATED", "ANTIFRAUD_CHECK", "IDENTITY_VERIFIED", "CLIENT_LOOKUP", "TERMS_ACCEPTED");
+        assertThat(timestamps).isSortedAccordingTo(java.util.Comparator.reverseOrder());
     }
 
     @Test
@@ -153,10 +209,12 @@ class BindingVerifyThenLifecycleIntegrationTest {
     }
 
     private void acceptTerms() throws Exception {
-        mockMvc.perform(post("/api/v1/bindings/{n}/terms", NUMBER)
+        String response = mockMvc.perform(post("/api/v1/bindings/{n}/terms", NUMBER)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"accepted\":true}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(objectMapper.readTree(response).path("message").asText())
+                .doesNotContain(CONTACT_PHONE, CLIENT_ID.toString(), "token");
     }
 
     private JsonNode verify() throws Exception {

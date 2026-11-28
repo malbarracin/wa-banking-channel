@@ -464,7 +464,7 @@
       ],
       "assignedTo": null,
       "deliverables": "El servicio funcionando en services/wa-channel-service y su contrato en shared/contracts/wa-channel-service/openapi.yaml y shared/contracts/wa-channel-service/handoff.md",
-      "status": "doing",
+      "status": "done",
       "createdAt": "2026-11-27T20:52:35.267Z",
       "createdBy": {
         "account": "opensoma.app@gmail.com",
@@ -476,29 +476,125 @@
         "run": "20261127-1704",
         "at": "2026-11-27T22:58:51.757Z"
       },
-      "doneAt": null,
-      "doneBy": null,
-      "note": null,
+      "doneAt": "2026-11-28T20:22:59.181Z",
+      "doneBy": {
+        "account": "opensoma.app@gmail.com",
+        "floor": "Marcelo"
+      },
+      "note": "Sesión 20261127-1704 · rama feature/20261127-1704",
       "budgetUsd": null,
       "budgetTokens": null,
       "spent": {
-        "usd": 0,
-        "tokens": 0,
+        "usd": 17.0278,
+        "tokens": 56925116,
         "runs": {
           "20261127-1704": {
-            "usd": 0,
+            "usd": 17.0278,
             "floor": "Marcelo",
             "tools": {
-              "kiro": 0
+              "kiro": 0,
+              "kilocode": 0,
+              "claude-code": 17.0279,
+              "codex": 0,
+              "cursor": 0,
+              "copilot": 0
             },
-            "tokens": 0,
-            "toolTokens": {},
-            "loops": 0,
-            "redoTokens": 0,
+            "tokens": 56925116,
+            "toolTokens": {
+              "claude-code": 18311793,
+              "cursor": 17704296,
+              "codex": 17726369,
+              "copilot": 3182658
+            },
+            "loops": 4,
+            "redoTokens": 24430295,
             "roles": {
               "analista": {
                 "kiro": {
                   "tokens": 0,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "arquitecto": {
+                "kiro": {
+                  "tokens": 0,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "tech-lead": {
+                "kilocode": {
+                  "tokens": 0,
+                  "steps": 2,
+                  "redo": 0
+                },
+                "claude-code": {
+                  "tokens": 2061515,
+                  "steps": 2,
+                  "redo": 2
+                }
+              },
+              "dev-backend": {
+                "codex": {
+                  "tokens": 11934886,
+                  "steps": 6,
+                  "redo": 4
+                },
+                "cursor": {
+                  "tokens": 15780844,
+                  "steps": 10,
+                  "redo": 4
+                }
+              },
+              "tester": {
+                "claude-code": {
+                  "tokens": 8329126,
+                  "steps": 9,
+                  "redo": 2
+                },
+                "codex": {
+                  "tokens": 2892357,
+                  "steps": 4,
+                  "redo": 3
+                }
+              },
+              "reviewer": {
+                "claude-code": {
+                  "tokens": 7921152,
+                  "steps": 10,
+                  "redo": 3
+                },
+                "codex": {
+                  "tokens": 753287,
+                  "steps": 3,
+                  "redo": 2
+                }
+              },
+              "devops": {
+                "codex": {
+                  "tokens": 2145839,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "documentador": {
+                "cursor": {
+                  "tokens": 1923452,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "pr-publisher": {
+                "copilot": {
+                  "tokens": 508447,
+                  "steps": 1,
+                  "redo": 0
+                }
+              },
+              "pr-reviewer": {
+                "copilot": {
+                  "tokens": 2674211,
                   "steps": 1,
                   "redo": 0
                 }
@@ -512,7 +608,7 @@
       "times": {
         "startedAt": "2026-11-27T22:58:51.757Z",
         "releasedAt": null,
-        "workedMs": 0,
+        "workedMs": 77047424,
         "stalledMs": 0,
         "waitingMs": 410096,
         "stalls": 0,
@@ -521,7 +617,7 @@
       "work": null,
       "integratedAt": null,
       "sprint": null,
-      "updatedAt": "2026-11-27T23:07:44.933Z"
+      "updatedAt": "2026-11-28T20:22:59.181Z"
     },
     {
       "id": "P-7",
@@ -1045,6 +1141,14 @@
       "floor": "marcelo-a-abarracin-ThinkPad-L15-Gen-2",
       "account": "opensoma.app@gmail.com",
       "text": "2"
+    },
+    {
+      "at": "2026-11-28T20:22:59.181Z",
+      "kind": "finished",
+      "id": "P-6",
+      "title": "Un número de WhatsApp queda vinculado a un cliente con su identidad verificada",
+      "floor": "Marcelo",
+      "account": "opensoma.app@gmail.com"
     }
   ],
   "deadline": null,

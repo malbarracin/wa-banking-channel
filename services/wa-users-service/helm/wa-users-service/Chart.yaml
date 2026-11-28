@@ -1,0 +1,6 @@
+apiVersion: v2
+name: wa-users-service
+description: Registro único del cliente del banco (alta, consulta, actualización, estados y auditoría)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

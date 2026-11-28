@@ -1,0 +1,66 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/OWNER/REPO/wa-users-service   # lo reemplaza el CD con --set image.repository
+  tag: ""                                          # vacío = appVersion del chart
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+springProfile: prod
+
+# Variables no secretas (van a un ConfigMap)
+config:
+  SERVER_PORT: "8080"
+  JAVA_OPTS: "-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -XX:+UseG1GC"
+
+# Conexión a la base. Lo normal es usar un Secret que ya existe en el cluster (existingSecret) con las claves
+# DATABASE_URL, DATABASE_USERNAME y DATABASE_PASSWORD. Con create=true el chart lo crea con los valores
+# pasados por --set (nunca escritos en este archivo).
+database:
+  existingSecret: ""
+  secret:
+    create: false
+    url: ""
+    username: ""
+    password: ""
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    cpu: "1"
+    memory: 768Mi
+
+probes:
+  liveness:
+    path: /actuator/health/liveness
+    initialDelaySeconds: 40
+    periodSeconds: 15
+  readiness:
+    path: /actuator/health/readiness
+    initialDelaySeconds: 20
+    periodSeconds: 10
+
+ingress:
+  enabled: false
+  className: ""
+  host: ""
+  tls: []
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 100
+  runAsGroup: 101
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop: ["ALL"]

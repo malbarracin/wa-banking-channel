@@ -1,0 +1,15 @@
+# App corriendo DENTRO del docker-compose: la base se llama por el nombre del servicio.
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

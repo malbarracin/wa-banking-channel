@@ -1,0 +1,13 @@
+replicaCount: 1
+image:
+  tag: latest
+  pullPolicy: Always
+database:
+  existingSecret: wa-users-service-db
+resources:
+  requests:
+    cpu: 100m
+    memory: 384Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi

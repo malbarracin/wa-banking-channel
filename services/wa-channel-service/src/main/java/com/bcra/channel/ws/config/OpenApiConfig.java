@@ -29,6 +29,11 @@ public class OpenApiConfig {
                         "NotFound",
                         errorExample(ErrorCode.NOT_FOUND, "No hay historial de auditoría para el número indicado")),
                 Map.entry("Conflict", errorExample(ErrorCode.CONFLICT, "El número ya tiene un vínculo activo")),
+                Map.entry(
+                        "VerificationLocked",
+                        errorExample(
+                                ErrorCode.VERIFICATION_LOCKED,
+                                "Por seguridad, pausamos los intentos de verificación. Comunicate con soporte.")),
                 Map.entry("InternalError", errorExample(ErrorCode.INTERNAL_ERROR, "Error interno")));
 
         return new OpenAPI()

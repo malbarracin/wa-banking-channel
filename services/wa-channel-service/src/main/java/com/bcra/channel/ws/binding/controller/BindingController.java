@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.bcra.channel.ws.binding.dto.AcceptTermsRequest;
 import com.bcra.channel.ws.binding.dto.AcceptTermsResponse;
 import com.bcra.channel.ws.binding.dto.BindingStatusResponse;
+import com.bcra.channel.ws.binding.dto.VerifyIdentityRequest;
+import com.bcra.channel.ws.binding.dto.VerifyIdentityResponse;
 import com.bcra.channel.ws.binding.service.BindingService;
 import com.bcra.channel.ws.exception.ErrorResponse;
 
@@ -32,7 +34,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/bindings")
 @RequiredArgsConstructor
-@Tag(name = "Vínculo", description = "Estado del vínculo y aceptación de términos")
+@Tag(name = "Vínculo", description = "Estado del vínculo, términos y verificación de identidad")
 public class BindingController {
 
     private final BindingService bindingService;
@@ -152,5 +154,108 @@ public class BindingController {
             @PathVariable String whatsappNumber,
             @Valid @RequestBody AcceptTermsRequest request) {
         return bindingService.acceptTerms(whatsappNumber, request);
+    }
+
+    /**
+     * Verifica la identidad del cliente y activa el vínculo si corresponde.
+     *
+     * @param whatsappNumber número WhatsApp en E.164
+     * @param request        clientId de H1 y dato de verificación
+     * @return vínculo activo con resultado verificable, o pendiente con intentos restantes
+     */
+    @PostMapping(
+            path = "/{whatsappNumber}/verify",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "Verificar identidad y activar vínculo",
+            description = "Exige vínculo en PENDIENTE_VERIFICACION. Consulta H1 por clientId, aplica la "
+                    + "política de verificación, anti-fraude y emite el resultado verificable. "
+                    + "verificationData no se persiste ni se audita.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            schema = @Schema(implementation = VerifyIdentityRequest.class),
+                            examples = @ExampleObject(
+                                    name = "Verificacion",
+                                    value = """
+                                            {
+                                              "clientId": "123e4567-e89b-12d3-a456-426614174000",
+                                              "verificationData": "+5491112345678"
+                                            }
+                                            """))))
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Verificación procesada (éxito o fallo con intentos restantes)",
+                    content = @Content(
+                            schema = @Schema(implementation = VerifyIdentityResponse.class),
+                            examples = {
+                                    @ExampleObject(
+                                            name = "Exito",
+                                            value = """
+                                                    {
+                                                      "bindingId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                                                      "status": "ACTIVO",
+                                                      "attemptsRemaining": 0,
+                                                      "verifiableResult": {
+                                                        "identityVerified": true,
+                                                        "bindingId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                                                        "clientId": "123e4567-e89b-12d3-a456-426614174000",
+                                                        "verifiedAt": "2026-11-27T15:30:00Z"
+                                                      },
+                                                      "message": "¡Listo, Ana Pérez! Tu WhatsApp quedó vinculado de forma segura."
+                                                    }
+                                                    """),
+                                    @ExampleObject(
+                                            name = "FalloConIntentos",
+                                            value = """
+                                                    {
+                                                      "bindingId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                                                      "status": "PENDIENTE_VERIFICACION",
+                                                      "attemptsRemaining": 2,
+                                                      "message": "No pudimos validar tus datos. Te quedan 2 intentos."
+                                                    }
+                                                    """)
+                            })),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Datos inválidos",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/BadRequest"))),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Cliente no encontrado en el registro del banco",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/NotFound"))),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Sin términos, cliente suspendido/inactivo o número ya vinculado",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/Conflict"))),
+            @ApiResponse(
+                    responseCode = "423",
+                    description = "Intentos de verificación agotados",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/VerificationLocked"))),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Error interno",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))
+    })
+    public VerifyIdentityResponse verify(
+            @Parameter(
+                    description = "Número WhatsApp en formato E.164",
+                    example = "+5491112345678",
+                    required = true)
+            @PathVariable String whatsappNumber,
+            @Valid @RequestBody VerifyIdentityRequest request) {
+        return bindingService.verify(whatsappNumber, request);
     }
 }

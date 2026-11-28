@@ -11,6 +11,16 @@
    "de": "Marcelo"
   },
   {
+   "id": "ep53d08e",
+   "texto": "Awaitility: `untilAsserted` sólo reintenta ante AssertionError; el ExecutionException/TimeoutException de AdminClient o del consumidor mientras el broker de Testcontainers arranca aborta el test en el primer intento. Toda espera que llame al broker necesita `.ignoreExceptions()`. Y no se hace polling para comprobar una ausencia (pasa en el primer intento y no demuestra nada): aserción directa o `.during(...)`.",
+   "tipo": "trampa",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-28T00:23:12.813Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "ti4zwunl",
    "texto": "wa-channel-service: verify sobre ACTIVO con clientId distinto responde 409 mensaje 8.7 y audita ANTIFRAUD_CHECK ERROR sin llamar a H1; acceptTerms sobre ACTIVO usa el mismo mensaje; IdentityVerifierResolver lanza IllegalStateException al arrancar si bank.channel.verification.policy no tiene implementación.",
    "tipo": "dato",
@@ -19,6 +29,16 @@
    "at": "2026-11-28T00:17:26.618Z",
    "veces": 1,
    "de": "Marcelo"
+  },
+  {
+   "id": "yvsgw7c7",
+   "texto": "platform/wa-event-platform: surefire por defecto no descubre *IT.java; el pom incluye **/*IT.java para que TopicProvisioningIT y TopicProvisionDisabledIT corran en verify (sin eso el gate pasaba sin Kafka).",
+   "tipo": "trampa",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-28T00:13:58.142Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
   },
   {
    "id": "u4ta2dor",
@@ -41,6 +61,16 @@
    "de": "Marcelo"
   },
   {
+   "id": "n3gm2tj8",
+   "texto": "platform/wa-event-platform: topics del canal se provisionan al arrancar con wa.channel.topics.provision.enabled (default true); políticas en wa.channel.topics.* / WA_CHANNEL_TOPICS_*. IT de Kafka usan Testcontainers con imagen fija apache/kafka:4.4.0 en modo KRaft. KafkaAdmin no altera configs de topics ya existentes.",
+   "tipo": "dato",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-28T00:00:01.500Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "k2lby0l4",
    "texto": "wa-channel-service: perfil/preferencias en ChannelProfileController + ChannelProfileService; displayName solo de UsersServiceClient (nunca contactos/documentos). Verify: .\\mvnw.cmd -q -B clean verify desde services/wa-channel-service.",
    "tipo": "comando",
@@ -61,6 +91,16 @@
    "de": "Marcelo"
   },
   {
+   "id": "4ep0hpjj",
+   "texto": "Los esquemas de eventos no se duplican en src/main/resources: el pom de platform/wa-event-platform copia shared/contracts/events/*.schema.json a classpath:contracts/events/ en generate-resources, EventSchemasOnClasspathTest verifica la copia byte a byte, y desde Java se usan con SchemaCatalog (clave: ID_PREFIX https://contracts.bcra/wa-channel/events/ + nombre de archivo; los $ref relativos se resuelven contra el mapa local, sin red).",
+   "tipo": "dato",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-27T23:42:35.672Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "enzib0r0",
    "texto": "wa-channel-service: autorización interna con BankInternalAuthFilter + @RequireInternalRole (SUPPORT→internal-roles.support, BANK_POLICY→bank-policy); header X-Internal-Role. Auditoría en V3__create_channel_audit (V1/V2 reservados al vínculo). Verify: .\\mvnw.cmd -q -B clean verify desde services/wa-channel-service.",
    "tipo": "dato",
@@ -71,6 +111,16 @@
    "de": "Marcelo"
   },
   {
+   "id": "62tayzps",
+   "texto": "SchemaCatalogTest ahora incluye resolvesEverySchemaIdLocally: comprueba que cada $id de los cinco esquemas se resuelve al mismo JsonSchema que requireByFileName (mapa local, sin red).",
+   "tipo": "dato",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-27T23:35:44.532Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "dv0ybnya",
    "texto": "wa-channel-service: UsersServiceClient usa RestClient con bank.channel.users-service.base-url y timeout-ms; tests WireMock en UsersServiceClientTest y UsersServiceClientErrorMappingTest. Verificar: desde services/wa-channel-service con .\\mvnw.cmd -q -B clean verify (log fuera de target/ si hay clean).",
    "tipo": "comando",
@@ -79,6 +129,36 @@
    "at": "2026-11-27T23:35:27.952Z",
    "veces": 1,
    "de": "Marcelo"
+  },
+  {
+   "id": "04s091tr",
+   "texto": "En el perfil secure de los componentes Spring, spring.kafka.ssl.trust-store-location se enlaza como Resource: el valor de KAFKA_SSL_TRUSTSTORE_LOCATION necesita el prefijo file: (file:/etc/kafka/truststore.jks). Una ruta pelada tipo /etc/kafka/truststore.jks se resuelve como classpath y la aplicación no arranca (\"Resource must be on a file system\"). Conviene aclararlo en el .env.example y en la guía de despliegue de cada componente que use SASL_SSL.",
+   "tipo": "trampa",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-27T23:31:32.871Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "h5cxx4r7",
+   "texto": "SchemaCatalog debe tener un único constructor público: si hay un segundo (aunque sea package-private/privado), Spring 6 no elige el de ResourcePatternResolver+ObjectMapper y falla con «No default constructor found». Para pruebas incompletas usar SchemaCatalog.fromResources(Resource[], ObjectMapper) con un ResourcePatternResolver stub.",
+   "tipo": "dato",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T23:26:40.821Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "84b1omkl",
+   "texto": "Perfil secure de wa-event-platform: tests SecureProfileConfigurationTest, ProfileSwitchIsConfigOnlyTest, EnvExampleAndSecretsGuardTest (incluye guard de placeholders en YAML) y DlqAdminApiDisabledOutsideLocalTest cubren los criterios de seguridad por ambiente; verify offline con mvnw.cmd -o -B verify.",
+   "tipo": "dato",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-27T23:24:03.751Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
   },
   {
    "id": "97qcxfd3",
@@ -99,6 +179,16 @@
    "at": "2026-11-27T23:13:24.201Z",
    "veces": 1,
    "de": "Marcelo"
+  },
+  {
+   "id": "uam3oqwd",
+   "texto": "Perfil secure de platform/wa-event-platform: application-secure.yml exige KAFKA_BOOTSTRAP_SERVERS, KAFKA_SASL_USERNAME, KAFKA_SASL_PASSWORD, KAFKA_SSL_TRUSTSTORE_LOCATION y KAFKA_SSL_TRUSTSTORE_PASSWORD (listadas vacías en .env.example). wa.channel.dlq.admin-api.enabled es false por defecto y true sólo con perfil local; la API de TASK-10 debe condicionarse a esa propiedad.",
+   "tipo": "dato",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T23:13:23.005Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
   },
   {
    "id": "esjy0sj6",
@@ -131,6 +221,66 @@
    "de": "Marcelo"
   },
   {
+   "id": "qte03lto",
+   "texto": "El contrato de error de la plataforma de eventos vive en com.bcra.events.exception (ErrorResponse, FieldError, ErrorCode, GlobalExceptionHandler con 400/404/409/500). NotFoundException y ConflictException son abstractas a propósito: las excepciones del módulo dlq y las tareas siguientes deben extenderlas en vez de crear su propio manejador o su propio cuerpo de error. El manejador general de Exception devuelve 500 para 405/415/406: si se agregan rutas con varios métodos, hay que mapearlos.",
+   "tipo": "dato",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-27T23:04:19.574Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "re4gl8ra",
+   "texto": "En platform/wa-event-platform, los tests que pegan a /actuator/prometheus necesitan @AutoConfigureObservability: Spring Boot desactiva la exportación de métricas en el contexto de test y sin eso el endpoint no publica jvm_memory_used_bytes.",
+   "tipo": "trampa",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-27T22:57:05.614Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "zjevde8t",
+   "texto": "El gate de contratos quedó en 192 chequeos (`python scripts/verify_contracts.py`) y su prueba de mutación en 29/29 (`python scripts/mutation_check.py`). Ahora exige un par de ejemplos valid/invalid por evento en shared/contracts/events/examples/: si agregás un esquema de evento, agregá sus dos ejemplos. Los ejemplos se resuelven contra la v1; para publicar una v2 hay que extender el script (avisa solo).",
+   "tipo": "comando",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-27T22:49:42.135Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "auozou8w",
+   "texto": "En Windows, correr Maven de un componente desde cualquier carpeta con `& \"<comp>\\mvnw.cmd\" -o -B -f \"<comp>\\pom.xml\" verify > $env:TEMP\\verify.log 2>&1` y filtrar con Select-String 'Tests run|\\[ERROR\\]|BUILD|Rule violated'; el log fuera de target/ evita el choque del clean, y `-o` usa el repositorio local (la descarga del wrapper no funciona en este entorno). Para una sola clase: agregar \"-Dtest=NombreTest\" y \"-Djacoco.skip=true\", cada -D entre comillas o PowerShell parte el argumento.",
+   "tipo": "comando",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-27T22:46:50.102Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "63amdr1a",
+   "texto": "Un @RestControllerAdvice con @ExceptionHandler(Exception.class) gana sobre el DefaultHandlerExceptionResolver de Spring MVC: sin handlers propios, un método HTTP equivocado (HttpRequestMethodNotSupportedException) y un Content-Type no soportado (HttpMediaTypeNotSupportedException) terminan en 500 INTERNAL_ERROR con log.error en vez de 405 y 415. Todo GlobalExceptionHandler del programa necesita handlers explícitos para esas dos (y para HttpMediaTypeNotAcceptableException).",
+   "tipo": "trampa",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-27T22:46:44.747Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "0jxar1o6",
+   "texto": "En un @SpringBootTest, /actuator/prometheus responde 404 aunque micrometer-registry-prometheus esté en el POM y «prometheus» esté en management.endpoints.web.exposure.include: Spring Boot apaga la exportación de métricas en las pruebas (management.defaults.metrics.export.enabled=false). Para probar ese endpoint hay que anotar la clase con @AutoConfigureObservability; no es un defecto del componente.",
+   "tipo": "trampa",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-27T22:46:40.536Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "q4rhgnv6",
    "texto": "wa-knowledge-rag: Postgres del compose va en .env.compose (POSTGRES_*), no en .env de la app — Settings (KB_*/GOOGLE_API_KEY) rechaza extras. Arranque: docker compose --env-file .env.compose up --build. Sync = servicio wa-knowledge-rag-sync con kb sync --loop.",
    "tipo": "trampa",
@@ -139,6 +289,16 @@
    "at": "2026-11-27T22:45:39.490Z",
    "veces": 1,
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "12srhuoj",
+   "texto": "El gate de contratos (`python scripts/verify_contracts.py`) exige jsonschema y referencing; instalar con `python -m pip install -r scripts/requirements.txt`. Sin ellas el script sale con exit 1 (no se omite).",
+   "tipo": "comando",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T22:39:44.063Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
   },
   {
    "id": "icwh8291",
@@ -171,6 +331,26 @@
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
   },
   {
+   "id": "kjb3rosb",
+   "texto": "arquitectura.md §5.4 quedó desactualizada: muestra el cuerpo de la DLQ con `originalBody` (el cuerpo original como texto) y `originalHeaders.correlationId`, pero el esquema publicado y el catálogo usan `originalRecordReference` (referencia opaca a una custodia restringida, ver dlq-custodia.md) y sólo admiten eventType/eventVersion en originalHeaders. Vale lo publicado en shared/contracts/events/; conviene corregir la arquitectura para que no confunda al Gateway ni al Orquestador.",
+   "tipo": "dato",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-27T22:28:42.502Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "no1ao2d2",
+   "texto": "El contrato de eventos (shared/contracts/events/) se verifica con `python scripts/verify_contracts.py`: 170 chequeos de esquemas, ejemplos y correspondencia catálogo ↔ esquema. Ya cuelga del final de scripts/verify_java.py, así que corre con la verificación del repositorio aunque no haya componentes Java. Si lo tocás, corré `python scripts/mutation_check.py`: comprueba que el gate de verdad falle.",
+   "tipo": "comando",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-27T22:28:37.908Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "ninsgbiv",
    "texto": "wa-users-service: OpenApiConfig arma components.examples con Map.of, que no tiene orden fijo; cada verify reordena las claves en shared/contracts/wa-users-service/openapi.yaml/json y deja un diff sin cambios reales (se arregla con LinkedHashMap).",
    "tipo": "trampa",
@@ -199,6 +379,16 @@
    "at": "2026-11-27T22:20:20.989Z",
    "veces": 1,
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "bezj2ost",
+   "texto": "En Windows no redirigir la salida de `mvnw clean verify` a `target/verify.log` en el mismo comando: el clean no puede borrar el log porque el shell lo tiene abierto. Escribir el log fuera de target o correr verify sin clean.",
+   "tipo": "trampa",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T22:16:41.677Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
   },
   {
    "id": "voeyt7d2",
@@ -231,6 +421,26 @@
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
   },
   {
+   "id": "vgs9p6y2",
+   "texto": "En esta máquina hay Java 21 y Node 24 además de Python con jsonschema 4.26: se puede comprobar un patrón de JSON Schema en los tres motores que lo van a evaluar (java.util.regex con `java Archivo.java`, ECMA-262 con `node archivo.mjs`, `re` con Python) usando semántica de búsqueda parcial, que es la de `pattern`. Con eso quedó confirmado que `(?![\\s\\S])` rechaza igual el sufijo \\n, \\r, \\r\\n, espacio, tabulador y U+2028 en los tres.",
+   "tipo": "comando",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-27T22:09:33.753Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "9to5w9sd",
+   "texto": "Para probar los esquemas de shared/contracts/events con Python: los $id son https://contracts.bcra/wa-channel/events/<archivo> y no se resuelven por red, así que hay que armar un referencing.Registry().with_resources([(doc[\"$id\"], Resource.from_contents(doc)), ...]) con los cinco archivos y pasarlo a Draft202012Validator(registry=...); correr cada caso dos veces, con y sin FormatChecker(), porque format es sólo anotación en draft 2020-12 y los huecos aparecen únicamente sin la aserción.",
+   "tipo": "comando",
+   "rol": "tester",
+   "run": null,
+   "at": "2026-11-27T22:09:29.600Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "y2wekulm",
    "texto": "UserService.update debe usar findByIdForUpdate igual que changeStatus: sin bloqueo, un PATCH de datos puede reescribir status y deshacer una suspensión concurrente.",
    "tipo": "trampa",
@@ -239,6 +449,16 @@
    "at": "2026-11-27T22:05:38.072Z",
    "veces": 1,
    "de": "Marcelo"
+  },
+  {
+   "id": "bejx6rvw",
+   "texto": "scripts/verify_java.py vive en la raíz del repo: recorre carpetas con pom.xml+mvnw y corre verify; sin componentes Java termina en 0. Lo crea la primera tarea que lo necesite si aún no existe.",
+   "tipo": "comando",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T22:03:12.199Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
   },
   {
    "id": "wbom32f4",
@@ -259,6 +479,16 @@
    "at": "2026-11-27T21:57:54.106Z",
    "veces": 1,
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "tuq7pxvt",
+   "texto": "En patrones de JSON Schema no cerrar con `$`: `pattern` compara parcialmente y tanto `re` de Python como `java.util.regex` dejan que `$` calce antes de un salto de línea final, así que \"...123Z\\n\" valida. Usar `(?![\\s\\S])` para exigir el final real de la cadena. Y `format` (uuid, date-time) es sólo anotación en draft 2020-12: si el valor debe quedar restringido por contrato, agregar también un `pattern` explícito.",
+   "tipo": "trampa",
+   "rol": "reviewer",
+   "run": null,
+   "at": "2026-11-27T21:57:13.907Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
   },
   {
    "id": "in6ullk9",
@@ -321,6 +551,26 @@
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
   },
   {
+   "id": "kphtrtzb",
+   "texto": "La plataforma de eventos (platform/wa-event-platform) no usa JPA, base de datos ni MapStruct: no persiste nada y no tiene mapeo entidad ↔ DTO. Es una excepción explícita al stack decidida en la arquitectura del componente, no un olvido; Lombok y el umbral de cobertura del 80 % se mantienen. Su puerto en la PC propuesto es 8092 (siguiente libre de la serie del programa) y queda configurable.",
+   "tipo": "decision",
+   "rol": "tech-lead",
+   "run": null,
+   "at": "2026-11-27T21:37:00.353Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "b9qx1go7",
+   "texto": "Cada componente Java se verifica dentro de su carpeta con `./mvnw -q -B verify` (JaCoCo ≥ 80 % en la fase verify), y el repositorio entero con `python scripts/verify_java.py` desde la raíz; ese script lo crea la primera tarea técnica de la plataforma de eventos y después se reutiliza para todos los componentes. Mandá la salida a target/verify.log y mirá sólo el final o las líneas con ERROR/FAIL.",
+   "tipo": "comando",
+   "rol": "tech-lead",
+   "run": null,
+   "at": "2026-11-27T21:36:57.888Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
    "id": "writuv40",
    "texto": "Para publicar desde una operación concurrente con ingest/submit/approve, workflow.approvals.lock_subject serializa por tipo e identificador; latest_version devuelve la versión más reciente y kb_approval conserva por separado las aprobaciones reales y de prueba de cada rol.",
    "tipo": "dato",
@@ -349,6 +599,26 @@
    "at": "2026-11-27T21:27:18.308Z",
    "veces": 1,
    "de": "marcelo-a-abarracin-ThinkPad-L15-Gen-2"
+  },
+  {
+   "id": "rsyqekrv",
+   "texto": "Los cuerpos de MessageReceived, MessageReadyToSend y MessageStatus no están en la fuente (H0 y H0.2 sólo nombran los tipos y los identificadores): los fijó el analista con mínimo de datos. messageId es opaco y lo asigna quien crea el mensaje (Gateway en el inbound, derivado del id del proveedor para que su reintento dé el mismo valor; Orquestador en el outbound, y el estado de entrega reusa ese messageId). Un solo instante por evento, en occurredAt del sobre, sin repetirlo en el cuerpo.",
+   "tipo": "decision",
+   "rol": "analista",
+   "run": null,
+   "at": "2026-11-27T21:25:34.080Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
+  },
+  {
+   "id": "0vyvbzqd",
+   "texto": "Orden por conversación: el transporte lo garantiza sólo en el camino feliz y en el reintento bloqueante corto; NO sobre un evento derivado a topic de reintento ni sobre un reproceso desde la DLQ (el mismo hito H0.1 exige que un evento fallido no frene la cola). El orden lógico es del Orquestador con su máquina de estados, usando messageId y occurredAt. Reintento y reproceso conservan conversationId (clave), correlationId y messageId, y no duplican efectos.",
+   "tipo": "decision",
+   "rol": "analista",
+   "run": null,
+   "at": "2026-11-27T21:25:30.266Z",
+   "veces": 1,
+   "de": "DESKTOP-JVEJTUF"
   },
   {
    "id": "ino6nzwa",

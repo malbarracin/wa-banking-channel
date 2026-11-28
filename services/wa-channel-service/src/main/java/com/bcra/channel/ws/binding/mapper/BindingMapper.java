@@ -5,6 +5,7 @@ import org.mapstruct.Mapping;
 
 import com.bcra.channel.ws.binding.dto.BindingStatusResponse;
 import com.bcra.channel.ws.binding.dto.ChannelProfileResponse;
+import com.bcra.channel.ws.binding.dto.VerifiableResultResponse;
 import com.bcra.channel.ws.binding.entity.Binding;
 import com.bcra.channel.ws.binding.entity.BindingStatus;
 
@@ -16,6 +17,16 @@ public interface BindingMapper {
 
     @Mapping(target = "bindingId", source = "id")
     BindingStatusResponse toStatusResponse(Binding binding);
+
+    /**
+     * Resultado verificable tras activar el vínculo.
+     *
+     * @param binding vínculo en {@link BindingStatus#ACTIVO}
+     * @return payload para el orquestador
+     */
+    @Mapping(target = "identityVerified", constant = "true")
+    @Mapping(target = "bindingId", source = "id")
+    VerifiableResultResponse toVerifiableResult(Binding binding);
 
     /**
      * Perfil del canal a partir del vínculo y el nombre público de H1.

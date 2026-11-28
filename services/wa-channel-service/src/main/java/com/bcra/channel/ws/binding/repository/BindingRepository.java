@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.bcra.channel.ws.binding.entity.Binding;
+import com.bcra.channel.ws.binding.entity.BindingStatus;
 
 /**
  * Persistencia de vínculos WhatsApp ↔ cliente.
@@ -28,4 +29,15 @@ public interface BindingRepository extends JpaRepository<Binding, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT b FROM Binding b WHERE b.whatsappNumber = :whatsappNumber")
     Optional<Binding> findByWhatsappNumberForUpdate(@Param("whatsappNumber") String whatsappNumber);
+
+    /**
+     * Anti-fraude: ¿hay vínculo ACTIVO del número con un clientId distinto?
+     *
+     * @param whatsappNumber número en E.164
+     * @param status         estado buscado (típicamente {@link BindingStatus#ACTIVO})
+     * @param clientId       clientId que se intenta vincular
+     * @return {@code true} si existe conflicto
+     */
+    boolean existsByWhatsappNumberAndStatusAndClientIdNot(
+            String whatsappNumber, BindingStatus status, UUID clientId);
 }

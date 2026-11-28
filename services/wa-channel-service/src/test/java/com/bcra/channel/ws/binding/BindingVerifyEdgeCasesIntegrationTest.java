@@ -6,6 +6,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.getRequestedFor;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
@@ -43,6 +44,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import com.bcra.channel.ws.audit.entity.AuditAction;
 import com.bcra.channel.ws.audit.entity.AuditEntry;
 import com.bcra.channel.ws.audit.repository.AuditRepository;
+import com.bcra.channel.ws.audit.service.AuditService;
 import com.bcra.channel.ws.binding.entity.Binding;
 import com.bcra.channel.ws.binding.entity.BindingStatus;
 import com.bcra.channel.ws.binding.entity.VerificationAttempt;
@@ -267,6 +269,44 @@ class BindingVerifyEdgeCasesIntegrationTest {
         verify(CONTACT_PHONE)
                 .andExpect(status().isLocked())
                 .andExpect(jsonPath("$.code").value("VERIFICATION_LOCKED"));
+    }
+
+    @Test
+    @DisplayName("Aceptar términos sobre un número ACTIVO → 409 CONFLICT con el mensaje 8.7 y el vínculo sigue ACTIVO")
+    void acceptTermsOnActiveNumberReturnsNumberAlreadyLinked() throws Exception {
+        acceptTerms();
+        stubActiveUser();
+        verify(CONTACT_PHONE).andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/bindings/{n}/terms", NUMBER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"accepted\":true}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"))
+                .andExpect(jsonPath("$.message").value(channelMessages.numberAlreadyLinked()));
+
+        Binding binding = bindingRepository.findByWhatsappNumber(NUMBER).orElseThrow();
+        assertThat(binding.getStatus()).isEqualTo(BindingStatus.ACTIVO);
+        assertThat(binding.getClientId()).isEqualTo(CLIENT_ID);
+        assertThat(binding.getVerifiedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Verify repetido por el mismo cliente sobre ACTIVO → 409 sin auditar ANTIFRAUD_CHECK ERROR")
+    void repeatedVerifyBySameClientIsNotAntifraudError() throws Exception {
+        acceptTerms();
+        stubActiveUser();
+        verify(CONTACT_PHONE).andExpect(status().isOk());
+
+        verify(CONTACT_PHONE)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(not(
+                        channelMessages.numberAlreadyLinked())));
+
+        assertThat(auditRepository.findAll())
+                .filteredOn(entry -> NUMBER.equals(entry.getWhatsappNumber()))
+                .filteredOn(entry -> entry.getAction() == AuditAction.ANTIFRAUD_CHECK)
+                .allSatisfy(entry -> assertThat(entry.getResult()).isNotEqualTo(AuditService.RESULT_ERROR));
     }
 
     @Test

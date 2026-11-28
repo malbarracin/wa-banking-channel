@@ -1852,11 +1852,5 @@
   },
   "helps": [],
   "helpSeq": 0,
-  "helpers": {
-    "marcelo-a-abarracin-ThinkPad-L15-Gen-2": {
-      "idle": true,
-      "team": null,
-      "at": "2026-11-27T23:02:26.983Z"
-    }
-  }
+  "helpers": {}
 }

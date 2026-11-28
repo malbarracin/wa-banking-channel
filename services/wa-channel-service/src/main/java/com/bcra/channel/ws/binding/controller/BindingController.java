@@ -7,17 +7,25 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.bcra.channel.ws.binding.dto.AcceptTermsRequest;
 import com.bcra.channel.ws.binding.dto.AcceptTermsResponse;
 import com.bcra.channel.ws.binding.dto.BindingStatusResponse;
+import com.bcra.channel.ws.binding.dto.BlockBindingRequest;
+import com.bcra.channel.ws.binding.dto.BlockBindingResponse;
+import com.bcra.channel.ws.binding.dto.UnbindRequest;
+import com.bcra.channel.ws.binding.dto.UnbindResponse;
+import com.bcra.channel.ws.binding.service.BindingLifecycleService;
 import com.bcra.channel.ws.binding.service.BindingService;
+import com.bcra.channel.ws.config.BankInternalAuthFilter;
 import com.bcra.channel.ws.exception.ErrorResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -32,10 +40,11 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/bindings")
 @RequiredArgsConstructor
-@Tag(name = "Vínculo", description = "Estado del vínculo y aceptación de términos")
+@Tag(name = "Vínculo", description = "Estado del vínculo, términos, bloqueo y desvinculación")
 public class BindingController {
 
     private final BindingService bindingService;
+    private final BindingLifecycleService bindingLifecycleService;
 
     /**
      * Consulta el estado del vínculo de un número.
@@ -152,5 +161,163 @@ public class BindingController {
             @PathVariable String whatsappNumber,
             @Valid @RequestBody AcceptTermsRequest request) {
         return bindingService.acceptTerms(whatsappNumber, request);
+    }
+
+    /**
+     * Bloquea el vínculo (cliente confirmado o política del banco).
+     *
+     * @param whatsappNumber     número WhatsApp en E.164
+     * @param request            actor, motivo y confirmación
+     * @param internalRoleHeader {@code X-Internal-Role} obligatorio si actor=BANCO
+     * @return vínculo bloqueado con indicador de revocación de credencial
+     */
+    @PostMapping(
+            path = "/{whatsappNumber}/block",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "Bloquear vínculo",
+            description = "ACTIVO → BLOQUEADO. Cliente requiere confirmed=true. "
+                    + "BANCO requiere header X-Internal-Role con el rol bank-policy configurado. "
+                    + "La respuesta indica credentialRevocationRequired para revocar en el mismo intercambio.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Vínculo bloqueado",
+                    content = @Content(
+                            schema = @Schema(implementation = BlockBindingResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "bindingId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                                      "status": "BLOQUEADO",
+                                      "message": "Tu WhatsApp quedó bloqueado para operaciones. Para reactivarlo, seguí los pasos de verificación cuando quieras.",
+                                      "credentialRevocationRequired": true
+                                    }
+                                    """))),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Actor ausente, sin confirmación del cliente o número inválido",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/BadRequest"))),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "BANCO sin X-Internal-Role válido",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/Forbidden"))),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Vínculo inexistente",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/NotFound"))),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Ya bloqueado, desvinculado u otra transición inválida",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/Conflict"))),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Error interno",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))
+    })
+    public BlockBindingResponse block(
+            @Parameter(
+                    description = "Número WhatsApp en formato E.164",
+                    example = "+5491112345678",
+                    required = true)
+            @PathVariable String whatsappNumber,
+            @Valid @RequestBody BlockBindingRequest request,
+            @Parameter(
+                    name = BankInternalAuthFilter.HEADER_NAME,
+                    description = "Rol interno; obligatorio si actor=BANCO (valor bank-policy)",
+                    in = ParameterIn.HEADER,
+                    example = "bank-policy")
+            @RequestHeader(value = BankInternalAuthFilter.HEADER_NAME, required = false)
+            String internalRoleHeader) {
+        return bindingLifecycleService.block(whatsappNumber, request, internalRoleHeader);
+    }
+
+    /**
+     * Desvincula el número (cliente confirmado o política del banco).
+     *
+     * @param whatsappNumber     número WhatsApp en E.164
+     * @param request            actor, motivo y confirmación
+     * @param internalRoleHeader {@code X-Internal-Role} obligatorio si actor=BANCO
+     * @return vínculo desvinculado con indicador de revocación de credencial
+     */
+    @PostMapping(
+            path = "/{whatsappNumber}/unbind",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            summary = "Desvincular número",
+            description = "ACTIVO o BLOQUEADO → DESVINCULADO. Cliente requiere confirmed=true. "
+                    + "BANCO requiere header X-Internal-Role con el rol bank-policy configurado. "
+                    + "La respuesta indica credentialRevocationRequired para revocar en el mismo intercambio.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Número desvinculado",
+                    content = @Content(
+                            schema = @Schema(implementation = UnbindResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {
+                                      "bindingId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+                                      "status": "DESVINCULADO",
+                                      "message": "Tu número fue desvinculado del canal. Si querés volver a operar por WhatsApp, escribinos y repetimos la verificación.",
+                                      "credentialRevocationRequired": true
+                                    }
+                                    """))),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Actor ausente, sin confirmación del cliente o número inválido",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/BadRequest"))),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "BANCO sin X-Internal-Role válido",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/Forbidden"))),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Vínculo inexistente",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/NotFound"))),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Ya desvinculado u otra transición inválida",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/Conflict"))),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Error interno",
+                    content = @Content(
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(ref = "#/components/examples/InternalError")))
+    })
+    public UnbindResponse unbind(
+            @Parameter(
+                    description = "Número WhatsApp en formato E.164",
+                    example = "+5491112345678",
+                    required = true)
+            @PathVariable String whatsappNumber,
+            @Valid @RequestBody UnbindRequest request,
+            @Parameter(
+                    name = BankInternalAuthFilter.HEADER_NAME,
+                    description = "Rol interno; obligatorio si actor=BANCO (valor bank-policy)",
+                    in = ParameterIn.HEADER,
+                    example = "bank-policy")
+            @RequestHeader(value = BankInternalAuthFilter.HEADER_NAME, required = false)
+            String internalRoleHeader) {
+        return bindingLifecycleService.unbind(whatsappNumber, request, internalRoleHeader);
     }
 }

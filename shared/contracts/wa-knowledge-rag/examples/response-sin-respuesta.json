@@ -1,0 +1,10 @@
+{
+  "correlationId": "consulta-prueba-3",
+  "knowledgeVersion": "kv-12",
+  "confidence": {
+    "level": "sin_respuesta",
+    "score": 0.3,
+    "suggestion": "derivar"
+  },
+  "results": []
+}

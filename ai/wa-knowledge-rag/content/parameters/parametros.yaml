@@ -1,0 +1,28 @@
+# Candidatos sintéticos para desarrollo y pruebas. Los valores del banco están pendientes.
+horario_transferencias:
+  value: "de 09:00 a 18:00"
+  is_test: true
+limite_por_transferencia:
+  value: "$ 1000"
+  is_test: true
+limite_diario_transferencias:
+  value: "$ 2000"
+  is_test: true
+umbral_doble_confirmacion:
+  value: "$ 500"
+  is_test: true
+ventana_movimientos:
+  value: "los últimos 30 días"
+  is_test: true
+tope_movimientos:
+  value: "10"
+  is_test: true
+ventana_consumos:
+  value: "los últimos 30 días"
+  is_test: true
+tope_consumos:
+  value: "10"
+  is_test: true
+telefono_soporte:
+  value: "202-555-0142"
+  is_test: true

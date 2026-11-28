@@ -1,0 +1,27 @@
+cuentas:
+  operaciones: cuentas-operaciones
+  horario-transferencias: cuentas-horario-transferencias
+  limites-transferencias: cuentas-limites-transferencias
+  destinatarios: cuentas-destinatarios
+  confirmaciones: cuentas-confirmaciones
+  movimientos: cuentas-movimientos
+  fuera-de-alcance: cuentas-fuera-de-alcance
+tarjetas:
+  perdida-o-robo: tarjetas-perdida-o-robo
+  bloqueo-temporal: tarjetas-bloqueo-temporal
+  aviso-de-viaje: tarjetas-aviso-de-viaje
+  datos-de-tarjeta: tarjetas-datos-de-tarjeta
+  consumos: tarjetas-consumos
+  fuera-de-alcance: tarjetas-fuera-de-alcance
+seguros:
+  polizas-y-coberturas: seguros-polizas-y-coberturas
+  siniestro: seguros-siniestro
+  estado-del-caso: seguros-estado-del-caso
+  documentacion: seguros-documentacion
+  fuera-de-alcance: seguros-fuera-de-alcance
+canal:
+  asistente: canal-asistente
+  vinculacion-e-identidad: canal-vinculacion-e-identidad
+  nueva-verificacion: canal-nueva-verificacion
+  derivacion: canal-derivacion
+  privacidad: canal-privacidad

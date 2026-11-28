@@ -8,6 +8,13 @@ import com.bcra.channel.ws.exception.NotFoundException;
 public class BindingNotFoundException extends NotFoundException {
 
     public BindingNotFoundException() {
-        super("No existe vínculo para el número indicado");
+        this("No existe vínculo para el número indicado");
+    }
+
+    /**
+     * @param message mensaje sin datos sensibles
+     */
+    public BindingNotFoundException(String message) {
+        super(message);
     }
 }

@@ -1,6 +1,136 @@
 {
  "items": [
   {
+   "id": "34is25se",
+   "texto": "wa-channel-service BindingController concentra getStatus/terms/verify (BindingService) y block/unbind (BindingLifecycleService); BindingMapper tiene toVerifiableResult y toProfileResponse juntos.",
+   "tipo": "dato",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-28T00:23:57.505Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "ti4zwunl",
+   "texto": "wa-channel-service: verify sobre ACTIVO con clientId distinto responde 409 mensaje 8.7 y audita ANTIFRAUD_CHECK ERROR sin llamar a H1; acceptTerms sobre ACTIVO usa el mismo mensaje; IdentityVerifierResolver lanza IllegalStateException al arrancar si bank.channel.verification.policy no tiene implementación.",
+   "tipo": "dato",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-28T00:17:26.618Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "u4ta2dor",
+   "texto": "wa-channel-service: en Windows el log de verify no puede ir a target/ (clean lo bloquea); usar .\\mvnw.cmd -q -B clean verify con salida fuera de target (ej. ..\\..\\verify.log).",
+   "tipo": "comando",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-28T00:09:55.775Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "f79b4pbr",
+   "texto": "wa-channel-service verify: BindingService.verify usa @Transactional(noRollbackFor={VerificationLockedException, BindingConflictException, ClientNotFoundException}) para que el BLOQUEADO y la auditoría ANTIFRAUD/VERIFICATION_LOCKED no se reviertan al lanzar 423/409; IdentityVerifier por bank.channel.verification.policy (document-code = DevContactIdentityVerifier).",
+   "tipo": "dato",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-28T00:07:34.666Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "k2lby0l4",
+   "texto": "wa-channel-service: perfil/preferencias en ChannelProfileController + ChannelProfileService; displayName solo de UsersServiceClient (nunca contactos/documentos). Verify: .\\mvnw.cmd -q -B clean verify desde services/wa-channel-service.",
+   "tipo": "comando",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T23:59:35.455Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "zzad9loq",
+   "texto": "wa-channel-service: rechazo de términos se audita con AuditService.recordTermsRejected (REQUIRES_NEW) para que no lo revierta el rollback del 400; mensajes 400 al cliente van por BadRequestException (IllegalArgumentException sigue con mensaje genérico). Verify: .\\mvnw.cmd -q -B clean verify desde services/wa-channel-service.",
+   "tipo": "dato",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T23:49:47.237Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "enzib0r0",
+   "texto": "wa-channel-service: autorización interna con BankInternalAuthFilter + @RequireInternalRole (SUPPORT→internal-roles.support, BANK_POLICY→bank-policy); header X-Internal-Role. Auditoría en V3__create_channel_audit (V1/V2 reservados al vínculo). Verify: .\\mvnw.cmd -q -B clean verify desde services/wa-channel-service.",
+   "tipo": "dato",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T23:37:21.098Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "dv0ybnya",
+   "texto": "wa-channel-service: UsersServiceClient usa RestClient con bank.channel.users-service.base-url y timeout-ms; tests WireMock en UsersServiceClientTest y UsersServiceClientErrorMappingTest. Verificar: desde services/wa-channel-service con .\\mvnw.cmd -q -B clean verify (log fuera de target/ si hay clean).",
+   "tipo": "comando",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T23:35:27.952Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "97qcxfd3",
+   "texto": "wa-channel-service: verificar con .\\mvnw.cmd -q -B clean verify desde services/wa-channel-service (log fuera de target/ si hay clean) y python scripts/verify_java.py desde la raíz; datasource DATABASE_URL/USERNAME/PASSWORD, puerto SERVER_PORT.",
+   "tipo": "comando",
+   "rol": "dev-backend",
+   "run": null,
+   "at": "2026-11-27T23:20:52.079Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "jxpkyaxb",
+   "texto": "wa-channel-service: POST /bindings/{n}/verify recibe el clientId interno de wa-users-service que le pasa el orquestador (H1 no busca por uniquenessValue y su contrato no se cambia). Autorización interna: header X-Internal-Role contra bank.channel.internal-roles.support (historial) y .bank-policy (block/unbind con actor BANCO). block/unbind devuelven credentialRevocationRequired=true.",
+   "tipo": "decision",
+   "rol": "tech-lead",
+   "run": null,
+   "at": "2026-11-27T23:13:24.201Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "esjy0sj6",
+   "texto": "wa-channel-service: shared/contracts/wa-users-service/ no existe en la rama main; el contrato de H1 disponible está en services/wa-users-service/delivery/openapi/openapi.yaml. Los tests de WireMock de H3 deben apuntar a esa ruta.",
+   "tipo": "dato",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-27T23:09:42.414Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "6w2bbjt2",
+   "texto": "wa-channel-service: el contrato de wa-users-service (H1) no expone búsqueda por uniquenessValue; el tech-lead debe decidir si se agrega GET /api/v1/users?search={uniquenessValue} a H1 o si el orquestador (H0.2) provee el id interno del cliente directo a H3 en el paso de verificación.",
+   "tipo": "trampa",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-27T23:09:40.638Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
+   "id": "oyczjv9h",
+   "texto": "wa-channel-service: paquete base com.bcra.channel.ws, dos módulos de dominio (binding y audit), sin api.versioning; todos los endpoints bajo /api/v1/; los ErrorCode enum agrega VERIFICATION_LOCKED (423) y FORBIDDEN (403) al contrato estándar. Arquitectura en specs/canal-whatsapp/arquitectura.md.",
+   "tipo": "decision",
+   "rol": "arquitecto",
+   "run": null,
+   "at": "2026-11-27T23:09:38.622Z",
+   "veces": 1,
+   "de": "Marcelo"
+  },
+  {
    "id": "q4rhgnv6",
    "texto": "wa-knowledge-rag: Postgres del compose va en .env.compose (POSTGRES_*), no en .env de la app — Settings (KB_*/GOOGLE_API_KEY) rechaza extras. Arranque: docker compose --env-file .env.compose up --build. Sync = servicio wa-knowledge-rag-sync con kb sync --loop.",
    "tipo": "trampa",

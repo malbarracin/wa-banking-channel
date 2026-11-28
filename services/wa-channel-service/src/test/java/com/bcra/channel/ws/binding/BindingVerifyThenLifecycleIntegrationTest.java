@@ -194,6 +194,14 @@ class BindingVerifyThenLifecycleIntegrationTest {
         assertThat(bindingRepository.findByWhatsappNumber(NUMBER).orElseThrow().getStatus())
                 .isEqualTo(BindingStatus.DESVINCULADO);
 
+        usersService.resetRequests();
+        mockMvc.perform(post("/api/v1/bindings/{n}/verify", NUMBER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(verifyBody()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("CONFLICT"));
+        usersService.verify(0, getRequestedFor(urlPathMatching("/api/v1/users/.*")));
+
         acceptTerms();
         assertThat(bindingRepository.findByWhatsappNumber(NUMBER).orElseThrow().getStatus())
                 .isEqualTo(BindingStatus.PENDIENTE_VERIFICACION);

@@ -1,0 +1,42 @@
+# Despliegue manual con Helm. Queda deshabilitado hasta que existan el cluster y sus credenciales:
+# definir el secret KUBE_CONFIG (kubeconfig en base64) y la variable de repositorio WA_USERS_DEPLOY_ENABLED=true.
+name: wa-users-service CD
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Entorno (dev | prod)
+        required: true
+        default: dev
+        type: choice
+        options: [dev, prod]
+      image_tag:
+        description: Tag de la imagen (sha del commit publicado por el CI)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: vars.WA_USERS_DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+
+      - name: Kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+
+      - name: helm upgrade --install
+        run: |
+          helm upgrade --install users services/wa-users-service/helm/wa-users-service \
+            -f services/wa-users-service/helm/wa-users-service/values-${{ inputs.environment }}.yaml \
+            --set image.repository=ghcr.io/${GITHUB_REPOSITORY,,}/wa-users-service \
+            --set image.tag=${{ inputs.image_tag }} \
+            -n ${{ inputs.environment }} --create-namespace --wait

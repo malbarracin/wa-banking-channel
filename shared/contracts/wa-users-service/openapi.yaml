@@ -1,0 +1,655 @@
+openapi: 3.1.0
+info:
+  title: wa-users-service
+  description: "Registro único de clientes del banco: alta, consulta, actualizació\
+    n de datos permitidos, cambio de estado operativo y auditoría."
+  version: 0.1.0-SNAPSHOT
+servers:
+- url: http://localhost:8080
+  description: Local
+tags:
+- name: Clientes
+  description: "Alta, consulta, actualización y estado operativo de clientes"
+- name: Auditoría
+  description: "Historial de altas, cambios de estado y modificaciones"
+paths:
+  /api/v1/users:
+    post:
+      tags:
+      - Clientes
+      summary: Dar de alta un cliente
+      description: Crea un cliente ACTIVE con los datos mínimos de bank.users.required-fields
+        y audita el alta. Rechaza duplicados del campo de unicidad.
+      operationId: create
+      parameters:
+      - name: X-Actor
+        in: header
+        description: Actor del alta; system si se omite
+        required: false
+        schema:
+          type: string
+        example: operador-123
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+            examples:
+              Alta mínima:
+                description: Alta mínima
+                value:
+                  uniquenessValue: CLI-1001
+                  displayName: Ana Pérez
+                  contactEmail: ana.perez@example.com
+                  contactPhone: "+5491112345678"
+        required: true
+      responses:
+        "201":
+          description: Cliente creado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+              example:
+                id: 123e4567-e89b-12d3-a456-426614174000
+                externalId: USR-00042
+                displayName: Ana Pérez
+                contactEmail: ana.perez@example.com
+                contactPhone: "+5491112345678"
+                status: ACTIVE
+                createdAt: 2026-11-27T12:00:00Z
+        "400":
+          description: Datos inválidos o incompletos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Validación:
+                  $ref: "#/components/examples/ValidationError"
+                Solicitud inválida:
+                  $ref: "#/components/examples/BadRequest"
+        "409":
+          description: Valor de unicidad ya registrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Duplicate:
+                  $ref: "#/components/examples/Duplicate"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/users/{id}:
+    get:
+      tags:
+      - Clientes
+      summary: Consultar cliente
+      description: Devuelve solo los campos de bank.users.public-fields y el estado
+        actual.
+      operationId: find
+      parameters:
+      - name: id
+        in: path
+        description: Identificador interno
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        "200":
+          description: Cliente encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+              example:
+                id: 123e4567-e89b-12d3-a456-426614174000
+                externalId: USR-00042
+                displayName: Ana Pérez
+                contactEmail: ana.perez@example.com
+                contactPhone: "+5491112345678"
+                status: ACTIVE
+                createdAt: 2026-11-27T12:00:00Z
+        "400":
+          description: Identificador inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "404":
+          description: Cliente inexistente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+    patch:
+      tags:
+      - Clientes
+      summary: Actualizar cliente
+      description: Actualiza solo campos de bank.users.updatable-fields. Cualquier
+        otro campo se rechaza con 400 BAD_REQUEST.
+      operationId: update
+      parameters:
+      - name: id
+        in: path
+        description: Identificador interno
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 123e4567-e89b-12d3-a456-426614174000
+      - name: X-Actor
+        in: header
+        description: Actor de la modificación
+        required: false
+        schema:
+          type: string
+        example: operador-123
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+            examples:
+              Nombre:
+                description: Nombre
+                value:
+                  displayName: Juan Pérez
+              Contacto:
+                description: Contacto
+                value:
+                  contactEmail: juan.perez@example.com
+                  contactPhone: "+5491198765432"
+        required: true
+      responses:
+        "200":
+          description: Cliente actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+              example:
+                id: 123e4567-e89b-12d3-a456-426614174000
+                externalId: USR-00042
+                displayName: Juan Pérez
+                contactEmail: juan.perez@example.com
+                contactPhone: "+5491198765432"
+                status: ACTIVE
+                createdAt: 2026-11-27T12:00:00Z
+        "400":
+          description: Campo no permitido o dato inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                Campo no permitido:
+                  description: Campo no permitido
+                  value:
+                    code: BAD_REQUEST
+                    message: Campo no actualizable
+                    details:
+                    - field: uniquenessValue
+                      message: Campo no permitido
+                    timestamp: 2026-11-27T12:00:00Z
+                Validación:
+                  $ref: "#/components/examples/ValidationError"
+        "404":
+          description: Cliente inexistente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/users/{id}/status:
+    patch:
+      tags:
+      - Clientes
+      summary: Cambiar estado operativo
+      description: Aplica una transición permitida por bank.users.allowed-transitions
+        (ACTIVE/SUSPENDED/INACTIVE) y audita el cambio. Solo ACTIVE es elegible para
+        un vínculo de canal nuevo.
+      operationId: changeStatus
+      parameters:
+      - name: id
+        in: path
+        description: Identificador interno
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 123e4567-e89b-12d3-a456-426614174000
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeUserStatusRequest"
+            examples:
+              Suspender:
+                description: Suspender
+                value:
+                  status: SUSPENDED
+                  actor: operador-123
+              Reactivar:
+                description: Reactivar
+                value:
+                  status: ACTIVE
+                  actor: operador-123
+              Baja lógica:
+                description: Baja lógica
+                value:
+                  status: INACTIVE
+                  actor: operador-123
+        required: true
+      responses:
+        "200":
+          description: Estado actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserResponse"
+              example:
+                id: 123e4567-e89b-12d3-a456-426614174000
+                externalId: USR-00042
+                displayName: Ana Pérez
+                contactEmail: ana.perez@example.com
+                contactPhone: "+5491112345678"
+                status: SUSPENDED
+                createdAt: 2026-11-27T12:00:00Z
+        "400":
+          description: Estado inválido o datos incompletos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+                ValidationError:
+                  $ref: "#/components/examples/ValidationError"
+        "404":
+          description: Cliente inexistente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                NotFound:
+                  $ref: "#/components/examples/NotFound"
+        "409":
+          description: Transición no permitida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InvalidTransition:
+                  $ref: "#/components/examples/InvalidTransition"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+  /api/v1/users/{id}/audit:
+    get:
+      tags:
+      - Auditoría
+      summary: Consultar auditoría
+      description: "Devuelve el historial cronológico del cliente (fecha, acción y\
+        \ resultado)."
+      operationId: history
+      parameters:
+      - name: id
+        in: path
+        description: Identificador del cliente
+        required: true
+        schema:
+          type: string
+          format: uuid
+        example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        "200":
+          description: Historial
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditEntryResponse"
+              example:
+              - id: a1a2a3a4-1111-4444-8888-123456789abc
+                userId: 123e4567-e89b-12d3-a456-426614174000
+                action: ALTA
+                result: OK
+                previousStatus: null
+                newStatus: ACTIVE
+                changedFields: null
+                actor: operador-123
+                occurredAt: 2026-11-27T12:00:00Z
+        "400":
+          description: Identificador inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                BadRequest:
+                  $ref: "#/components/examples/BadRequest"
+        "500":
+          description: Error interno
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                InternalError:
+                  $ref: "#/components/examples/InternalError"
+components:
+  schemas:
+    CreateUserRequest:
+      type: object
+      description: Alta de cliente; obligatorios según bank.users.required-fields
+      properties:
+        uniquenessValue:
+          type: string
+          description: Valor del campo de unicidad del banco
+          example: CLI-1001
+          maxLength: 255
+          minLength: 0
+        displayName:
+          type: string
+          description: Nombre de tratamiento
+          example: Ana Pérez
+          maxLength: 255
+          minLength: 0
+        contactEmail:
+          type: string
+          format: email
+          description: Correo de contacto
+          example: ana.perez@example.com
+          maxLength: 255
+          minLength: 0
+        contactPhone:
+          type: string
+          description: Teléfono de contacto
+          example: "+5491112345678"
+          maxLength: 255
+          minLength: 0
+    UserResponse:
+      type: object
+      description: Cliente con los campos públicos configurados en bank.users.public-fields
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador interno
+          example: 123e4567-e89b-12d3-a456-426614174000
+        externalId:
+          type: string
+          description: Identificador externo asignado
+          example: USR-00042
+        uniquenessValue:
+          type: string
+          description: Valor de unicidad (solo si está en public-fields)
+          example: CLI-1001
+        displayName:
+          type: string
+          description: Nombre de tratamiento
+          example: Ana Pérez
+        contactEmail:
+          type: string
+          description: Correo de contacto
+          example: ana.perez@example.com
+        contactPhone:
+          type: string
+          description: Teléfono de contacto
+          example: "+5491112345678"
+        status:
+          type: string
+          description: Estado operativo
+          enum:
+          - ACTIVE
+          - SUSPENDED
+          - INACTIVE
+          example: ACTIVE
+        createdAt:
+          type: string
+          format: date-time
+          description: Alta en UTC (ISO-8601)
+          example: 2026-11-27T12:00:00Z
+    ErrorResponse:
+      type: object
+      description: "Error con código estable, mensaje, detalles y marca de tiempo\
+        \ UTC"
+      properties:
+        code:
+          type: string
+          description: Código del error
+          enum:
+          - VALIDATION_ERROR
+          - BAD_REQUEST
+          - NOT_FOUND
+          - CONFLICT
+          - INTERNAL_ERROR
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          description: Mensaje legible sin datos internos
+          example: Validation failed
+        details:
+          type: array
+          description: Detalle por campo; lista vacía si no aplica
+          items:
+            $ref: "#/components/schemas/FieldError"
+        timestamp:
+          type: string
+          format: date-time
+          description: Instante UTC del error
+          example: 2026-11-27T12:00:00Z
+      required:
+      - code
+      - details
+      - message
+      - timestamp
+    FieldError:
+      type: object
+      description: Error asociado a un campo
+      properties:
+        field:
+          type: string
+          description: Nombre del campo
+          example: contactEmail
+        message:
+          type: string
+          description: Motivo del rechazo
+          example: must be a well-formed email address
+      required:
+      - field
+      - message
+    UpdateUserRequest:
+      type: object
+      description: Actualización parcial; solo campos en bank.users.updatable-fields
+      properties:
+        displayName:
+          type: string
+          description: Nombre de tratamiento
+          example: Juan Pérez
+          maxLength: 255
+          minLength: 0
+        contactEmail:
+          type: string
+          format: email
+          description: Correo de contacto
+          example: juan.perez@example.com
+          maxLength: 255
+          minLength: 1
+        contactPhone:
+          type: string
+          description: Teléfono de contacto (E.164 simplificado)
+          example: "+5491198765432"
+          pattern: "\\+?[0-9]{7,15}"
+    ChangeUserStatusRequest:
+      type: object
+      description: Cambio de estado operativo de un cliente
+      properties:
+        status:
+          type: string
+          description: Estado destino
+          enum:
+          - ACTIVE
+          - SUSPENDED
+          - INACTIVE
+          example: SUSPENDED
+        actor:
+          type: string
+          description: Actor que solicita el cambio
+          example: operador-123
+          minLength: 1
+      required:
+      - actor
+      - status
+    AuditEntryResponse:
+      type: object
+      description: "Entrada de auditoría (fecha, acción y resultado; sin valores de\
+        \ PII)"
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Identificador de la entrada
+          example: a1a2a3a4-1111-4444-8888-123456789abc
+        userId:
+          type: string
+          format: uuid
+          description: Identificador del cliente
+          example: b1b2b3b4-1111-4444-8888-123456789abc
+        action:
+          type: string
+          description: Acción registrada
+          enum:
+          - ALTA
+          - MODIFICACION
+          - CAMBIO_ESTADO
+          example: ALTA
+        result:
+          type: string
+          description: Resultado de la operación
+          enum:
+          - OK
+          - ERROR
+          example: OK
+        previousStatus:
+          type: string
+          description: Estado anterior
+          enum:
+          - ACTIVE
+          - SUSPENDED
+          - INACTIVE
+          example: ACTIVE
+        newStatus:
+          type: string
+          description: Estado nuevo
+          enum:
+          - ACTIVE
+          - SUSPENDED
+          - INACTIVE
+          example: SUSPENDED
+        changedFields:
+          type: string
+          description: Nombres de campos modificados
+          example: displayName
+        actor:
+          type: string
+          description: Identificador del actor
+          example: service-account
+        occurredAt:
+          type: string
+          format: date-time
+          description: Fecha de la operación en UTC
+          example: 2026-01-01T12:00:00Z
+  examples:
+    ValidationError:
+      value:
+        code: VALIDATION_ERROR
+        message: Validation failed
+        details:
+        - field: contactEmail
+          message: must be a well-formed email address
+        timestamp: 2026-11-27T12:00:00Z
+    BadRequest:
+      value:
+        code: BAD_REQUEST
+        message: Invalid request
+        details: []
+        timestamp: 2026-11-27T12:00:00Z
+    NotFound:
+      value:
+        code: NOT_FOUND
+        message: No existe el usuario solicitado
+        details: []
+        timestamp: 2026-11-27T12:00:00Z
+    Duplicate:
+      value:
+        code: CONFLICT
+        message: DUPLICADO
+        details:
+        - field: uniquenessValue
+          message: DUPLICADO
+        timestamp: 2026-11-27T12:00:00Z
+    InvalidTransition:
+      value:
+        code: CONFLICT
+        message: Transición de estado no permitida
+        details:
+        - field: previousStatus
+          message: INACTIVE
+        - field: newStatus
+          message: ACTIVE
+        - field: reason
+          message: TRANSICION_NO_PERMITIDA
+        timestamp: 2026-11-27T12:00:00Z
+    InternalError:
+      value:
+        code: INTERNAL_ERROR
+        message: Internal error
+        details: []
+        timestamp: 2026-11-27T12:00:00Z
